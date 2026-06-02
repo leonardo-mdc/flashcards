@@ -749,5 +749,21 @@
         if (e.key === 'Enter') document.getElementById('addSetBtn').click();
     });
 
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveCard();
+            }
+            return;
+        }
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 's') { e.preventDefault(); saveCard(); }
+            if (e.key === 'n') { e.preventDefault(); newCard(); }
+            if (e.key === 'd') { e.preventDefault(); deleteCard(); }
+            if (e.key === 'z') { e.preventDefault(); revertCard(); }
+        }
+    });
+
     loadCardSets();
 })();
