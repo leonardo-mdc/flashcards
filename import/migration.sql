@@ -18,3 +18,12 @@ CREATE TABLE IF NOT EXISTS review_history (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
 );
+
+-- Create student_set_access table for per-student set visibility
+CREATE TABLE IF NOT EXISTS student_set_access (
+    user_id INT NOT NULL,
+    set_id INT NOT NULL,
+    PRIMARY KEY (user_id, set_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (set_id) REFERENCES card_sets(id) ON DELETE CASCADE
+);

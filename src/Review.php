@@ -95,6 +95,69 @@ class Review
         $pdo->prepare("DELETE FROM user_card_progress WHERE user_id = ?")->execute([$userId]);
     }
 
+    public static function ensureSetAccessTable(): void
+    {
+        $pdo = Database::getConnection();
+        $pdo->exec("CREATE TABLE IF NOT EXISTS student_set_access (
+            user_id INT NOT NULL,
+            set_id INT NOT NULL,
+            PRIMARY KEY (user_id, set_id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (set_id) REFERENCES card_sets(id) ON DELETE CASCADE
+        )");
+    }
+
+    public static function getAccessibleSets(int $userId): array
+    {
+        self::ensureSetAccessTable();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT set_id FROM student_set_access WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+    }
+
+    public static function setAccessibleSets(int $userId, array $setIds): void
+    {
+        self::ensureSetAccessTable();
+        $pdo = Database::getConnection();
+        $pdo->prepare("DELETE FROM student_set_access WHERE user_id = ?")->execute([$userId]);
+        $stmt = $pdo->prepare("INSERT INTO student_set_access (user_id, set_id) VALUES (?, ?)");
+        foreach ($setIds as $setId) {
+            $stmt->execute([$userId, (int) $setId]);
+        }
+    }
+
+    public static function hasAccessToSet(int $userId, int $setId): bool
+    {
+        $sets = self::getAccessibleSets($userId);
+        if (empty($sets)) return true;
+        return in_array($setId, $sets);
+    }
+
+    public static function isWithin30DayCycle(int $userId): bool
+    {
+        self::ensureHistoryTable();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT MIN(reviewed_at) FROM review_history WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $firstReview = $stmt->fetchColumn();
+        if (!$firstReview) return false;
+        $daysSinceFirst = (new \DateTime())->diff(new \DateTime($firstReview))->days;
+        return $daysSinceFirst < 30;
+    }
+
+    public static function checkAndResetCycle(int $userId): bool
+    {
+        if (!self::isWithin30DayCycle($userId)) {
+            $stats = self::getStats($userId);
+            if ($stats['total_reviews'] > 0) {
+                self::resetForUser($userId);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static function getStats(int $userId): array
     {
         self::ensureHistoryTable();

@@ -56,7 +56,7 @@
 
     async function loadCardSetsFromAPI() {
         try {
-            const res = await apiCall('api/get_sets.php', 'GET');
+            const res = await apiCall('api/get_sets.php?user_id=' + (currentStudent?.id || 0), 'GET');
             if (res && res.success && res.sets && res.sets.length > 0) {
                 availableCardSets = res.sets;
                 return availableCardSets;

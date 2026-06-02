@@ -7,6 +7,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/Card.php';
+require_once __DIR__ . '/../src/Review.php';
 
 try {
     $setId = null;
@@ -56,7 +57,9 @@ try {
         }
     }
 
-    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode);
+    Review::checkAndResetCycle($studentId);
+
+    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $studentId);
 
     $setName = null;
     if (!$randomMode && $setId !== null && $setId > 0) {

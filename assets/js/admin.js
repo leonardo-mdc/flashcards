@@ -473,7 +473,7 @@
         modal.id = 'editUserModal';
         modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
         modal.innerHTML = `
-            <div class="whiteboard-card" style="max-width:450px;width:90%;padding:24px;">
+            <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit User</h3>
                 <input type="hidden" id="editUserId" value="${data.id}">
                 <label class="block font-bold mb-1">Username:</label>
@@ -490,7 +490,14 @@
                     <input type="checkbox" id="editUserIsAdmin" value="1" ${data.admin === 'true' || data.admin === '1' ? 'checked' : ''}>
                     <span class="font-bold">Admin privileges</span>
                 </label>
-                <div class="flex gap-2">
+                <div class="mt-3 mb-2">
+                    <label class="block font-bold mb-1">📚 Visible Card Sets:</label>
+                    <p class="text-xs text-gray-500 mb-2">Leave all unchecked to show all sets</p>
+                    <div id="userSetAccessContainer" class="space-y-1">
+                        <div class="text-sm text-gray-400">Loading sets...</div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-3">
                     <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
                     <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
                 </div>
@@ -498,6 +505,29 @@
             </div>
         `;
         document.body.appendChild(modal);
+
+        // Load card sets and user's current access
+        (async () => {
+            const [setsRes, accessRes] = await Promise.all([
+                fetch('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+                fetch(`admin_cards.php?action=get_user_sets&user_id=${data.id}&t=${Date.now()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            ]);
+            const setsData = await setsRes.json();
+            const accessData = await accessRes.json();
+            const allSets = setsData.success ? setsData.sets : [];
+            const userSetIds = accessData.success ? accessData.set_ids : [];
+            const container = document.getElementById('userSetAccessContainer');
+            if (allSets.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-400">No card sets available</div>';
+            } else {
+                container.innerHTML = allSets.map(set => `
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" class="user-set-checkbox" value="${set.id}" ${userSetIds.includes(set.id) ? 'checked' : ''}>
+                        ${escapeHtml(set.name)}
+                    </label>
+                `).join('');
+            }
+        })();
 
         document.getElementById('cancelEditUserBtn').addEventListener('click', () => modal.remove());
         modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
@@ -517,12 +547,17 @@
                 body: JSON.stringify({ id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin })
             });
             const result = await response.json();
-            if (result.success) {
-                modal.remove();
-                loadUsers();
-            } else {
-                alert(result.error || 'Error saving user');
-            }
+            if (!result.success) { alert(result.error || 'Error saving user'); return; }
+
+            const checkedSets = [...document.querySelectorAll('.user-set-checkbox:checked')].map(cb => parseInt(cb.value));
+            await fetch('admin_cards.php?action=set_user_sets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ user_id: id, set_ids: checkedSets })
+            });
+
+            modal.remove();
+            loadUsers();
         });
     }
 

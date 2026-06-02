@@ -7,6 +7,7 @@ require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/Card.php';
+require_once __DIR__ . '/src/Review.php';
 
 $currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
 $isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
@@ -111,7 +112,6 @@ if ($isAjax && isset($_GET['action'])) {
             User::update($userId, $username, $fullName, $englishLevel, $isAdmin);
             echo json_encode(['success' => true]);
         } elseif ($action === 'reset_user_progress') {
-            require_once __DIR__ . '/src/Review.php';
             $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
             if ($userId <= 0) {
                 echo json_encode(['success' => false, 'error' => 'Invalid user']);
@@ -154,6 +154,20 @@ if ($isAjax && isset($_GET['action'])) {
                 exit;
             }
             CardSet::delete($id);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'get_user_sets') {
+            $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+            $setIds = Review::getAccessibleSets($userId);
+            echo json_encode(['success' => true, 'set_ids' => $setIds]);
+        } elseif ($action === 'set_user_sets') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $userId = (int) ($data['user_id'] ?? 0);
+            $setIds = array_map('intval', $data['set_ids'] ?? []);
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid user']);
+                exit;
+            }
+            Review::setAccessibleSets($userId, $setIds);
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);

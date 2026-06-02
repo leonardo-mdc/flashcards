@@ -5,7 +5,7 @@ class CardSet
     public static function getAll(): array
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT id, name FROM card_sets ORDER BY id ASC");
+        $stmt = $pdo->query("SELECT id, name FROM card_sets ORDER BY name ASC");
         return $stmt->fetchAll();
     }
 
@@ -17,7 +17,7 @@ class CardSet
             FROM card_sets cs
             INNER JOIN cards c ON c.set_id = cs.id
             GROUP BY cs.id, cs.name
-            ORDER BY cs.id ASC
+            ORDER BY cs.name ASC
         ");
         return $stmt->fetchAll();
     }

@@ -6,29 +6,34 @@ class Card
         ?int $setId,
         array $levels,
         bool $randomMode = false,
-        int $limit = 500
+        int $limit = 500,
+        ?int $excludeUserId = null
     ): array {
         $pdo = Database::getConnection();
         $sql = "SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name FROM cards c LEFT JOIN card_sets s ON c.set_id = s.id WHERE 1=1";
         $params = [];
 
         if (!$randomMode && $setId !== null && $setId > 0) {
-            $sql .= " AND set_id = ?";
+            $sql .= " AND c.set_id = ?";
             $params[] = $setId;
         } elseif (!$randomMode && ($setId === null || $setId === 0)) {
-            $sql .= " AND set_id = 1";
-            $params[] = 1;
+            $sql .= " AND c.set_id = 1";
         }
 
         if (!empty($levels)) {
             $placeholders = implode(',', array_fill(0, count($levels), '?'));
-            $sql .= " AND level IN ($placeholders)";
+            $sql .= " AND c.level IN ($placeholders)";
             foreach ($levels as $level) {
                 $params[] = $level;
             }
         }
 
-        $sql .= " ORDER BY id ASC LIMIT " . (int) $limit;
+        if ($excludeUserId !== null && $excludeUserId > 0) {
+            $sql .= " AND c.id NOT IN (SELECT card_id FROM user_card_progress WHERE user_id = ? AND next_review > CURDATE())";
+            $params[] = $excludeUserId;
+        }
+
+        $sql .= " ORDER BY c.id ASC LIMIT " . (int) $limit;
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
