@@ -112,6 +112,13 @@ class User
         return $stmt->fetchColumn() > 0;
     }
 
+    public static function update(int $id, string $username, string $fullName, string $englishLevel, bool $isAdmin): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ? WHERE id = ?");
+        $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $id]);
+    }
+
     public static function delete(int $id): void
     {
         $pdo = Database::getConnection();

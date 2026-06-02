@@ -410,6 +410,7 @@
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.progress || 0}%</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.english_level || 'Beginner')}</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
+                    <button class="edit-user-btn btn btn-primary text-xs" data-id="${user.id}" data-username="${escapeHtml(user.username)}" data-fullname="${escapeHtml(user.full_name || '')}" data-level="${escapeHtml(user.english_level || 'Beginner')}" data-admin="${user.is_admin}" style="padding:4px 10px;font-size:0.7rem;">✏️ Edit</button>
                     <button class="delete-user-btn btn btn-danger text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🗑 Delete</button>
                 </td>
             </tr>`;
@@ -417,6 +418,12 @@
         html += '</table>';
 
         userListContainer.innerHTML = html;
+
+        document.querySelectorAll('.edit-user-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                openEditUserModal(btn.dataset);
+            });
+        });
 
         document.querySelectorAll('.delete-user-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -433,6 +440,67 @@
                     }
                 }
             });
+        });
+    }
+
+    function openEditUserModal(data) {
+        const existing = document.getElementById('editUserModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'editUserModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+        modal.innerHTML = `
+            <div class="whiteboard-card" style="max-width:450px;width:90%;padding:24px;">
+                <h3 class="text-lg marker-underline mb-3">✏️ Edit User</h3>
+                <input type="hidden" id="editUserId" value="${data.id}">
+                <label class="block font-bold mb-1">Username:</label>
+                <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30">
+                <label class="block font-bold mb-1">Full Name:</label>
+                <input type="text" id="editUserFullName" class="form-input" value="${data.fullname}">
+                <label class="block font-bold mb-1">English Level:</label>
+                <select id="editUserLevel" class="form-select">
+                    <option value="Beginner" ${data.level === 'Beginner' ? 'selected' : ''}>🔰 Beginner</option>
+                    <option value="Intermediate" ${data.level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
+                    <option value="Advanced" ${data.level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
+                </select>
+                <label class="flex items-center gap-2 my-2">
+                    <input type="checkbox" id="editUserIsAdmin" value="1" ${data.admin === 'true' || data.admin === '1' ? 'checked' : ''}>
+                    <span class="font-bold">Admin privileges</span>
+                </label>
+                <div class="flex gap-2">
+                    <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
+                    <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
+                </div>
+                <p id="editUserError" class="text-red-600 text-center mt-2 hidden"></p>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('cancelEditUserBtn').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+        document.getElementById('saveEditUserBtn').addEventListener('click', async () => {
+            const id = parseInt(document.getElementById('editUserId').value);
+            const username = document.getElementById('editUserUsername').value.trim();
+            const fullName = document.getElementById('editUserFullName').value.trim();
+            const englishLevel = document.getElementById('editUserLevel').value;
+            const isAdmin = document.getElementById('editUserIsAdmin').checked;
+
+            if (!username) { alert('Username is required'); return; }
+
+            const response = await fetch('admin_cards.php?action=update_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin })
+            });
+            const result = await response.json();
+            if (result.success) {
+                modal.remove();
+                loadUsers();
+            } else {
+                alert(result.error || 'Error saving user');
+            }
         });
     }
 

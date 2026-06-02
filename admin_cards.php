@@ -97,6 +97,19 @@ if ($isAjax && isset($_GET['action'])) {
             }
             $user = User::create($username, $password, $isAdmin, $fullName, $englishLevel);
             echo json_encode(['success' => true, 'user' => $user]);
+        } elseif ($action === 'update_user') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $userId = (int) ($data['id'] ?? 0);
+            $username = trim($data['username'] ?? '');
+            $fullName = trim($data['full_name'] ?? '');
+            $englishLevel = $data['english_level'] ?? 'Beginner';
+            $isAdmin = !empty($data['is_admin']);
+            if ($userId <= 0 || $username === '') {
+                echo json_encode(['success' => false, 'error' => 'Invalid data']);
+                exit;
+            }
+            User::update($userId, $username, $fullName, $englishLevel, $isAdmin);
+            echo json_encode(['success' => true]);
         } elseif ($action === 'delete_user') {
             $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
             if ($userId === $currentUser['id']) {

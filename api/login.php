@@ -35,6 +35,9 @@ try {
             exit;
         }
         $_SESSION['student_user'] = $user;
+        if (!empty($user['is_admin'])) {
+            $_SESSION['admin_user'] = $user;
+        }
         echo json_encode(['success' => true, 'student' => $user, 'new' => true]);
     } else {
         $user = User::authenticate($name, $password);
@@ -43,6 +46,9 @@ try {
             exit;
         }
         $_SESSION['student_user'] = $user;
+        if (!empty($user['is_admin'])) {
+            $_SESSION['admin_user'] = $user;
+        }
         echo json_encode(['success' => true, 'student' => $user, 'new' => false]);
     }
 } catch (PDOException $e) {
