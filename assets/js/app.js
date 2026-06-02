@@ -246,8 +246,7 @@
                         </div>
                         <div class="text-sm text-gray-500 mt-1">📝 ${escapeHtml(currentStudent?.full_name || currentStudent?.username)}</div>
                         <div class="flex gap-4 mt-2 text-sm items-center">
-                            <div class="flex-1 min-w-0"><span class="text-xs">📊 Progress:</span><div class="progress-bar-container mt-1"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%" data-pct="${Math.round(currentStudent?.progress || 0)}%"></div></div></div>
-                            <span class="whitespace-nowrap">🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
+                            <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
                         </div>
                     </div>
                     ${stats ? `
@@ -271,18 +270,10 @@
                                 <div class="text-xs text-gray-600">Cards Seen</div>
                             </div>
                         </div>
-                        ${stats.daily && stats.daily.length > 0 ? `
                         <div class="mt-3">
-                            <div class="text-xs text-gray-500 mb-1">Last 30 days</div>
-                            <div class="flex items-end gap-1" style="height:40px;">
-                                ${stats.daily.map(d => {
-                                    const max = Math.max(...stats.daily.map(x => parseInt(x.count)), 1);
-                                    const h = Math.round((parseInt(d.count) / max) * 36);
-                                    return `<div title="${d.day}: ${d.count}" style="height:${h}px;width:8px;background:#3b82f6;border-radius:2px 2px 0 0;flex-shrink:0;"></div>`;
-                                }).join('')}
-                            </div>
+                            <div class="text-xs text-gray-500 mb-1">📊 Progress:</div>
+                            <div class="progress-bar-container" style="max-width:100%;"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%" data-pct="${Math.round(currentStudent?.progress || 0)}%"></div></div>
                         </div>
-                        ` : ''}
                     </div>
                     ` : ''}
                     </div>
