@@ -9,7 +9,7 @@ require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/CardSet.php';
 
 try {
-    $sets = CardSet::getAll();
+    $sets = CardSet::getWithCards();
     echo json_encode([
         'success' => true,
         'sets' => $sets,

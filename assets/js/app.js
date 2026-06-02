@@ -58,13 +58,8 @@
         try {
             const res = await apiCall('api/get_sets.php', 'GET');
             if (res && res.success && res.sets && res.sets.length > 0) {
-                const setsWithCards = res.sets.filter(set => {
-                    return phpCardSets.some(phpSet => phpSet.id === set.id);
-                });
-                if (setsWithCards.length > 0) {
-                    availableCardSets = setsWithCards;
-                    return availableCardSets;
-                }
+                availableCardSets = res.sets;
+                return availableCardSets;
             }
         } catch (e) {}
         if (phpCardSets && phpCardSets.length > 0) {
