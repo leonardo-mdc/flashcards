@@ -239,13 +239,9 @@
 
         const html = `
             <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
-                <div class="flex justify-end mb-2">
-                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
-                    <a href="?logout=1" class="ml-2 text-xs text-gray-500 underline">Logout</a>
-                </div>
                 <div class="text-center mb-4 md:mb-5">
-                    <div class="text-5xl md:text-6xl mb-1">🎓✏️</div>
-                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline">Flashcard Studio</h1>
+                    <div class="text-5xl md:text-6xl mb-1">🎓</div>
+                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline">Flashcard Studio <span class="text-2xl md:text-3xl">✏️</span></h1>
                     <p class="text-gray-600 text-sm md:text-lg mt-1">spaced repetition · tap card to flip</p>
                 </div>
                 <div class="space-y-4 md:space-y-5">
@@ -261,6 +257,7 @@
                         <div class="text-sm text-gray-500 mt-1">📝 ${escapeHtml(currentStudent?.full_name || currentStudent?.username)}</div>
                         <div class="flex gap-4 mt-2 text-sm items-center">
                             <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
+                            <a href="?logout=1" class="text-xs text-red-600 underline ml-auto">Logout</a>
                         </div>
                     </div>
                     ${stats ? `
