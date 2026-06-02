@@ -9,6 +9,29 @@ require_once __DIR__ . '/../src/User.php';
 try {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? 'login';
+
+    if ($action === 'update_profile') {
+        $userId = (int) ($input['user_id'] ?? 0);
+        $fullName = trim($input['full_name'] ?? '');
+        $englishLevel = $input['english_level'] ?? 'Beginner';
+        if ($userId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid user']);
+            exit;
+        }
+        $user = User::getById($userId);
+        if (!$user) {
+            echo json_encode(['success' => false, 'error' => 'User not found']);
+            exit;
+        }
+        User::update($userId, $user['username'], $fullName, $englishLevel, $user['is_admin']);
+        if (isset($_SESSION['student_user']) && $_SESSION['student_user']['id'] === $userId) {
+            $_SESSION['student_user']['full_name'] = $fullName;
+            $_SESSION['student_user']['english_level'] = $englishLevel;
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     $name = isset($input['name']) ? trim($input['name']) : '';
     $password = $input['password'] ?? '';
 

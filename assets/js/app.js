@@ -292,7 +292,10 @@
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Student</label>
-                            <span class="student-badge">✅ ${escapeHtml(currentStudent?.full_name || currentStudent?.username || currentStudent?.name)}</span>
+                            <div class="flex gap-2 items-center">
+                                <span class="student-badge">✅ ${escapeHtml(currentStudent?.full_name || currentStudent?.username || currentStudent?.name)}</span>
+                                <button id="editProfileBtn" class="text-xs text-blue-600 underline whitespace-nowrap">✏️ Edit</button>
+                            </div>
                         </div>
                         <div class="text-sm text-gray-500 mt-1">@${escapeHtml(currentStudent?.username)}</div>
                         <div class="flex gap-4 mt-2 text-sm">
@@ -387,6 +390,59 @@
         });
 
         document.getElementById('switchStudentBtn')?.addEventListener('click', () => clearStudent());
+
+        document.getElementById('editProfileBtn')?.addEventListener('click', openEditProfileModal);
+    }
+
+    function openEditProfileModal() {
+        const existing = document.getElementById('editProfileModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'editProfileModal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+        modal.innerHTML = `
+            <div class="whiteboard-card" style="max-width:400px;width:90%;padding:24px;">
+                <h3 class="text-lg marker-underline mb-3">✏️ Edit Profile</h3>
+                <label class="block font-bold mb-1">Full Name:</label>
+                <input type="text" id="editProfileFullName" class="form-input w-full p-2 border-2 rounded-xl mb-3" value="${escapeHtml(currentStudent?.full_name || '')}">
+                <label class="block font-bold mb-1">English Level:</label>
+                <select id="editProfileLevel" class="form-select w-full p-2 border-2 rounded-xl mb-3 bg-white">
+                    <option value="Beginner" ${currentStudent?.english_level === 'Beginner' ? 'selected' : ''}>🔰 Beginner</option>
+                    <option value="Intermediate" ${currentStudent?.english_level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
+                    <option value="Advanced" ${currentStudent?.english_level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
+                </select>
+                <div class="flex gap-2">
+                    <button id="saveProfileBtn" class="flex-1 bg-blue-700 text-white py-2 rounded-xl font-bold">💾 Save</button>
+                    <button id="cancelProfileBtn" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-xl font-bold">Cancel</button>
+                </div>
+                <p id="editProfileError" class="text-red-600 text-center mt-2 hidden"></p>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('cancelProfileBtn').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+        document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+            const fullName = document.getElementById('editProfileFullName').value.trim();
+            const englishLevel = document.getElementById('editProfileLevel').value;
+
+            const res = await apiCall('api/login.php', 'POST', {
+                action: 'update_profile',
+                user_id: currentStudent.id,
+                full_name: fullName,
+                english_level: englishLevel
+            });
+            if (res && res.success) {
+                currentStudent.full_name = fullName;
+                currentStudent.english_level = englishLevel;
+                modal.remove();
+                render();
+            } else {
+                alert(res?.error || 'Error updating profile');
+            }
+        });
     }
 
     function renderCardFront(card) {
