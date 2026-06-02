@@ -1,7 +1,7 @@
 (function () {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-    let currentView = 'welcome';
+    let currentView = 'login';
     let currentStudent = null;
     let currentSet = null;
     let selectedLevels = [];
@@ -18,10 +18,16 @@
 
     const phpCardSets = window.FLASHCARD_DATA.cardSets;
     const dbConnected = window.FLASHCARD_DATA.dbConnected;
+    const loggedInStudent = window.FLASHCARD_DATA.loggedInStudent;
 
     function loadSavedData() {
-        const saved = localStorage.getItem(STUDENT_STORAGE_KEY);
-        if (saved) try { currentStudent = JSON.parse(saved); } catch (e) {}
+        if (loggedInStudent && loggedInStudent.id) {
+            currentStudent = loggedInStudent;
+            currentView = 'welcome';
+        } else {
+            const saved = localStorage.getItem(STUDENT_STORAGE_KEY);
+            if (saved) try { currentStudent = JSON.parse(saved); currentView = 'welcome'; } catch (e) {}
+        }
         const session = sessionStorage.getItem(SESSION_STATE_KEY);
         if (session) try { const s = JSON.parse(session);
             if (s.selectedLevels) selectedLevels = s.selectedLevels;
@@ -51,20 +57,19 @@
         return Date.now() >= record.nextReview;
     }
 
-    function clearStudent() { localStorage.removeItem(STUDENT_STORAGE_KEY); currentStudent = null; renderWelcomeScreen(); }
+    function clearStudent() {
+        localStorage.removeItem(STUDENT_STORAGE_KEY);
+        currentStudent = null;
+        currentView = 'login';
+        render();
+    }
 
     async function apiCall(endpoint, method = 'GET', data = null) {
         try {
             let url = endpoint;
-            let options = { method, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin' };
+            let options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
             if (data && method === 'POST') {
-                const formData = new URLSearchParams();
-                for (const key in data) {
-                    if (data.hasOwnProperty(key) && data[key] !== undefined && data[key] !== null && data[key] !== '') {
-                        formData.append(key, data[key]);
-                    }
-                }
-                options.body = formData.toString();
+                options.body = JSON.stringify(data);
             }
             const response = await fetch(url, options);
             const text = await response.text();
@@ -107,14 +112,16 @@
         return [];
     }
 
-    async function createOrGetStudent(name) {
-        try {
-            const res = await apiCall('api/create_student.php', 'POST', { name });
-            if (res && res.success && res.student) { saveStudent(res.student); return res.student; }
-        } catch (e) {}
-        const mockStudent = { id: Date.now(), name: name };
-        saveStudent(mockStudent);
-        return mockStudent;
+    async function loginOrRegister(name, password, action) {
+        const res = await apiCall('api/login.php', 'POST', { name, password, action });
+        if (res && res.success && res.student) {
+            saveStudent(res.student);
+            currentStudent = res.student;
+            currentView = 'welcome';
+            render();
+            return res.student;
+        }
+        return null;
     }
 
     async function recordReview(cardId, studentId, quality, wasCorrect) {
@@ -140,123 +147,62 @@
     const appEl = document.getElementById('appRoot');
 
     function render() {
-        if (currentView === 'welcome') renderWelcomeScreen();
+        if (currentView === 'login') renderLoginScreen();
+        else if (currentView === 'welcome') renderWelcomeScreen();
         else renderStudyScreen();
     }
 
-    async function renderWelcomeScreen() {
-        appEl.innerHTML = `<div class="whiteboard-card p-8 text-center"><div class="loader mx-auto mb-4"></div><p>Loading card sets...</p></div>`;
-        const sets = await loadCardSetsFromAPI();
-        const randomSelected = (currentSet === null || isRandomMode);
-        const setsHtml = `<option value="" ${randomSelected ? 'selected' : ''}>🎲 RANDOM MODE - All Sets</option>` +
-            sets.map(s => `<option value="${s.id}" ${currentSet?.id == s.id && !randomSelected ? 'selected' : ''}>📚 ${escapeHtml(s.name)}</option>`).join('');
-
-        const html = `
+    function renderLoginScreen() {
+        appEl.innerHTML = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
                 <div class="text-center mb-6 md:mb-8">
                     <div class="text-6xl md:text-7xl mb-2">🎓✏️</div>
                     <h1 class="text-3xl md:text-5xl text-blue-900 marker-underline">Flashcard Studio</h1>
-                    <p class="text-gray-600 text-base md:text-xl mt-2">spaced repetition · tap card to flip</p>
+                    <p class="text-gray-600 text-base md:text-xl mt-2">sign in to start studying</p>
                 </div>
-                <div class="space-y-5 md:space-y-7">
+                <div class="space-y-5 md:space-y-7 max-w-md mx-auto">
                     <div class="marker-border p-4 md:p-5 bg-white/80">
-                        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-                            <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Your Name</label>
-                            ${currentStudent ? `<span class="student-badge">✅ ${escapeHtml(currentStudent.name)}</span>` : ''}
-                        </div>
-                        <input type="text" id="studentNameInput" placeholder="Enter your name" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl" value="${currentStudent?.name || ''}">
+                        <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Name</label>
+                        <input type="text" id="authNameInput" placeholder="Enter your name" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
                     </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
-                        <label class="text-xl md:text-2xl font-bold text-gray-800 mb-2 title-font">📖 Card Set</label>
-                        <select id="setSelect" class="w-full p-2 md:p-3 text-base md:text-lg border-2 rounded-xl bg-white">${setsHtml}</select>
-                        <button id="refreshSetsBtn" class="mt-2 text-xs text-blue-600 underline">⟳ Refresh (show non-empty sets)</button>
+                        <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">🔒 Password</label>
+                        <input type="password" id="authPasswordInput" placeholder="Enter password" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
                     </div>
-                    <div class="marker-border p-4 md:p-5 bg-white/80">
-                        <label class="text-xl md:text-2xl font-bold text-gray-800 mb-3 title-font">🎯 Difficulty Levels</label>
-                        <div class="flex flex-wrap gap-2 md:gap-4">
-                            ${['Beginner', 'Intermediate', 'Advanced'].map(lvl => `
-                                <button data-level="${lvl}" class="level-picker px-4 md:px-6 py-1 md:py-2 text-sm md:text-xl rounded-full border-2 transition-all ${selectedLevels.includes(lvl) ? 'bg-blue-600 text-white border-blue-800' : 'bg-white border-gray-400 hover:bg-gray-100'}">${lvl}</button>
-                            `).join('')}
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">💡 Select levels, then click START to filter cards</p>
+                    <div class="flex gap-3">
+                        <button id="loginBtn" class="flex-1 bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🔑 LOG IN</button>
+                        <button id="registerBtn" class="flex-1 bg-green-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">✨ REGISTER</button>
                     </div>
-                    <button id="launchStudyBtn" class="w-full bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🚀 START STUDYING →</button>
-                    ${currentStudent ? `<button id="switchStudentBtn" class="w-full text-gray-500 py-2 text-xs md:text-sm underline">↺ Switch student</button>` : ''}
-                </div>
-                <div class="teacher-script mt-5 md:mt-6 p-2 md:p-3 text-center text-gray-500 text-xs md:text-sm bg-yellow-50 border border-yellow-200 rounded-lg">
-                    💡 Tap any card to flip it! For multiple choice, tap your answer then flip to check.
+                    <p id="authError" class="text-red-600 text-center hidden"></p>
                 </div>
             </div>
         `;
-        appEl.innerHTML = html;
 
-        document.querySelectorAll('.level-picker').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const lvl = btn.getAttribute('data-level');
-                if (selectedLevels.includes(lvl)) {
-                    selectedLevels = selectedLevels.filter(l => l !== lvl);
-                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-800');
-                    btn.classList.add('bg-white', 'border-gray-400', 'hover:bg-gray-100');
-                } else {
-                    selectedLevels.push(lvl);
-                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-800');
-                    btn.classList.remove('bg-white', 'border-gray-400', 'hover:bg-gray-100');
-                }
-                saveSessionState();
-            });
+        const showError = (msg) => {
+            const el = document.getElementById('authError');
+            if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+        };
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const name = document.getElementById('authNameInput').value.trim();
+            const password = document.getElementById('authPasswordInput').value;
+            if (!name || !password) { showError('Please fill in all fields'); return; }
+            const result = await loginOrRegister(name, password, 'login');
+            if (!result) showError('Invalid name or password');
         });
 
-        document.getElementById('refreshSetsBtn')?.addEventListener('click', async () => {
-            displayStatusMessage('Refreshing card sets (non-empty only)...', 'info');
-            const freshSets = await loadCardSetsFromAPI();
-            const selectEl = document.getElementById('setSelect');
-            if (selectEl && freshSets.length) {
-                const randomSelectedNow = (currentSet === null || isRandomMode);
-                selectEl.innerHTML = '<option value="" ' + (randomSelectedNow ? 'selected' : '') + '>🎲 RANDOM MODE - All Sets</option>' +
-                    freshSets.map(s => `<option value="${s.id}" ${currentSet?.id == s.id && !randomSelectedNow ? 'selected' : ''}>📚 ${escapeHtml(s.name)}</option>`).join('');
-                displayStatusMessage(`Loaded ${freshSets.length} card sets (only those with cards)`, 'success');
-            } else {
-                displayStatusMessage('No card sets with cards found!', 'warning');
-            }
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const name = document.getElementById('authNameInput').value.trim();
+            const password = document.getElementById('authPasswordInput').value;
+            if (!name || !password) { showError('Please fill in all fields'); return; }
+            if (password.length < 4) { showError('Password must be at least 4 characters'); return; }
+            const result = await loginOrRegister(name, password, 'register');
+            if (!result) showError('Name already taken. Try logging in.');
         });
 
-        document.getElementById('launchStudyBtn')?.addEventListener('click', async () => {
-            const name = document.getElementById('studentNameInput')?.value.trim();
-            if (!name) { alert('Please enter your name'); return; }
-            const setSelect = document.getElementById('setSelect');
-            const selectedValue = setSelect?.value;
-            const randomMode = (selectedValue === "");
-            let setId = null;
-            if (!randomMode) setId = parseInt(selectedValue);
-
-            const levelsToUse = selectedLevels.length > 0 ? selectedLevels : ['Beginner', 'Intermediate', 'Advanced'];
-
-            displayStatusMessage(randomMode ? 'Loading random cards from ALL sets...' : `Loading cards with levels: ${levelsToUse.join(', ')}...`, 'info');
-
-            const student = await createOrGetStudent(name);
-            currentStudent = student;
-            isRandomMode = randomMode;
-            currentSet = randomMode ? null : { id: setId };
-            saveSessionState();
-
-            const cards = await loadCardsFromAPI(setId, levelsToUse, currentStudent.id, randomMode);
-            if (!cards || cards.length === 0) {
-                alert('No cards found for the selected filters! Try different difficulty levels.');
-                return;
-            }
-            if (randomMode) {
-                for (let i = cards.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [cards[i], cards[j]] = [cards[j], cards[i]];
-                }
-            }
-            currentCards = cards;
-            currentIndex = 0;
-            currentView = 'study';
-            render();
+        document.getElementById('authPasswordInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('loginBtn').click();
         });
-
-        document.getElementById('switchStudentBtn')?.addEventListener('click', () => clearStudent());
     }
 
     function escapeHtml(str) {
@@ -299,6 +245,120 @@
             }
         }
         return '📝 Type the correct form of the verb in parentheses';
+    }
+
+    async function renderWelcomeScreen() {
+        appEl.innerHTML = `<div class="whiteboard-card p-8 text-center"><div class="loader mx-auto mb-4"></div><p>Loading card sets...</p></div>`;
+        const sets = await loadCardSetsFromAPI();
+        const randomSelected = (currentSet === null || isRandomMode);
+        const setsHtml = `<option value="" ${randomSelected ? 'selected' : ''}>🎲 RANDOM MODE - All Sets</option>` +
+            sets.map(s => `<option value="${s.id}" ${currentSet?.id == s.id && !randomSelected ? 'selected' : ''}>📚 ${escapeHtml(s.name)}</option>`).join('');
+
+        const html = `
+            <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
+                <div class="flex justify-end mb-2">
+                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.name)}</span>
+                    <a href="?logout=1" class="ml-2 text-xs text-gray-500 underline">Logout</a>
+                </div>
+                <div class="text-center mb-6 md:mb-8">
+                    <div class="text-6xl md:text-7xl mb-2">🎓✏️</div>
+                    <h1 class="text-3xl md:text-5xl text-blue-900 marker-underline">Flashcard Studio</h1>
+                    <p class="text-gray-600 text-base md:text-xl mt-2">spaced repetition · tap card to flip</p>
+                </div>
+                <div class="space-y-5 md:space-y-7">
+                    <div class="marker-border p-4 md:p-5 bg-white/80">
+                        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                            <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Student</label>
+                            <span class="student-badge">✅ ${escapeHtml(currentStudent?.name)}</span>
+                        </div>
+                    </div>
+                    <div class="marker-border p-4 md:p-5 bg-white/80">
+                        <label class="text-xl md:text-2xl font-bold text-gray-800 mb-2 title-font">📖 Card Set</label>
+                        <select id="setSelect" class="w-full p-2 md:p-3 text-base md:text-lg border-2 rounded-xl bg-white">${setsHtml}</select>
+                        <button id="refreshSetsBtn" class="mt-2 text-xs text-blue-600 underline">⟳ Refresh (show non-empty sets)</button>
+                    </div>
+                    <div class="marker-border p-4 md:p-5 bg-white/80">
+                        <label class="text-xl md:text-2xl font-bold text-gray-800 mb-3 title-font">🎯 Difficulty Levels</label>
+                        <div class="flex flex-wrap gap-2 md:gap-4">
+                            ${['Beginner', 'Intermediate', 'Advanced'].map(lvl => `
+                                <button data-level="${lvl}" class="level-picker px-4 md:px-6 py-1 md:py-2 text-sm md:text-xl rounded-full border-2 transition-all ${selectedLevels.includes(lvl) ? 'bg-blue-600 text-white border-blue-800' : 'bg-white border-gray-400 hover:bg-gray-100'}">${lvl}</button>
+                            `).join('')}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">💡 Select levels, then click START to filter cards</p>
+                    </div>
+                    <button id="launchStudyBtn" class="w-full bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🚀 START STUDYING →</button>
+                    <button id="switchStudentBtn" class="w-full text-gray-500 py-2 text-xs md:text-sm underline">↺ Switch student</button>
+                </div>
+                <div class="teacher-script mt-5 md:mt-6 p-2 md:p-3 text-center text-gray-500 text-xs md:text-sm bg-yellow-50 border border-yellow-200 rounded-lg">
+                    💡 Tap any card to flip it! For multiple choice, tap your answer then flip to check.
+                </div>
+            </div>
+        `;
+        appEl.innerHTML = html;
+
+        document.querySelectorAll('.level-picker').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lvl = btn.getAttribute('data-level');
+                if (selectedLevels.includes(lvl)) {
+                    selectedLevels = selectedLevels.filter(l => l !== lvl);
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-800');
+                    btn.classList.add('bg-white', 'border-gray-400', 'hover:bg-gray-100');
+                } else {
+                    selectedLevels.push(lvl);
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-800');
+                    btn.classList.remove('bg-white', 'border-gray-400', 'hover:bg-gray-100');
+                }
+                saveSessionState();
+            });
+        });
+
+        document.getElementById('refreshSetsBtn')?.addEventListener('click', async () => {
+            displayStatusMessage('Refreshing card sets (non-empty only)...', 'info');
+            const freshSets = await loadCardSetsFromAPI();
+            const selectEl = document.getElementById('setSelect');
+            if (selectEl && freshSets.length) {
+                const randomSelectedNow = (currentSet === null || isRandomMode);
+                selectEl.innerHTML = '<option value="" ' + (randomSelectedNow ? 'selected' : '') + '>🎲 RANDOM MODE - All Sets</option>' +
+                    freshSets.map(s => `<option value="${s.id}" ${currentSet?.id == s.id && !randomSelectedNow ? 'selected' : ''}>📚 ${escapeHtml(s.name)}</option>`).join('');
+                displayStatusMessage(`Loaded ${freshSets.length} card sets (only those with cards)`, 'success');
+            } else {
+                displayStatusMessage('No card sets with cards found!', 'warning');
+            }
+        });
+
+        document.getElementById('launchStudyBtn')?.addEventListener('click', async () => {
+            const setSelect = document.getElementById('setSelect');
+            const selectedValue = setSelect?.value;
+            const randomMode = (selectedValue === "");
+            let setId = null;
+            if (!randomMode) setId = parseInt(selectedValue);
+
+            const levelsToUse = selectedLevels.length > 0 ? selectedLevels : ['Beginner', 'Intermediate', 'Advanced'];
+
+            displayStatusMessage(randomMode ? 'Loading random cards from ALL sets...' : `Loading cards with levels: ${levelsToUse.join(', ')}...`, 'info');
+
+            isRandomMode = randomMode;
+            currentSet = randomMode ? null : { id: setId };
+            saveSessionState();
+
+            const cards = await loadCardsFromAPI(setId, levelsToUse, currentStudent.id, randomMode);
+            if (!cards || cards.length === 0) {
+                alert('No cards found for the selected filters! Try different difficulty levels.');
+                return;
+            }
+            if (randomMode) {
+                for (let i = cards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [cards[i], cards[j]] = [cards[j], cards[i]];
+                }
+            }
+            currentCards = cards;
+            currentIndex = 0;
+            currentView = 'study';
+            render();
+        });
+
+        document.getElementById('switchStudentBtn')?.addEventListener('click', () => clearStudent());
     }
 
     function renderCardFront(card) {

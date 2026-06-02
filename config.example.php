@@ -11,7 +11,4 @@ return [
         'user' => 'your_username',
         'pass' => 'your_password',
     ],
-    'admin' => [
-        'password' => 'change_this_password',
-    ],
 ];

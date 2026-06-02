@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Flashcard Studio</title>
+    <title>Admin Setup - Flashcard Studio</title>
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <style>
@@ -17,11 +17,11 @@
             justify-content: center;
             padding: 20px;
         }
-        .login-card {
+        .setup-card {
             background: white;
             border-radius: 24px;
             padding: 40px;
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
             border: 8px solid #374151;
@@ -36,7 +36,7 @@
             box-sizing: border-box;
         }
         button {
-            background: #1d4ed8;
+            background: #16a34a;
             color: white;
             border: none;
             padding: 12px 24px;
@@ -44,33 +44,29 @@
             font-size: 1.2rem;
             cursor: pointer;
             width: 100%;
-            margin-top: 8px;
+            margin-top: 12px;
             box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.2);
             transition: all 0.15s;
         }
         button:hover { transform: translateY(2px); box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.2); }
         .error { color: #dc2626; text-align: center; margin-top: 10px; }
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            color: #64748b;
-            text-decoration: none;
-        }
+        .hint { font-size: 0.8rem; color: #6b7280; margin: 4px 0 12px; }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h1 class="text-2xl text-center marker-underline" style="margin-bottom: 20px;">🔒 Admin Login</h1>
+    <div class="setup-card">
+        <h1 class="text-2xl text-center marker-underline" style="margin-bottom: 12px;">👑 First-Time Setup</h1>
+        <p class="text-center text-gray-600 mb-4">Create the first admin account.</p>
         <form method="post">
-            <input type="text" name="username" placeholder="Username" autofocus required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit" name="login">Sign In</button>
-            <?php if (isset($loginError)): ?>
-                <div class="error">❌ <?= escapeHtml($loginError) ?></div>
+            <input type="text" name="username" placeholder="Admin username" autofocus required>
+            <input type="password" name="password" placeholder="Admin password" required minlength="6">
+            <div class="hint">Minimum 6 characters.</div>
+            <button type="submit" name="setup">Create Admin Account</button>
+            <?php if (isset($setupError)): ?>
+                <div class="error">❌ <?= escapeHtml($setupError) ?></div>
             <?php endif; ?>
         </form>
-        <a href="index.php" class="back-link">← Back to Flashcards</a>
+        <a href="index.php" class="back-link" style="display:block;text-align:center;margin-top:20px;color:#64748b;text-decoration:none;">← Back to Flashcards</a>
     </div>
 </body>
 </html>

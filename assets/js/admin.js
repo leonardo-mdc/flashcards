@@ -14,6 +14,8 @@
     const frontPreviewContent = document.getElementById('frontPreviewContent');
     const backPreviewContent = document.getElementById('backPreviewContent');
 
+    // ── Helpers ──
+
     function escapeHtml(str) {
         if (!str) return '';
         return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
@@ -23,6 +25,8 @@
         if (!text) return '';
         return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
     }
+
+    // ── Card CRUD ──
 
     async function loadCardSets() {
         const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
@@ -364,6 +368,105 @@
         }
     }
 
+    // ── User Management ──
+
+    const cardEditorSection = document.getElementById('cardEditorSection');
+    const userManagementSection = document.getElementById('userManagementSection');
+    const userListContainer = document.getElementById('userListContainer');
+
+    function showCardEditor() {
+        if (cardEditorSection) cardEditorSection.classList.remove('hidden');
+        if (userManagementSection) userManagementSection.classList.add('hidden');
+    }
+
+    function showUserManagement() {
+        if (cardEditorSection) cardEditorSection.classList.add('hidden');
+        if (userManagementSection) userManagementSection.classList.remove('hidden');
+        loadUsers();
+    }
+
+    async function loadUsers() {
+        if (!userListContainer) return;
+        userListContainer.innerHTML = '<div class="text-center py-4"><div class="loader"></div> Loading users...</div>';
+
+        const response = await fetch('admin_cards.php?action=get_users&t=' + Date.now(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await response.json();
+        if (data.success && data.users) {
+            renderUsers(data.users);
+        } else {
+            userListContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading users</div>';
+        }
+    }
+
+    function renderUsers(users) {
+        if (!users.length) {
+            userListContainer.innerHTML = '<div class="text-center text-gray-500 py-4">No users found</div>';
+            return;
+        }
+
+        let html = '<table class="w-full" style="border-collapse:collapse;">';
+        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
+        users.forEach(user => {
+            html += `<tr>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.username)}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">User</span>'}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
+                    <button class="delete-user-btn btn btn-danger text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🗑 Delete</button>
+                </td>
+            </tr>`;
+        });
+        html += '</table>';
+
+        userListContainer.innerHTML = html;
+
+        document.querySelectorAll('.delete-user-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = parseInt(btn.dataset.id);
+                if (confirm('Delete this user? This action cannot be undone.')) {
+                    const response = await fetch(`admin_cards.php?action=delete_user&user_id=${userId}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        loadUsers();
+                    } else {
+                        alert(result.error || 'Error deleting user');
+                    }
+                }
+            });
+        });
+    }
+
+    async function createUser() {
+        const username = document.getElementById('newUserUsername')?.value.trim();
+        const password = document.getElementById('newUserPassword')?.value;
+        const isAdmin = document.getElementById('newUserIsAdmin')?.checked || false;
+
+        if (!username) { alert('Username is required'); return; }
+        if (!password || password.length < 6) { alert('Password must be at least 6 characters'); return; }
+
+        const response = await fetch('admin_cards.php?action=create_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ username, password, is_admin: isAdmin })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert('User created successfully!');
+            document.getElementById('newUserUsername').value = '';
+            document.getElementById('newUserPassword').value = '';
+            document.getElementById('newUserIsAdmin').checked = false;
+            loadUsers();
+        } else {
+            alert(result.error || 'Error creating user');
+        }
+    }
+
+    // ── Event wiring ──
+
+    // Card editor
     setSelector.addEventListener('change', () => {
         if (setSelector.value) {
             loadCards(setSelector.value);
@@ -396,5 +499,11 @@
         }
     }, 500);
 
+    // User management
+    document.getElementById('toggleUsersBtn')?.addEventListener('click', showUserManagement);
+    document.getElementById('backToCardsBtn')?.addEventListener('click', showCardEditor);
+    document.getElementById('createUserBtn')?.addEventListener('click', createUser);
+
+    // Init
     loadCardSets();
 })();

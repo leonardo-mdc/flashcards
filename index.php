@@ -1,18 +1,22 @@
 <?php
-/**
- * Flashcard Studio - Main Application Entry Point
- *
- * - Initializes database connection
- * - Passes card sets to JavaScript via FLASHCARD_DATA
- * - All rendering logic lives in assets/js/app.js
- */
+
+session_start();
 
 require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/CardSet.php';
+require_once __DIR__ . '/src/Student.php';
 
 $dbConnected = Database::testConnection();
 $cardSets = $dbConnected ? CardSet::getWithCards() : [];
+
+$loggedInStudent = isset($_SESSION['student_user']) ? $_SESSION['student_user'] : null;
+
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: index.php');
+    exit;
+}
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +35,8 @@ $cardSets = $dbConnected ? CardSet::getWithCards() : [];
     <script>
         window.FLASHCARD_DATA = {
             cardSets: <?= json_encode($cardSets) ?>,
-            dbConnected: <?= $dbConnected ? 'true' : 'false' ?>
+            dbConnected: <?= $dbConnected ? 'true' : 'false' ?>,
+            loggedInStudent: <?= json_encode($loggedInStudent) ?>
         };
     </script>
     <script src="assets/js/app.js"></script>

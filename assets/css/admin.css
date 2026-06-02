@@ -14,6 +14,21 @@ body {
     margin: 0;
     padding: 20px;
 }
+@media (max-width: 640px) {
+    body { padding: 8px; }
+    .whiteboard-card { padding: 12px !important; border-width: 4px; }
+    h1 { font-size: clamp(1.2rem, 5vw, 1.5rem) !important; }
+    h2 { font-size: clamp(1rem, 4.5vw, 1.3rem) !important; }
+    h3 { font-size: clamp(0.9rem, 4vw, 1.1rem) !important; }
+    .btn { font-size: clamp(0.65rem, 3vw, 0.8rem) !important; padding: 6px 14px !important; }
+    .form-input, .form-textarea, .form-select { font-size: clamp(0.8rem, 3.5vw, 0.95rem) !important; padding: 8px !important; }
+    .grid-2cols { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .preview-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .card-item { padding: 8px !important; }
+    .card-list { max-height: 300px !important; }
+    .card-word-preview { font-size: clamp(1.4rem, 6vw, 1.8rem) !important; margin-top: 30px; }
+    .card-front-preview, .card-back-preview { min-height: 240px !important; padding: 16px !important; }
+}
 .admin-container {
     max-width: 1600px;
     margin: 0 auto;
@@ -63,14 +78,14 @@ body {
     position: absolute;
     top: 10px;
     right: 15px;
-    font-size: 0.7rem;
+    font-size: clamp(0.55rem, 1.5vw, 0.7rem);
     background: #e2e8f0;
     padding: 2px 10px;
     border-radius: 20px;
     color: #475569;
 }
 .card-word-preview {
-    font-size: 2.5rem;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
     text-align: center;
     word-break: break-word;
     margin-top: 60px;
@@ -81,6 +96,7 @@ body {
     margin: 8px 0;
     border-radius: 12px;
     background: white;
+    font-size: clamp(0.8rem, 2vw, 0.95rem);
 }
 .quiz-option-preview.selected {
     background: #dbeafe;
@@ -93,6 +109,7 @@ body {
     cursor: pointer;
     transition: all 0.15s;
     box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.2);
+    font-size: clamp(0.75rem, 1.8vw, 0.9rem);
 }
 .btn:hover {
     transform: translateY(1px);
@@ -122,7 +139,7 @@ body {
     border-left: 4px solid #1d4ed8;
 }
 .card-type {
-    font-size: 0.7rem;
+    font-size: clamp(0.55rem, 1.5vw, 0.7rem);
     background: #e2e8f0;
     padding: 2px 8px;
     border-radius: 20px;
@@ -136,7 +153,7 @@ body {
     padding: 10px;
     border: 2px solid #e2e8f0;
     border-radius: 12px;
-    font-size: 1rem;
+    font-size: clamp(0.85rem, 2vw, 1rem);
     margin-bottom: 12px;
     background: white;
 }
@@ -176,11 +193,11 @@ body {
     margin-bottom: 20px;
     color: #1f2937;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: clamp(0.75rem, 2vw, 0.9rem);
 }
 .back-link:hover { text-decoration: underline; }
 .help-text {
-    font-size: 0.7rem;
+    font-size: clamp(0.55rem, 1.5vw, 0.7rem);
     color: #6b7280;
     margin-top: -8px;
     margin-bottom: 12px;
@@ -189,6 +206,6 @@ body {
     background: #fef3c7;
     padding: 4px 8px;
     border-radius: 8px;
-    font-size: 0.7rem;
+    font-size: clamp(0.55rem, 1.5vw, 0.7rem);
     display: inline-block;
 }
