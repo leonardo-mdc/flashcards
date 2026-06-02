@@ -32,9 +32,25 @@ class Review
         }
     }
 
+    public static function ensureHistoryTable(): void
+    {
+        $pdo = Database::getConnection();
+        $pdo->exec("CREATE TABLE IF NOT EXISTS review_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            card_id INT NOT NULL,
+            quality INT NOT NULL,
+            was_correct TINYINT(1) DEFAULT 0,
+            reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+        )");
+    }
+
     public static function record(int $cardId, int $userId, int $quality, bool $wasCorrect): void
     {
         self::ensureTable();
+        self::ensureHistoryTable();
         $pdo = Database::getConnection();
 
         $daysToAdd = match ($quality) {
@@ -65,5 +81,49 @@ class Review
             ");
             $stmt->execute([$userId, $cardId, $nextReview, $today, $wasCorrect ? 1 : 0]);
         }
+
+        $stmt = $pdo->prepare("INSERT INTO review_history (user_id, card_id, quality, was_correct) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$userId, $cardId, $quality, $wasCorrect ? 1 : 0]);
+    }
+
+    public static function getStats(int $userId): array
+    {
+        self::ensureHistoryTable();
+        $pdo = Database::getConnection();
+
+        $total = $pdo->prepare("SELECT COUNT(*) FROM review_history WHERE user_id = ?");
+        $total->execute([$userId]);
+        $totalReviews = (int) $total->fetchColumn();
+
+        $correct = $pdo->prepare("SELECT COUNT(*) FROM review_history WHERE user_id = ? AND was_correct = 1");
+        $correct->execute([$userId]);
+        $correctCount = (int) $correct->fetchColumn();
+
+        $distinctCards = $pdo->prepare("SELECT COUNT(DISTINCT card_id) FROM review_history WHERE user_id = ?");
+        $distinctCards->execute([$userId]);
+        $cardsReviewed = (int) $distinctCards->fetchColumn();
+
+        $daily = $pdo->prepare("
+            SELECT DATE(reviewed_at) as day, COUNT(*) as count
+            FROM review_history
+            WHERE user_id = ? AND reviewed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY DATE(reviewed_at)
+            ORDER BY day ASC
+        ");
+        $daily->execute([$userId]);
+        $dailyStats = $daily->fetchAll();
+
+        $upcoming = $pdo->prepare("SELECT COUNT(*) FROM user_card_progress WHERE user_id = ? AND next_review <= CURDATE()");
+        $upcoming->execute([$userId]);
+        $dueToday = (int) $upcoming->fetchColumn();
+
+        return [
+            'total_reviews' => $totalReviews,
+            'correct_count' => $correctCount,
+            'incorrect_count' => $totalReviews - $correctCount,
+            'cards_reviewed' => $cardsReviewed,
+            'daily' => $dailyStats,
+            'due_today' => $dueToday,
+        ];
     }
 }

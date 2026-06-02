@@ -7,6 +7,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/Review.php';
+require_once __DIR__ . '/../src/User.php';
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -26,6 +27,15 @@ try {
 
     Review::record($cardId, $userId, $quality, $wasCorrect);
 
+    $stats = Review::getStats($userId);
+    $totalCards = 0;
+    $pdo = Database::getConnection();
+    $stmt = $pdo->query("SELECT COUNT(*) FROM cards");
+    $totalCards = (int) $stmt->fetchColumn();
+    $progressPercent = $totalCards > 0 ? min(100, (int) round(($stats['cards_reviewed'] / $totalCards) * 100)) : 0;
+    $user = User::getById($userId);
+    User::updateProgress($userId, $progressPercent, $user['english_level'] ?? 'Beginner');
+
     $daysToAdd = match ($quality) {
         0 => 1,
         2 => 3,
@@ -40,6 +50,7 @@ try {
         'next_review' => $nextReview,
         'days_added' => $daysToAdd,
         'quality' => $quality,
+        'progress' => $progressPercent,
     ]);
 } catch (PDOException $e) {
     echo json_encode([

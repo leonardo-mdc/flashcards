@@ -12,6 +12,7 @@ try {
     $setId = null;
     $studentId = 0;
     $selectedLevels = [];
+    $studentLevel = null;
     $randomMode = false;
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -20,12 +21,14 @@ try {
         $studentId = isset($input['student_id']) ? (int) $input['student_id'] : 0;
         $selectedLevels = isset($input['levels']) ? $input['levels'] : [];
         $randomMode = isset($input['random_mode']) && ($input['random_mode'] === true || $input['random_mode'] === 'true');
+        $studentLevel = isset($input['student_level']) ? $input['student_level'] : null;
     }
 
     if (!$input) {
         $setId = isset($_POST['set_id']) ? (int) $_POST['set_id'] : (isset($_GET['set_id']) ? (int) $_GET['set_id'] : null);
         $studentId = isset($_POST['student_id']) ? (int) $_POST['student_id'] : (isset($_GET['student_id']) ? (int) $_GET['student_id'] : 0);
         $randomMode = isset($_POST['random_mode']) ? ($_POST['random_mode'] === 'true') : (isset($_GET['random_mode']) ? ($_GET['random_mode'] === 'true') : false);
+        $studentLevel = isset($_POST['student_level']) ? $_POST['student_level'] : (isset($_GET['student_level']) ? $_GET['student_level'] : null);
 
         if (isset($_POST['levels'])) {
             if (is_array($_POST['levels'])) {
@@ -46,7 +49,11 @@ try {
     }
 
     if (empty($selectedLevels)) {
-        $selectedLevels = ['Beginner', 'Intermediate', 'Advanced'];
+        if ($studentLevel && $studentLevel !== '') {
+            $selectedLevels = [$studentLevel, 'Beginner', 'Intermediate', 'Advanced'];
+        } else {
+            $selectedLevels = ['Beginner', 'Intermediate', 'Advanced'];
+        }
     }
 
     $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode);

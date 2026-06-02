@@ -11,10 +11,7 @@
     let availableCardSets = [];
     let isRandomMode = false;
 
-    const STUDENT_STORAGE_KEY = 'flashcard_student';
     const SESSION_STATE_KEY = 'flashcard_session';
-    const PROGRESS_STORAGE_KEY = 'flashcard_progress';
-    let localProgress = {};
 
     const phpCardSets = window.FLASHCARD_DATA.cardSets;
     const dbConnected = window.FLASHCARD_DATA.dbConnected;
@@ -31,26 +28,10 @@
             if (s.currentSet) currentSet = s.currentSet;
             if (s.isRandomMode) isRandomMode = s.isRandomMode;
         } catch (e) {}
-        const prog = localStorage.getItem(PROGRESS_STORAGE_KEY);
-        if (prog) try { localProgress = JSON.parse(prog); } catch (e) {}
     }
 
     function saveSessionState() {
         sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify({ selectedLevels, currentSet, isRandomMode }));
-    }
-
-    function saveProgress(cardId, quality, wasCorrect) {
-        const key = `${currentStudent?.id}_${cardId}`;
-        let nextReview = quality === 0 ? Date.now() + 86400000 : (quality === 2 ? Date.now() + 259200000 : Date.now() + 604800000);
-        localProgress[key] = { quality, timestamp: Date.now(), nextReview, wasCorrect: wasCorrect !== false };
-        localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(localProgress));
-    }
-
-    function isCardDue(cardId) {
-        const key = `${currentStudent?.id}_${cardId}`;
-        const record = localProgress[key];
-        if (!record) return true;
-        return Date.now() >= record.nextReview;
     }
 
     function clearStudent() {
@@ -94,13 +75,14 @@
         return availableCardSets;
     }
 
-    async function loadCardsFromAPI(setId, levels, studentId, randomMode = false) {
+    async function loadCardsFromAPI(setId, levels, studentId, randomMode = false, studentLevel = '') {
         try {
             const res = await apiCall('api/get_cards.php', 'POST', {
                 set_id: (randomMode || setId === null) ? '' : setId.toString(),
                 student_id: studentId,
                 levels: levels,
-                random_mode: randomMode ? 'true' : 'false'
+                random_mode: randomMode ? 'true' : 'false',
+                student_level: studentLevel
             });
             if (res && res.success && res.cards && res.cards.length > 0) return res.cards;
         } catch (e) {}
@@ -119,9 +101,17 @@
     }
 
     async function recordReview(cardId, studentId, quality, wasCorrect) {
-        try { await apiCall('api/record_review.php', 'POST', { card_id: cardId, user_id: studentId, quality, correct: wasCorrect }); } catch (e) {}
-        saveProgress(cardId, quality, wasCorrect);
-        return true;
+        try {
+            const res = await apiCall('api/record_review.php', 'POST', { card_id: cardId, user_id: studentId, quality, correct: wasCorrect });
+            if (res && res.progress !== undefined) {
+                currentStudent.progress = res.progress;
+            }
+        } catch (e) {}
+    }
+
+    async function loadStats() {
+        const res = await apiCall('api/get_stats.php', 'POST', { user_id: currentStudent?.id });
+        return res?.stats || null;
     }
 
     let statusTimeout;
@@ -277,6 +267,8 @@
         const setsHtml = `<option value="" ${randomSelected ? 'selected' : ''}>🎲 RANDOM MODE - All Sets</option>` +
             sets.map(s => `<option value="${s.id}" ${currentSet?.id == s.id && !randomSelected ? 'selected' : ''}>📚 ${escapeHtml(s.name)}</option>`).join('');
 
+        const stats = await loadStats();
+
         const html = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
                 <div class="flex justify-end mb-2">
@@ -303,6 +295,41 @@
                             <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
                         </div>
                     </div>
+                    ${stats ? `
+                    <div class="marker-border p-4 md:p-5 bg-white/80">
+                        <label class="text-xl md:text-2xl font-bold text-gray-800 mb-3 title-font">📈 Study Stats</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                            <div class="bg-blue-50 p-3 rounded-xl">
+                                <div class="text-2xl font-bold text-blue-700">${stats.total_reviews}</div>
+                                <div class="text-xs text-gray-600">Total Reviews</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-xl">
+                                <div class="text-2xl font-bold text-green-700">${stats.correct_count}</div>
+                                <div class="text-xs text-gray-600">Correct</div>
+                            </div>
+                            <div class="bg-red-50 p-3 rounded-xl">
+                                <div class="text-2xl font-bold text-red-700">${stats.incorrect_count}</div>
+                                <div class="text-xs text-gray-600">Incorrect</div>
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded-xl">
+                                <div class="text-2xl font-bold text-purple-700">${stats.cards_reviewed}</div>
+                                <div class="text-xs text-gray-600">Cards Seen</div>
+                            </div>
+                        </div>
+                        ${stats.daily && stats.daily.length > 0 ? `
+                        <div class="mt-3">
+                            <div class="text-xs text-gray-500 mb-1">Last 30 days</div>
+                            <div class="flex items-end gap-1" style="height:40px;">
+                                ${stats.daily.map(d => {
+                                    const max = Math.max(...stats.daily.map(x => parseInt(x.count)), 1);
+                                    const h = Math.round((parseInt(d.count) / max) * 36);
+                                    return `<div title="${d.day}: ${d.count}" style="height:${h}px;width:8px;background:#3b82f6;border-radius:2px 2px 0 0;flex-shrink:0;"></div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    ` : ''}
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 mb-2 title-font">📖 Card Set</label>
                         <select id="setSelect" class="w-full p-2 md:p-3 text-base md:text-lg border-2 rounded-xl bg-white">${setsHtml}</select>
@@ -310,6 +337,7 @@
                     </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 mb-3 title-font">🎯 Difficulty Levels</label>
+                        <p class="text-xs text-gray-500 mb-2">Leave unselected to auto-pick your level (${escapeHtml(currentStudent?.english_level || 'Beginner')})</p>
                         <div class="flex flex-wrap gap-2 md:gap-4">
                             ${['Beginner', 'Intermediate', 'Advanced'].map(lvl => `
                                 <button data-level="${lvl}" class="level-picker px-4 md:px-6 py-1 md:py-2 text-sm md:text-xl rounded-full border-2 transition-all ${selectedLevels.includes(lvl) ? 'bg-blue-600 text-white border-blue-800' : 'bg-white border-gray-400 hover:bg-gray-100'}">${lvl}</button>
@@ -364,16 +392,28 @@
             let setId = null;
             if (!randomMode) setId = parseInt(selectedValue);
 
-            const levelsToUse = selectedLevels.length > 0 ? selectedLevels : ['Beginner', 'Intermediate', 'Advanced'];
+            const levelsToUse = selectedLevels.length > 0 ? selectedLevels : [];
+            const studentLevel = currentStudent?.english_level || '';
 
-            displayStatusMessage(randomMode ? 'Loading random cards from ALL sets...' : `Loading cards with levels: ${levelsToUse.join(', ')}...`, 'info');
+            displayStatusMessage(randomMode ? 'Loading random cards from ALL sets...' : `Loading cards...`, 'info');
 
             isRandomMode = randomMode;
             currentSet = randomMode ? null : { id: setId };
             saveSessionState();
 
-            const cards = await loadCardsFromAPI(setId, levelsToUse, currentStudent.id, randomMode);
+            const cards = await loadCardsFromAPI(setId, levelsToUse, currentStudent.id, randomMode, studentLevel);
             if (!cards || cards.length === 0) {
+                if (selectedLevels.length === 0) {
+                    displayStatusMessage('No cards at your level. Trying all levels...', 'warning');
+                    const fallback = await loadCardsFromAPI(setId, ['Beginner', 'Intermediate', 'Advanced'], currentStudent.id, randomMode);
+                    if (fallback && fallback.length > 0) {
+                        currentCards = fallback;
+                        currentIndex = 0;
+                        currentView = 'study';
+                        render();
+                        return;
+                    }
+                }
                 alert('No cards found for the selected filters! Try different difficulty levels.');
                 return;
             }
