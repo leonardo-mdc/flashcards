@@ -281,6 +281,7 @@
                     <p class="text-gray-600 text-base md:text-xl mt-2">spaced repetition · tap card to flip</p>
                 </div>
                 <div class="space-y-5 md:space-y-7">
+                    <div class="md:grid md:grid-cols-2 md:gap-5">
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Student</label>
@@ -330,6 +331,7 @@
                         ` : ''}
                     </div>
                     ` : ''}
+                    </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 mb-2 title-font">📖 Card Set</label>
                         <select id="setSelect" class="w-full p-2 md:p-3 text-base md:text-lg border-2 rounded-xl bg-white">${setsHtml}</select>
