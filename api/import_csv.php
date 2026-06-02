@@ -66,6 +66,7 @@ try {
         $title = trim($data['title'] ?? '');
         $level = trim($data['level'] ?? '');
         $setName = trim($data['set'] ?? '');
+        $setIdRaw = trim($data['set_id'] ?? '');
 
         if (empty($title) || empty($type)) continue;
 
@@ -79,14 +80,20 @@ try {
             $level = 'Beginner';
         }
 
-        $setId = 1;
+        $setId = 0;
+        if ($setIdRaw !== '' && is_numeric($setIdRaw) && (int)$setIdRaw > 0) {
+            $setId = (int) $setIdRaw;
+        }
         if (!empty($setName)) {
             $existing = CardSet::getIdByName($setName);
             if ($existing !== null) {
                 $setId = $existing;
-            } else {
+            } elseif ($setId === 0) {
                 $setId = CardSet::create($setName);
             }
+        }
+        if ($setId === 0) {
+            $setId = 1;
         }
 
         $questionText = trim($data['question_text'] ?? '');

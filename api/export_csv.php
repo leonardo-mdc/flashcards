@@ -29,7 +29,7 @@ header('Content-Disposition: attachment; filename="cards_export.csv');
 $out = fopen('php://output', 'w');
 
 fputcsv($out, [
-    'id', 'set', 'type', 'title', 'level',
+    'id', 'set', 'set_id', 'type', 'title', 'level',
     'question_text', 'definition', 'sentence',
     'opt1', 'opt2', 'opt3', 'opt4',
     'correct_answer', 'explanation',
@@ -44,6 +44,7 @@ foreach ($cards as $card) {
     $row = [
         'id'             => $card['id'],
         'set'            => $card['set_name'] ?? '',
+        'set_id'         => $card['set_id'],
         'type'           => $type,
         'title'          => $card['title'] ?? '',
         'level'          => $card['level'] ?? 'Beginner',
