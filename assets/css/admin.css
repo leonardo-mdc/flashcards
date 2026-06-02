@@ -209,3 +209,29 @@ body {
     font-size: clamp(0.55rem, 1.5vw, 0.7rem);
     display: inline-block;
 }
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.set-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.set-item .set-name-display {
+    flex: 1;
+}
+.set-item .set-name-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}

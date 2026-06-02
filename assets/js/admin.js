@@ -591,5 +591,163 @@
     document.getElementById('backToCardsBtn')?.addEventListener('click', showCardEditor);
     document.getElementById('createUserBtn')?.addEventListener('click', createUser);
 
+    // --- Manage Sets ---
+    const manageSetsModal = document.getElementById('manageSetsModal');
+    const setListContainer = document.getElementById('setListContainer');
+
+    async function loadSetsList() {
+        if (!setListContainer) return;
+        setListContainer.innerHTML = '<div class="text-center text-gray-500 py-4"><div class="loader"></div> Loading...</div>';
+        const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await response.json();
+        if (!data.success || !data.sets) {
+            setListContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading sets</div>';
+            return;
+        }
+        let html = '';
+        data.sets.forEach(set => {
+            html += `
+                <div class="set-item" data-id="${set.id}">
+                    <span class="set-name-display font-bold">${escapeHtml(set.name)}</span>
+                    <input type="text" class="set-name-input hidden" value="${escapeHtml(set.name)}">
+                    <button class="edit-set-btn btn btn-primary text-xs" style="padding:4px 10px;font-size:0.7rem;">✏️</button>
+                    <button class="save-set-btn btn btn-success text-xs hidden" style="padding:4px 10px;font-size:0.7rem;">💾</button>
+                    <button class="cancel-set-btn btn btn-secondary text-xs hidden" style="padding:4px 10px;font-size:0.7rem;">✕</button>
+                    <button class="delete-set-btn btn btn-danger text-xs" style="padding:4px 10px;font-size:0.7rem;">🗑</button>
+                </div>`;
+        });
+        setListContainer.innerHTML = html;
+
+        document.querySelectorAll('.edit-set-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = btn.closest('.set-item');
+                item.querySelector('.set-name-display').classList.add('hidden');
+                item.querySelector('.set-name-input').classList.remove('hidden');
+                btn.classList.add('hidden');
+                item.querySelector('.save-set-btn').classList.remove('hidden');
+                item.querySelector('.cancel-set-btn').classList.remove('hidden');
+                item.querySelector('.delete-set-btn').classList.add('hidden');
+                item.querySelector('.set-name-input').focus();
+            });
+        });
+
+        document.querySelectorAll('.cancel-set-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = btn.closest('.set-item');
+                item.querySelector('.set-name-display').classList.remove('hidden');
+                item.querySelector('.set-name-input').classList.add('hidden');
+                item.querySelector('.edit-set-btn').classList.remove('hidden');
+                btn.classList.add('hidden');
+                item.querySelector('.save-set-btn').classList.add('hidden');
+                item.querySelector('.cancel-set-btn').classList.add('hidden');
+                item.querySelector('.delete-set-btn').classList.remove('hidden');
+                item.querySelector('.set-name-input').value = item.querySelector('.set-name-display').textContent.trim();
+            });
+        });
+
+        document.querySelectorAll('.save-set-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = btn.closest('.set-item');
+                const id = parseInt(item.dataset.id);
+                const name = item.querySelector('.set-name-input').value.trim();
+                if (!name) { alert('Name cannot be empty'); return; }
+                const response = await fetch('admin_cards.php?action=update_set', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ id, name })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    await refreshSets();
+                    loadSetsList();
+                } else {
+                    alert(result.error || 'Error updating set');
+                }
+            });
+        });
+
+        document.querySelectorAll('.delete-set-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = btn.closest('.set-item');
+                const id = parseInt(item.dataset.id);
+                if (confirm('Delete this card set? Cards in this set will remain but become orphaned.')) {
+                    const response = await fetch(`admin_cards.php?action=delete_set&set_id=${id}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        await refreshSets();
+                        loadSetsList();
+                    } else {
+                        alert(result.error || 'Error deleting set');
+                    }
+                }
+            });
+        });
+    }
+
+    async function refreshSets() {
+        const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await response.json();
+        if (data.success && data.sets) {
+            const currentVal = setSelector.value;
+            setSelector.innerHTML = '<option value="">-- Choose Card Set --</option>';
+            if (editSetId) {
+                const currentEditVal = editSetId.value;
+                editSetId.innerHTML = '';
+                data.sets.forEach(set => {
+                    setSelector.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
+                    editSetId.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
+                });
+                if (currentEditVal) editSetId.value = currentEditVal;
+            } else {
+                data.sets.forEach(set => {
+                    setSelector.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
+                });
+            }
+            if (currentVal) setSelector.value = currentVal;
+        }
+    }
+
+    document.getElementById('manageSetsBtn')?.addEventListener('click', () => {
+        manageSetsModal.classList.remove('hidden');
+        loadSetsList();
+    });
+
+    document.getElementById('closeSetsModalBtn')?.addEventListener('click', () => {
+        manageSetsModal.classList.add('hidden');
+    });
+
+    manageSetsModal?.addEventListener('click', (e) => {
+        if (e.target === manageSetsModal) manageSetsModal.classList.add('hidden');
+    });
+
+    document.getElementById('addSetBtn')?.addEventListener('click', async () => {
+        const input = document.getElementById('newSetNameInput');
+        const name = input.value.trim();
+        if (!name) { alert('Enter a name for the new set'); return; }
+        const response = await fetch('admin_cards.php?action=create_set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ name })
+        });
+        const result = await response.json();
+        if (result.success) {
+            input.value = '';
+            await refreshSets();
+            loadSetsList();
+        } else {
+            alert(result.error || 'Error creating set');
+        }
+    });
+
+    document.getElementById('newSetNameInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('addSetBtn').click();
+    });
+
     loadCardSets();
 })();

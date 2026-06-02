@@ -30,4 +30,26 @@ class CardSet
         $row = $stmt->fetch();
         return $row ? $row['name'] : null;
     }
+
+    public static function create(string $name): int
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("INSERT INTO card_sets (name) VALUES (?)");
+        $stmt->execute([$name]);
+        return (int) $pdo->lastInsertId();
+    }
+
+    public static function update(int $id, string $name): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE card_sets SET name = ? WHERE id = ?");
+        $stmt->execute([$name, $id]);
+    }
+
+    public static function delete(int $id): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("DELETE FROM card_sets WHERE id = ?");
+        $stmt->execute([$id]);
+    }
 }

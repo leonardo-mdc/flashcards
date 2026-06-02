@@ -128,6 +128,33 @@ if ($isAjax && isset($_GET['action'])) {
             }
             User::delete($userId);
             echo json_encode(['success' => true]);
+        } elseif ($action === 'create_set') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $name = trim($data['name'] ?? '');
+            if ($name === '') {
+                echo json_encode(['success' => false, 'error' => 'Name is required']);
+                exit;
+            }
+            $id = CardSet::create($name);
+            echo json_encode(['success' => true, 'id' => $id, 'name' => $name]);
+        } elseif ($action === 'update_set') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $id = (int) ($data['id'] ?? 0);
+            $name = trim($data['name'] ?? '');
+            if ($id <= 0 || $name === '') {
+                echo json_encode(['success' => false, 'error' => 'Invalid data']);
+                exit;
+            }
+            CardSet::update($id, $name);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'delete_set') {
+            $id = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 0;
+            if ($id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid set']);
+                exit;
+            }
+            CardSet::delete($id);
+            echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
         }
@@ -183,6 +210,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                             <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <button id="manageSetsBtn" class="btn btn-secondary text-sm">⚙️ Manage</button>
                     <div class="flex gap-2">
                         <button id="saveCardBtn" class="btn btn-success">💾 SAVE</button>
                         <button id="revertCardBtn" class="btn btn-warning">↺ REVERT</button>
@@ -314,6 +342,22 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         </div>
     </div>
 </div>
+
+    <div id="manageSetsModal" class="modal-overlay hidden">
+        <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg marker-underline">⚙️ Manage Card Sets</h3>
+                <button id="closeSetsModalBtn" class="text-gray-500 text-xl font-bold">&times;</button>
+            </div>
+            <div class="mb-3 flex gap-2">
+                <input type="text" id="newSetNameInput" class="form-input flex-1" placeholder="New set name...">
+                <button id="addSetBtn" class="btn btn-success whitespace-nowrap">➕ Add</button>
+            </div>
+            <div id="setListContainer">
+                <div class="text-center text-gray-500 py-4">Loading...</div>
+            </div>
+        </div>
+    </div>
 
 <script src="assets/js/admin.js"></script>
 </body>
