@@ -1,7 +1,5 @@
 <?php
-/**
- * CardSet model — queries the card_sets table.
- */
+
 class CardSet
 {
     public static function getAll(): array

@@ -1,7 +1,5 @@
 <?php
-/**
- * Card model — queries and mutations on the cards table.
- */
+
 class Card
 {
     public static function getBySetAndLevels(

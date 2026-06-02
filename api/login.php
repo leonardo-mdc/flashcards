@@ -4,7 +4,7 @@ session_start();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../src/Database.php';
-require_once __DIR__ . '/../src/Student.php';
+require_once __DIR__ . '/../src/User.php';
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -22,21 +22,21 @@ try {
             echo json_encode(['success' => false, 'error' => 'Password must be at least 4 characters']);
             exit;
         }
-        $student = Student::register($name, $password);
-        if (!$student) {
+        $user = User::register($name, $password);
+        if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Name already taken. Please log in.']);
             exit;
         }
-        $_SESSION['student_user'] = $student;
-        echo json_encode(['success' => true, 'student' => $student, 'new' => true]);
+        $_SESSION['student_user'] = $user;
+        echo json_encode(['success' => true, 'student' => $user, 'new' => true]);
     } else {
-        $student = Student::authenticate($name, $password);
-        if (!$student) {
+        $user = User::authenticate($name, $password);
+        if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Invalid name or password']);
             exit;
         }
-        $_SESSION['student_user'] = $student;
-        echo json_encode(['success' => true, 'student' => $student, 'new' => false]);
+        $_SESSION['student_user'] = $user;
+        echo json_encode(['success' => true, 'student' => $user, 'new' => false]);
     }
 } catch (PDOException $e) {
     echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);

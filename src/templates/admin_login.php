@@ -50,13 +50,6 @@
         }
         button:hover { transform: translateY(2px); box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.2); }
         .error { color: #dc2626; text-align: center; margin-top: 10px; }
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            color: #64748b;
-            text-decoration: none;
-        }
     </style>
 </head>
 <body>
@@ -70,7 +63,7 @@
                 <div class="error">❌ <?= escapeHtml($loginError) ?></div>
             <?php endif; ?>
         </form>
-        <a href="index.php" class="back-link">← Back to Flashcards</a>
+        <a href="index.php" style="display:block;text-align:center;margin-top:20px;color:#64748b;text-decoration:none;">← Back to Flashcards</a>
     </div>
 </body>
 </html>

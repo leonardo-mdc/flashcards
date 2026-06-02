@@ -1,8 +1,5 @@
 <?php
-/**
- * Database connection singleton.
- * All PDO instances share the same connection via ::getConnection().
- */
+
 class Database
 {
     private static ?PDO $instance = null;

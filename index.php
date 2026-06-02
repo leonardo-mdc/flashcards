@@ -5,7 +5,7 @@ session_start();
 require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/CardSet.php';
-require_once __DIR__ . '/src/Student.php';
+require_once __DIR__ . '/src/User.php';
 
 $dbConnected = Database::testConnection();
 $cardSets = $dbConnected ? CardSet::getWithCards() : [];

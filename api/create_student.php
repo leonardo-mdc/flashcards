@@ -10,34 +10,22 @@ require_once __DIR__ . '/../src/Student.php';
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
-    $action = $input['action'] ?? 'login';
     $studentName = isset($input['name']) ? trim($input['name']) : '';
-    $password = $input['password'] ?? '';
 
-    if (empty($studentName) || empty($password)) {
-        echo json_encode(['success' => false, 'error' => 'Name and password are required']);
+    if (empty($studentName)) {
+        echo json_encode(['success' => false, 'error' => 'Student name is required']);
         exit;
     }
 
-    if ($action === 'register') {
-        if (strlen($password) < 4) {
-            echo json_encode(['success' => false, 'error' => 'Password must be at least 4 characters']);
-            exit;
-        }
-        $student = Student::register($studentName, $password);
-        if (!$student) {
-            echo json_encode(['success' => false, 'error' => 'Name already taken. Please log in.']);
-            exit;
-        }
-        echo json_encode(['success' => true, 'student' => $student, 'new' => true]);
-    } else {
-        $student = Student::authenticate($studentName, $password);
-        if (!$student) {
-            echo json_encode(['success' => false, 'error' => 'Invalid name or password']);
-            exit;
-        }
-        echo json_encode(['success' => true, 'student' => $student, 'new' => false]);
-    }
+    $student = Student::createOrGet($studentName);
+    echo json_encode([
+        'success' => true,
+        'student' => $student,
+        'existing' => isset($student['id']),
+    ]);
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Database error: ' . $e->getMessage(),
+    ]);
 }

@@ -14,8 +14,6 @@
     const frontPreviewContent = document.getElementById('frontPreviewContent');
     const backPreviewContent = document.getElementById('backPreviewContent');
 
-    // ── Helpers ──
-
     function escapeHtml(str) {
         if (!str) return '';
         return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
@@ -25,8 +23,6 @@
         if (!text) return '';
         return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
     }
-
-    // ── Card CRUD ──
 
     async function loadCardSets() {
         const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
@@ -368,8 +364,6 @@
         }
     }
 
-    // ── User Management ──
-
     const cardEditorSection = document.getElementById('cardEditorSection');
     const userManagementSection = document.getElementById('userManagementSection');
     const userListContainer = document.getElementById('userListContainer');
@@ -407,11 +401,13 @@
         }
 
         let html = '<table class="w-full" style="border-collapse:collapse;">';
-        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
+        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Progress</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Level</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
         users.forEach(user => {
             html += `<tr>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.username)}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">User</span>'}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">Student</span>'}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.progress || 0}%</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.english_level || 'Beginner')}</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
                     <button class="delete-user-btn btn btn-danger text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🗑 Delete</button>
                 </td>
@@ -464,9 +460,6 @@
         }
     }
 
-    // ── Event wiring ──
-
-    // Card editor
     setSelector.addEventListener('change', () => {
         if (setSelector.value) {
             loadCards(setSelector.value);
@@ -499,11 +492,9 @@
         }
     }, 500);
 
-    // User management
     document.getElementById('toggleUsersBtn')?.addEventListener('click', showUserManagement);
     document.getElementById('backToCardsBtn')?.addEventListener('click', showCardEditor);
     document.getElementById('createUserBtn')?.addEventListener('click', createUser);
 
-    // Init
     loadCardSets();
 })();

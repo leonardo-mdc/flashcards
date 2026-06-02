@@ -1,7 +1,4 @@
 <?php
-/**
- * Shared utility functions.
- */
 
 function escapeHtml($str): string
 {

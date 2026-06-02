@@ -147,7 +147,6 @@ body {
     .flashcard-container { min-height: 360px !important; }
     .flashcard { min-height: 360px !important; }
     .card-front, .card-back { padding: 10px !important; }
-    .flex-wrap.gap-2.md\:gap-3 { gap: 6px !important; }
     #againBtn, #goodBtn, #easyBtn { font-size: clamp(0.6rem, 2.8vw, 0.75rem) !important; padding: 6px 10px !important; }
     .flip-btn { font-size: clamp(0.6rem, 2.8vw, 0.75rem) !important; padding: 4px 10px !important; }
 }

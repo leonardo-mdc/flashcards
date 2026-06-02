@@ -1,12 +1,4 @@
 <?php
-/**
- * Admin Panel - Entry Point
- *
- * - First-time setup (creates the first admin user)
- * - DB-based authentication with bcrypt
- * - Card CRUD via AJAX
- * - User management (admin only)
- */
 
 session_start();
 
@@ -16,13 +8,9 @@ require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/Card.php';
 
-// ── State ───────────────────────────────────────────────────
-
 $currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
 $isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
 $needsSetup = !User::hasAdmins();
-
-// ── POST handlers ───────────────────────────────────────────
 
 if (isset($_POST['setup'])) {
     $username = trim($_POST['username'] ?? '');
@@ -59,8 +47,6 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
-// ── AJAX API ────────────────────────────────────────────────
-
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
@@ -73,8 +59,6 @@ if ($isAjax && isset($_GET['action'])) {
 
     try {
         $action = $_GET['action'];
-
-        // ── Card CRUD ──
 
         if ($action === 'get_cards') {
             $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
@@ -98,11 +82,7 @@ if ($isAjax && isset($_GET['action'])) {
             $cardId = isset($_GET['card_id']) ? (int) $_GET['card_id'] : 0;
             Card::delete($cardId);
             echo json_encode(['success' => true]);
-        }
-
-        // ── User CRUD ──
-
-        elseif ($action === 'get_users') {
+        } elseif ($action === 'get_users') {
             echo json_encode(['success' => true, 'users' => User::getAll()]);
         } elseif ($action === 'create_user') {
             $data = json_decode(file_get_contents('php://input'), true);
@@ -133,8 +113,6 @@ if ($isAjax && isset($_GET['action'])) {
     exit;
 }
 
-// ── Login / Setup Screens ───────────────────────────────────
-
 if (!$isLoggedIn) {
     if ($needsSetup) {
         require __DIR__ . '/src/templates/admin_setup.php';
@@ -143,8 +121,6 @@ if (!$isLoggedIn) {
     }
     exit;
 }
-
-// ── Editor Screen ───────────────────────────────────────────
 
 $dbConnected = Database::testConnection();
 $cardSets = $dbConnected ? CardSet::getAll() : [];
@@ -263,8 +239,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             </div>
         </div>
     </div>
-
-    <!-- ══════════ User Management Section ══════════ -->
 
     <div id="userManagementSection" class="hidden">
         <div class="whiteboard-card">

@@ -125,7 +125,7 @@
     }
 
     async function recordReview(cardId, studentId, quality, wasCorrect) {
-        try { await apiCall('api/record_review.php', 'POST', { card_id: cardId, student_id: studentId, quality, correct: wasCorrect }); } catch (e) {}
+        try { await apiCall('api/record_review.php', 'POST', { card_id: cardId, user_id: studentId, quality, correct: wasCorrect }); } catch (e) {}
         saveProgress(cardId, quality, wasCorrect);
         return true;
     }
@@ -257,7 +257,7 @@
         const html = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
                 <div class="flex justify-end mb-2">
-                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.name)}</span>
+                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
                     <a href="?logout=1" class="ml-2 text-xs text-gray-500 underline">Logout</a>
                 </div>
                 <div class="text-center mb-6 md:mb-8">
@@ -269,7 +269,7 @@
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Student</label>
-                            <span class="student-badge">✅ ${escapeHtml(currentStudent?.name)}</span>
+                            <span class="student-badge">✅ ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
                         </div>
                     </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
@@ -475,7 +475,7 @@
 
     function renderStudyScreen() {
         if (!currentCards.length || currentIndex >= currentCards.length) {
-            appEl.innerHTML = `<div class="whiteboard-card p-6 md:p-12 text-center"><div class="text-7xl md:text-8xl mb-3">🏆✨</div><h2 class="text-3xl md:text-5xl text-green-800 marker-underline mb-3">All caught up!</h2><p class="text-base md:text-xl mb-5">Great job, ${escapeHtml(currentStudent?.name || 'student')}!</p><button id="backToWelcomeBtn" class="bg-gray-800 text-white px-6 md:px-8 py-2 md:py-3 text-lg md:text-xl rounded-xl btn-chalk">← Back to Dashboard</button></div>`;
+            appEl.innerHTML = `<div class="whiteboard-card p-6 md:p-12 text-center"><div class="text-7xl md:text-8xl mb-3">🏆✨</div><h2 class="text-3xl md:text-5xl text-green-800 marker-underline mb-3">All caught up!</h2><p class="text-base md:text-xl mb-5">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p><button id="backToWelcomeBtn" class="bg-gray-800 text-white px-6 md:px-8 py-2 md:py-3 text-lg md:text-xl rounded-xl btn-chalk">← Back to Dashboard</button></div>`;
             document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
             return;
         }
