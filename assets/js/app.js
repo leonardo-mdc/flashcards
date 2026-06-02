@@ -131,8 +131,6 @@
         else renderStudyScreen();
     }
 
-    let isRegisterMode = false;
-
     function renderLoginScreen() {
         appEl.innerHTML = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
@@ -146,28 +144,11 @@
                         <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Username</label>
                         <input type="text" id="authNameInput" placeholder="Username (max 30 chars)" maxlength="30" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
                     </div>
-                    <div id="registerFields" class="space-y-5 ${isRegisterMode ? '' : 'hidden'}">
-                        <div class="marker-border p-4 md:p-5 bg-white/80">
-                            <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">📝 Full Name</label>
-                            <input type="text" id="authFullNameInput" placeholder="Your full name" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
-                        </div>
-                        <div class="marker-border p-4 md:p-5 bg-white/80">
-                            <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">🎯 English Level</label>
-                            <select id="authLevelInput" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2 bg-white">
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate">Intermediate</option>
-                                <option value="Advanced">Advanced</option>
-                            </select>
-                        </div>
-                    </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">🔒 Password</label>
                         <input type="password" id="authPasswordInput" placeholder="Enter password" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
                     </div>
-                    <div class="flex gap-3">
-                        <button id="loginBtn" class="flex-1 bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🔑 LOG IN</button>
-                        <button id="registerBtn" class="flex-1 bg-green-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">✨ REGISTER</button>
-                    </div>
+                    <button id="loginBtn" class="w-full bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🔑 LOG IN</button>
                     <p id="authError" class="text-red-600 text-center hidden"></p>
                 </div>
             </div>
@@ -184,28 +165,6 @@
             if (!name || !password) { showError('Please fill in all fields'); return; }
             const result = await loginOrRegister(name, password, 'login');
             if (!result) showError('Invalid name or password');
-        });
-
-        document.getElementById('registerBtn').addEventListener('click', async () => {
-            if (!isRegisterMode) {
-                isRegisterMode = true;
-                document.getElementById('registerFields').classList.remove('hidden');
-                document.getElementById('registerBtn').textContent = '✅ CONFIRM REGISTER';
-                return;
-            }
-            const name = document.getElementById('authNameInput').value.trim();
-            const password = document.getElementById('authPasswordInput').value;
-            const fullName = document.getElementById('authFullNameInput').value.trim();
-            const englishLevel = document.getElementById('authLevelInput').value;
-            if (!name || !password) { showError('Please fill in all fields'); return; }
-            if (password.length < 4) { showError('Password must be at least 4 characters'); return; }
-            const result = await loginOrRegister(name, password, 'register', fullName, englishLevel);
-            if (!result) {
-                showError('Name already taken. Try logging in.');
-                isRegisterMode = false;
-                document.getElementById('registerFields').classList.add('hidden');
-                document.getElementById('registerBtn').textContent = '✨ REGISTER';
-            }
         });
 
         document.getElementById('authPasswordInput').addEventListener('keydown', (e) => {
