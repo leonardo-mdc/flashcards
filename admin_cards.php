@@ -237,6 +237,14 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                             <option value="Advanced">🎓 Advanced</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block font-bold mb-1">Card Set:</label>
+                        <select id="editSetId" class="form-select">
+                            <?php foreach ($cardSets as $set): ?>
+                                <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div id="editFieldsContainer"></div>
                     <div class="help-text mt-2">
                         💡 Tip: Use <code>\br</code> in any text field to create a line break. Example: "First line\brSecond line"

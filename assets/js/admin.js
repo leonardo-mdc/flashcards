@@ -10,6 +10,7 @@
     const editTitle = document.getElementById('editTitle');
     const editPatternType = document.getElementById('editPatternType');
     const editLevel = document.getElementById('editLevel');
+    const editSetId = document.getElementById('editSetId');
     const editFieldsContainer = document.getElementById('editFieldsContainer');
     const frontPreviewContent = document.getElementById('frontPreviewContent');
     const backPreviewContent = document.getElementById('backPreviewContent');
@@ -122,6 +123,7 @@
         editTitle.value = card.title || '';
         editPatternType.value = card.pattern_type || 'usage_cases';
         editLevel.value = card.level || 'Beginner';
+        if (editSetId) editSetId.value = card.set_id || 1;
 
         let contentData = card.content_data || {};
         if (typeof contentData === 'string') {
@@ -299,7 +301,7 @@
 
         const cardData = {
             id: parseInt(editCardId.value) || 0,
-            set_id: parseInt(setSelector.value) || 1,
+            set_id: editSetId ? parseInt(editSetId.value) : (parseInt(setSelector.value) || 1),
             title: editTitle.value,
             pattern_type: patternType,
             level: editLevel.value,
@@ -350,6 +352,7 @@
         editTitle.value = '';
         editPatternType.value = 'usage_cases';
         editLevel.value = 'Beginner';
+        if (editSetId) editSetId.value = setSelector.value || '1';
         renderEditFields('usage_cases', {});
         updatePreviews();
         selectedCardId = null;
