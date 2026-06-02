@@ -33,6 +33,14 @@ if (!$loggedInStudent) {
     <body class="flex items-center justify-center">
         <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
         <div id="appRoot" class="w-full max-w-5xl mx-auto"></div>
+
+        <script>
+            window.FLASHCARD_DATA = {
+                cardSets: [],
+                dbConnected: <?= $dbConnected ? 'true' : 'false' ?>,
+                loggedInStudent: null
+            };
+        </script>
         <script src="assets/js/app.js"></script>
     </body>
     </html>

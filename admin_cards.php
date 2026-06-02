@@ -89,11 +89,13 @@ if ($isAjax && isset($_GET['action'])) {
             $username = trim($data['username'] ?? '');
             $password = $data['password'] ?? '';
             $isAdmin = !empty($data['is_admin']);
+            $fullName = trim($data['full_name'] ?? '');
+            $englishLevel = $data['english_level'] ?? 'Beginner';
             if ($username === '' || strlen($password) < 6) {
                 echo json_encode(['success' => false, 'error' => 'Username required, password min 6 chars']);
                 exit;
             }
-            $user = User::create($username, $password, $isAdmin);
+            $user = User::create($username, $password, $isAdmin, $fullName, $englishLevel);
             echo json_encode(['success' => true, 'user' => $user]);
         } elseif ($action === 'delete_user') {
             $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
@@ -251,9 +253,17 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 <div class="whiteboard-card" style="padding:16px;">
                     <h3 class="text-lg marker-underline mb-3">➕ Add User</h3>
                     <label class="block font-bold mb-1">Username:</label>
-                    <input type="text" id="newUserUsername" class="form-input" placeholder="Enter username">
+                    <input type="text" id="newUserUsername" class="form-input" placeholder="Enter username" maxlength="30">
+                    <label class="block font-bold mb-1">Full Name:</label>
+                    <input type="text" id="newUserFullName" class="form-input" placeholder="Enter full name">
                     <label class="block font-bold mb-1">Password:</label>
                     <input type="password" id="newUserPassword" class="form-input" placeholder="Min 6 characters">
+                    <label class="block font-bold mb-1">English Level:</label>
+                    <select id="newUserLevel" class="form-select">
+                        <option value="Beginner">🔰 Beginner</option>
+                        <option value="Intermediate">📚 Intermediate</option>
+                        <option value="Advanced">🎓 Advanced</option>
+                    </select>
                     <label class="flex items-center gap-2 mt-1 mb-3">
                         <input type="checkbox" id="newUserIsAdmin" value="1">
                         <span class="font-bold">Admin privileges</span>

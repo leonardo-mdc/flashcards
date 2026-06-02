@@ -401,9 +401,10 @@
         }
 
         let html = '<table class="w-full" style="border-collapse:collapse;">';
-        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Progress</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Level</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
+        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Name</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Progress</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Level</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
         users.forEach(user => {
             html += `<tr>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.full_name || user.username)}</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.username)}</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">Student</span>'}</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.progress || 0}%</td>
@@ -437,7 +438,9 @@
 
     async function createUser() {
         const username = document.getElementById('newUserUsername')?.value.trim();
+        const fullName = document.getElementById('newUserFullName')?.value.trim();
         const password = document.getElementById('newUserPassword')?.value;
+        const englishLevel = document.getElementById('newUserLevel')?.value || 'Beginner';
         const isAdmin = document.getElementById('newUserIsAdmin')?.checked || false;
 
         if (!username) { alert('Username is required'); return; }
@@ -446,13 +449,15 @@
         const response = await fetch('admin_cards.php?action=create_user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ username, password, is_admin: isAdmin })
+            body: JSON.stringify({ username, full_name: fullName, password, english_level: englishLevel, is_admin: isAdmin })
         });
         const result = await response.json();
         if (result.success) {
             alert('User created successfully!');
             document.getElementById('newUserUsername').value = '';
+            document.getElementById('newUserFullName').value = '';
             document.getElementById('newUserPassword').value = '';
+            document.getElementById('newUserLevel').value = 'Beginner';
             document.getElementById('newUserIsAdmin').checked = false;
             loadUsers();
         } else {
