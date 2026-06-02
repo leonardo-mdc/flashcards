@@ -750,18 +750,14 @@
     });
 
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                saveCard();
-            }
-            return;
-        }
-        if (e.ctrlKey || e.metaKey) {
-            if (e.key === 's') { e.preventDefault(); saveCard(); }
-            if (e.key === 'n') { e.preventDefault(); newCard(); }
-            if (e.key === 'd') { e.preventDefault(); deleteCard(); }
-            if (e.key === 'z') { e.preventDefault(); revertCard(); }
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === 's' || e.key === 'S') saveCard();
+        if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newCard(); }
+        if (e.key === 'd' || e.key === 'D') deleteCard();
+        if (e.key === 'r' || e.key === 'R') revertCard();
+        if (e.key === '?' || e.key === 'H' || e.key === 'h') {
+            alert('Shortcuts: S=Save  N=New  D=Delete  R=Revert  ?=Help');
         }
     });
 
