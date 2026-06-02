@@ -618,7 +618,7 @@
                         <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs md:text-sm">Exit</button>
                     </div>
                 </div>
-                <div class="progress-bar-container mb-3"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
+                <div class="progress-bar-container mb-4"><div class="progress-bar-fill" style="width: ${progressPercent}%" data-pct="${Math.round(progressPercent)}%"></div></div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '420px' : '480px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '420px' : '480px'};">
                         <div class="card-front p-5 md:p-6 overflow-y-auto border-4 border-gray-700 shadow-xl" id="cardFront">
