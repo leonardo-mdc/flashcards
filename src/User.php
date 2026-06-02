@@ -132,4 +132,11 @@ class User
         $stmt = $pdo->prepare("UPDATE users SET progress = ?, english_level = ? WHERE id = ?");
         $stmt->execute([$progress, $englishLevel, $id]);
     }
+
+    public static function resetProgress(int $id): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE users SET progress = 0 WHERE id = ?");
+        $stmt->execute([$id]);
+    }
 }

@@ -411,6 +411,7 @@
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.english_level || 'Beginner')}</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
                     <button class="edit-user-btn btn btn-primary text-xs" data-id="${user.id}" data-username="${escapeHtml(user.username)}" data-fullname="${escapeHtml(user.full_name || '')}" data-level="${escapeHtml(user.english_level || 'Beginner')}" data-admin="${user.is_admin}" style="padding:4px 10px;font-size:0.7rem;">✏️ Edit</button>
+                    <button class="reset-user-btn btn btn-warning text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🔄 Reset</button>
                     <button class="delete-user-btn btn btn-danger text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🗑 Delete</button>
                 </td>
             </tr>`;
@@ -437,6 +438,24 @@
                         loadUsers();
                     } else {
                         alert(result.error || 'Error deleting user');
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll('.reset-user-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = parseInt(btn.dataset.id);
+                if (confirm('Reset all progress for this user? This will clear review history and progress.')) {
+                    const response = await fetch(`admin_cards.php?action=reset_user_progress&user_id=${userId}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Progress reset successfully');
+                        loadUsers();
+                    } else {
+                        alert(result.error || 'Error resetting progress');
                     }
                 }
             });

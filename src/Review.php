@@ -86,6 +86,15 @@ class Review
         $stmt->execute([$userId, $cardId, $quality, $wasCorrect ? 1 : 0]);
     }
 
+    public static function resetForUser(int $userId): void
+    {
+        self::ensureTable();
+        self::ensureHistoryTable();
+        $pdo = Database::getConnection();
+        $pdo->prepare("DELETE FROM review_history WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM user_card_progress WHERE user_id = ?")->execute([$userId]);
+    }
+
     public static function getStats(int $userId): array
     {
         self::ensureHistoryTable();

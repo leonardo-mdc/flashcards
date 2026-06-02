@@ -110,6 +110,16 @@ if ($isAjax && isset($_GET['action'])) {
             }
             User::update($userId, $username, $fullName, $englishLevel, $isAdmin);
             echo json_encode(['success' => true]);
+        } elseif ($action === 'reset_user_progress') {
+            require_once __DIR__ . '/../src/Review.php';
+            $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid user']);
+                exit;
+            }
+            Review::resetForUser($userId);
+            User::resetProgress($userId);
+            echo json_encode(['success' => true]);
         } elseif ($action === 'delete_user') {
             $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
             if ($userId === $currentUser['id']) {
