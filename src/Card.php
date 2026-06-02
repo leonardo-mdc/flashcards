@@ -9,7 +9,7 @@ class Card
         int $limit = 500
     ): array {
         $pdo = Database::getConnection();
-        $sql = "SELECT id, set_id, title, pattern_type, level, question_text, content_data FROM cards WHERE 1=1";
+        $sql = "SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name FROM cards c LEFT JOIN card_sets s ON c.set_id = s.id WHERE 1=1";
         $params = [];
 
         if (!$randomMode && $setId !== null && $setId > 0) {

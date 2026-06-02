@@ -245,9 +245,9 @@
                             </div>
                         </div>
                         <div class="text-sm text-gray-500 mt-1">📝 ${escapeHtml(currentStudent?.full_name || currentStudent?.username)}</div>
-                        <div class="flex gap-4 mt-2 text-sm">
-                            <span>📊 Progress: <strong>${currentStudent?.progress || 0}%</strong></span>
-                            <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
+                        <div class="flex gap-4 mt-2 text-sm items-center">
+                            <div class="flex-1 min-w-0"><span class="text-xs">📊 Progress:</span><div class="progress-bar-container mt-1"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%" data-pct="${Math.round(currentStudent?.progress || 0)}%"></div></div></div>
+                            <span class="whitespace-nowrap">🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
                         </div>
                     </div>
                     ${stats ? `
@@ -448,10 +448,11 @@
 
         if (pattern === 'multiple_choice') {
             const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const gridClass = options.length > 3 ? 'grid md:grid-cols-2 gap-3' : 'space-y-3';
             return `
                 <div class="text-center">
                     <p class="text-xl mb-6 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
-                    <div class="space-y-3" id="mcqOptionsContainer">
+                    <div class="${gridClass}" id="mcqOptionsContainer">
                         ${options.map((opt, idx) => `<div class="quiz-option" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                     </div>
                     <p class="text-sm text-gray-400 mt-4">👆 Tap your answer, then flip the card</p>
@@ -577,7 +578,10 @@
                         <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs md:text-sm">Exit</button>
                     </div>
                 </div>
-                <div class="progress-bar-container mb-4"><div class="progress-bar-fill" style="width: ${progressPercent}%" data-pct="${Math.round(progressPercent)}%"></div></div>
+                <div class="progress-bar-container mb-2"><div class="progress-bar-fill" style="width: ${progressPercent}%" data-pct="${Math.round(progressPercent)}%"></div></div>
+                <div class="text-center mb-2">
+                    <span class="text-xs md:text-sm text-gray-500 title-font">📚 ${escapeHtml(card.set_name || '')}</span>
+                </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '420px' : '480px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '420px' : '480px'};">
                         <div class="card-front p-5 md:p-6 overflow-y-auto border-4 border-gray-700 shadow-xl" id="cardFront">
