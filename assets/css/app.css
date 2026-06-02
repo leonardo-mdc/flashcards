@@ -16,7 +16,7 @@ body {
 @media (max-width: 640px) {
     body { padding: 6px; }
     .whiteboard-card { border-width: 4px; padding: 12px !important; }
-    .flashcard { min-height: 360px !important; }
+    .flashcard { min-height: 320px !important; }
     .card-front, .card-back { padding: 12px !important; }
     .card-word { font-size: clamp(1.6rem, 7.5vw, 2.2rem) !important; }
     .card-definition { font-size: clamp(0.85rem, 3.5vw, 1.1rem) !important; }
@@ -47,7 +47,7 @@ body {
 .marker-underline { display: inline-block; position: relative; }
 .marker-underline::after { content: ""; position: absolute; left: 0; bottom: -6px; width: 100%; height: 6px; background: #be123c; border-radius: 100% 5% 100% 5%; opacity: 0.7; }
 .flashcard-container { perspective: 1600px; }
-.flashcard { transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; min-height: 480px; position: relative; cursor: pointer; }
+.flashcard { transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; min-height: 400px; position: relative; cursor: pointer; }
 .flashcard.flipped { transform: rotateY(180deg); }
 .card-front, .card-back { backface-visibility: hidden; border-radius: 1rem; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; }
 .card-front { transform: rotateY(0deg); z-index: 2; background: white; }
@@ -61,8 +61,8 @@ body {
     transition: all 0.2s; 
     border: 2px solid #e2e8f0; 
     cursor: pointer; 
-    padding: 12px 16px;
-    margin: 8px 0;
+    padding: 8px 12px;
+    margin: 4px 0;
     border-radius: 12px;
     background: white;
     font-size: clamp(0.85rem, 2.5vw, 1rem);
@@ -92,8 +92,8 @@ body {
 .card-definition { 
     font-size: clamp(0.95rem, 2.2vw, 1.2rem); 
     text-align: left; 
-    line-height: 1.4;
-    margin-top: 16px;
+    line-height: 1.3;
+    margin-top: 8px;
 }
 .back-content {
     max-height: 100%;
@@ -104,13 +104,13 @@ body {
     font-size: clamp(1rem, 3vw, 1.4rem);
     font-weight: bold;
     text-align: center;
-    padding: 16px;
+    padding: 8px;
 }
 .context-hint { 
     font-size: clamp(0.7rem, 1.8vw, 0.8rem); 
     color: #6b7280; 
     margin-top: 4px; 
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     text-align: center;
 }
 .admin-link {
@@ -130,7 +130,7 @@ body {
 
 .card-back p, .card-back li, .card-back div, .card-back span {
     font-size: clamp(0.8rem, 2vw, 12pt);
-    line-height: 1.4;
+    line-height: 1.3;
 }
 .card-back h3 {
     font-size: clamp(1.1rem, 3vw, 1.6rem);
@@ -145,11 +145,11 @@ body {
 }
 
 @media (max-width: 480px) {
-    .flashcard-container { min-height: 360px !important; }
-    .flashcard { min-height: 360px !important; }
-    .card-front, .card-back { padding: 10px !important; }
-    #againBtn, #goodBtn, #easyBtn { font-size: clamp(0.6rem, 2.8vw, 0.75rem) !important; padding: 6px 10px !important; }
-    .flip-btn { font-size: clamp(0.6rem, 2.8vw, 0.75rem) !important; padding: 4px 10px !important; }
+    .flashcard-container { min-height: 320px !important; }
+    .flashcard { min-height: 320px !important; }
+    .card-front, .card-back { padding: 8px !important; }
+    #againBtn, #goodBtn, #easyBtn { font-size: clamp(0.55rem, 2.5vw, 0.7rem) !important; padding: 4px 8px !important; }
+    .flip-btn { font-size: clamp(0.55rem, 2.5vw, 0.7rem) !important; padding: 3px 8px !important; }
 }
 
 @media (max-width: 380px) {

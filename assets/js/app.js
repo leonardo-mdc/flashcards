@@ -147,22 +147,22 @@
 
     function renderLoginScreen() {
         appEl.innerHTML = `
-            <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
-                <div class="text-center mb-6 md:mb-8">
-                    <div class="text-6xl md:text-7xl mb-2">🎓✏️</div>
-                    <h1 class="text-3xl md:text-5xl text-blue-900 marker-underline">Flashcard Studio</h1>
-                    <p class="text-gray-600 text-base md:text-xl mt-2">sign in to start studying</p>
+            <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
+                <div class="text-center mb-4 md:mb-5">
+                    <div class="text-5xl md:text-6xl mb-1">🎓✏️</div>
+                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline">Flashcard Studio</h1>
+                    <p class="text-gray-600 text-sm md:text-lg mt-1">sign in to start studying</p>
                 </div>
-                <div class="space-y-5 md:space-y-7 max-w-md mx-auto">
-                    <div class="marker-border p-4 md:p-5 bg-white/80">
-                        <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Username</label>
-                        <input type="text" id="authNameInput" placeholder="Username (max 30 chars)" maxlength="30" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
+                <div class="space-y-4 md:space-y-5 max-w-md mx-auto">
+                    <div class="marker-border p-3 md:p-4 bg-white/80">
+                        <label class="text-lg md:text-xl font-bold text-gray-800 title-font">👤 Username</label>
+                        <input type="text" id="authNameInput" placeholder="Username (max 30 chars)" maxlength="30" class="w-full p-2 md:p-2 text-base md:text-lg border-2 rounded-xl mt-1">
                     </div>
-                    <div class="marker-border p-4 md:p-5 bg-white/80">
-                        <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">🔒 Password</label>
-                        <input type="password" id="authPasswordInput" placeholder="Enter password" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
+                    <div class="marker-border p-3 md:p-4 bg-white/80">
+                        <label class="text-lg md:text-xl font-bold text-gray-800 title-font">🔒 Password</label>
+                        <input type="password" id="authPasswordInput" placeholder="Enter password" class="w-full p-2 md:p-2 text-base md:text-lg border-2 rounded-xl mt-1">
                     </div>
-                    <button id="loginBtn" class="w-full bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🔑 LOG IN</button>
+                    <button id="loginBtn" class="w-full bg-blue-700 text-white py-2 md:py-3 text-lg md:text-xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🔑 LOG IN</button>
                     <p id="authError" class="text-red-600 text-center hidden"></p>
                 </div>
             </div>
@@ -229,7 +229,7 @@
     }
 
     async function renderWelcomeScreen() {
-        appEl.innerHTML = `<div class="whiteboard-card p-8 text-center"><div class="loader mx-auto mb-4"></div><p>Loading card sets...</p></div>`;
+        appEl.innerHTML = `<div class="whiteboard-card p-4 text-center"><div class="loader mx-auto mb-2"></div><p>Loading card sets...</p></div>`;
         const sets = await loadCardSetsFromAPI();
         const randomSelected = (currentSet === null || isRandomMode);
         const setsHtml = `<option value="" ${randomSelected ? 'selected' : ''}>🎲 RANDOM MODE - All Sets</option>` +
@@ -238,17 +238,17 @@
         const stats = await loadStats();
 
         const html = `
-            <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
+            <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
                 <div class="flex justify-end mb-2">
                     <span class="student-badge">👤 ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
                     <a href="?logout=1" class="ml-2 text-xs text-gray-500 underline">Logout</a>
                 </div>
-                <div class="text-center mb-6 md:mb-8">
-                    <div class="text-6xl md:text-7xl mb-2">🎓✏️</div>
-                    <h1 class="text-3xl md:text-5xl text-blue-900 marker-underline">Flashcard Studio</h1>
-                    <p class="text-gray-600 text-base md:text-xl mt-2">spaced repetition · tap card to flip</p>
+                <div class="text-center mb-4 md:mb-5">
+                    <div class="text-5xl md:text-6xl mb-1">🎓✏️</div>
+                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline">Flashcard Studio</h1>
+                    <p class="text-gray-600 text-sm md:text-lg mt-1">spaced repetition · tap card to flip</p>
                 </div>
-                <div class="space-y-5 md:space-y-7">
+                <div class="space-y-4 md:space-y-5">
                     <div class="md:grid md:grid-cols-2 md:gap-5">
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
@@ -463,11 +463,11 @@
             const gridClass = options.length > 3 ? 'grid md:grid-cols-2 gap-3' : 'space-y-3';
             return `
                 <div class="text-center">
-                    <p class="text-xl mb-6 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
+                    <p class="text-lg mb-3 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
                     <div class="${gridClass}" id="mcqOptionsContainer">
                         ${options.map((opt, idx) => `<div class="quiz-option" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                     </div>
-                    <p class="text-sm text-gray-400 mt-4">👆 Tap your answer, then flip the card</p>
+                    <p class="text-sm text-gray-400 mt-2">👆 Tap your answer, then flip the card</p>
                 </div>
             `;
         } else if (pattern === 'gap_fill') {
@@ -475,18 +475,18 @@
             const hint = getGapFillHint(card);
             return `
                 <div class="text-center">
-                    <p class="text-xl mb-2 font-bold">✏️ Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-4 rounded-xl mb-2">${escapeHtml(sentence)}</p>
+                    <p class="text-lg mb-1 font-bold">✏️ Complete the sentence:</p>
+                    <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${escapeHtml(sentence)}</p>
                     <div class="context-hint">${hint}</div>
-                    <input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-3 text-base border-2 rounded-xl mb-4">
-                    <p class="text-sm text-gray-400 mt-2">👆 Type answer, then flip to check</p>
+                    <input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2">
+                    <p class="text-sm text-gray-400 mt-1">👆 Type answer, then flip to check</p>
                 </div>
             `;
         } else {
             return `
-                <div class="flex flex-col items-center justify-center h-full min-h-[300px]">
+                <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     <div class="card-word">${escapeHtml(title)}</div>
-                    <p class="text-sm text-gray-400 mt-6">👆 Tap card to flip</p>
+                    <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
         }
@@ -508,15 +508,15 @@
             return `
                 <div class="back-content">
                     <div class="text-center">
-                        <h3 class="text-xl text-green-700 title-font marker-underline mb-3">✓ Answer</h3>
-                        <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                            <p class="text-lg font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(correctAnswer)}</p>
+                        <h3 class="text-lg text-green-700 title-font marker-underline mb-2">✓ Answer</h3>
+                        <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">
+                            <p class="text-base font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(correctAnswer)}</p>
                         </div>
-                        <div class="p-3 rounded-lg mb-3 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                            <p class="text-base">${isCorrect ? '✅ Correct!' : `❌ Incorrect. The correct answer is ${String.fromCharCode(65+correctIdx)}.`}</p>
+                        <div class="p-2 rounded-lg mb-2 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            <p class="text-sm">${isCorrect ? '✅ Correct!' : `❌ Incorrect. The correct answer is ${String.fromCharCode(65+correctIdx)}.`}</p>
                         </div>
-                        ${explanation ? `<div class="text-sm text-gray-600 mt-2 p-3 bg-gray-50 rounded-lg">📝 ${explanation}</div>` : ''}
-                        <p class="text-xs text-gray-400 mt-3">Rate your recall using the buttons below</p>
+                        ${explanation ? `<div class="text-sm text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 ${explanation}</div>` : ''}
+                        <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
                 </div>
             `;
@@ -529,15 +529,15 @@
             return `
                 <div class="back-content">
                     <div class="text-center">
-                        <h3 class="text-xl text-green-700 title-font marker-underline mb-3">✓ Correct Answer</h3>
-                        <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                            <p class="text-lg font-bold">${escapeHtml(correctAnswers.join(' / '))}</p>
+                        <h3 class="text-lg text-green-700 title-font marker-underline mb-2">✓ Correct Answer</h3>
+                        <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">
+                            <p class="text-base font-bold">${escapeHtml(correctAnswers.join(' / '))}</p>
                         </div>
-                        <div class="p-3 rounded-lg mb-3 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                            <p class="text-base">${isMatch ? '✅ Correct!' : `❌ Incorrect. Your answer: "${escapeHtml(userAnswer)}"`}</p>
+                        <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            <p class="text-sm">${isMatch ? '✅ Correct!' : `❌ Incorrect. Your answer: "${escapeHtml(userAnswer)}"`}</p>
                         </div>
-                        ${example ? `<div class="text-sm text-gray-600 mt-2 p-3 bg-gray-50 rounded-lg">📝 Example: ${example}</div>` : ''}
-                        <p class="text-xs text-gray-400 mt-3">Rate your recall using the buttons below</p>
+                        ${example ? `<div class="text-sm text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 Example: ${example}</div>` : ''}
+                        <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
                 </div>
             `;
@@ -548,16 +548,16 @@
             return `
                 <div class="back-content">
                     <div class="text-center">
-                        <h3 class="text-xl text-blue-700 title-font marker-underline mb-3">${escapeHtml(title)}</h3>
-                        <div class="card-definition bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                        <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
+                        <div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
                             ${definition}
                         </div>
                         ${example ? `
-                            <div class="mt-3 p-3 bg-gray-100 rounded-lg">
+                            <div class="mt-2 p-2 bg-gray-100 rounded-lg">
                                 <p class="text-sm"><strong>Example:</strong> ${example}</p>
                             </div>
                         ` : ''}
-                        <p class="text-xs text-gray-400 mt-3">Rate your recall using the buttons below</p>
+                        <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
                 </div>
             `;
@@ -567,9 +567,9 @@
     function renderStudyScreen() {
         if (!currentCards.length || currentIndex >= currentCards.length) {
             const message = allDueReviewed
-                ? `<div class="text-7xl md:text-8xl mb-3">🎉📚</div><h2 class="text-3xl md:text-5xl text-blue-800 marker-underline mb-3">All cards viewed!</h2><p class="text-base md:text-xl mb-5">You've seen all due cards for this set.<br>Try another set or come back later!</p>`
-                : `<div class="text-7xl md:text-8xl mb-3">🏆✨</div><h2 class="text-3xl md:text-5xl text-green-800 marker-underline mb-3">All caught up!</h2><p class="text-base md:text-xl mb-5">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>`;
-            appEl.innerHTML = `<div class="whiteboard-card p-6 md:p-12 text-center">${message}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-6 md:px-8 py-2 md:py-3 text-lg md:text-xl rounded-xl btn-chalk">← Back to Dashboard</button></div>`;
+                ? `<div class="text-5xl md:text-6xl mb-2">🎉📚</div><h2 class="text-2xl md:text-3xl text-blue-800 marker-underline mb-2">All cards viewed!</h2><p class="text-sm md:text-base mb-3">You've seen all due cards for this set.<br>Try another set or come back later!</p>`
+                : `<div class="text-5xl md:text-6xl mb-2">🏆✨</div><h2 class="text-2xl md:text-3xl text-green-800 marker-underline mb-2">All caught up!</h2><p class="text-sm md:text-base mb-3">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>`;
+            appEl.innerHTML = `<div class="whiteboard-card p-4 md:p-8 text-center">${message}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-4 md:px-6 py-1 md:py-2 text-base md:text-lg rounded-xl btn-chalk">← Back</button></div>`;
             document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
             return;
         }
@@ -582,37 +582,37 @@
         let quizState = { selectedIdx: null, userAnswer: '', answered: false, isCorrect: false };
 
         const html = `
-            <div class="whiteboard-card p-4 md:p-6">
-                <div class="flex justify-between items-center flex-wrap gap-2 mb-3">
+            <div class="whiteboard-card p-3 md:p-4">
+                <div class="flex justify-between items-center flex-wrap gap-1 mb-2">
                     <div class="flex gap-2 items-center">
                         <span class="level-chip">${escapeHtml(card.level || 'Beginner')}</span>
                         <span class="text-xs text-gray-500">${currentIndex + 1}/${currentCards.length}</span>
                     </div>
                     <div class="flex gap-2">
-                        <button id="flipCardBtn" class="flip-btn px-4 py-1 md:px-5 md:py-2 rounded-xl text-xs md:text-sm font-bold">🔄 FLIP</button>
-                        <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs md:text-sm">Exit</button>
+                        <button id="flipCardBtn" class="flip-btn px-3 py-1 md:px-4 md:py-1 rounded-xl text-xs md:text-xs font-bold">🔄 FLIP</button>
+                        <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs">Exit</button>
                     </div>
                 </div>
-                <div class="progress-bar-container mb-2" data-pct="${Math.round(progressPercent)}%"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
-                <div class="text-center mb-2">
-                    <span class="text-xs md:text-sm text-gray-500 title-font">📚 ${escapeHtml(card.set_name || '')}</span>
+                <div class="progress-bar-container mb-1" data-pct="${Math.round(progressPercent)}%"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
+                <div class="text-center mb-1">
+                    <span class="text-xs text-gray-500 title-font">📚 ${escapeHtml(card.set_name || '')}</span>
                 </div>
-                <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '420px' : '480px'};">
-                    <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '420px' : '480px'};">
-                        <div class="card-front p-5 md:p-6 overflow-y-auto border-4 border-gray-700 shadow-xl" id="cardFront">
+                <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
+                    <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">
+                        <div class="card-front p-4 md:p-5 overflow-y-auto border-4 border-gray-700 shadow-xl" id="cardFront">
                             ${renderCardFront(card)}
                         </div>
-                        <div class="card-back p-5 md:p-6 overflow-y-auto border-4 border-blue-300 shadow-xl" id="cardBack">
+                        <div class="card-back p-4 md:p-5 overflow-y-auto border-4 border-blue-300 shadow-xl" id="cardBack">
                             ${renderCardBack(card, quizState)}
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-wrap justify-center gap-2 md:gap-3 mt-3">
-                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 md:px-6 py-2 rounded-xl text-sm md:text-base font-bold btn-chalk">🔁 Again (1 day)</button>
-                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 md:px-6 py-2 rounded-xl text-sm md:text-base font-bold btn-chalk">👍 Good (3 days)</button>
-                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 rounded-xl text-sm md:text-base font-bold btn-chalk">⭐ Easy (7 days)</button>
+                <div class="flex flex-wrap justify-center gap-1 md:gap-2 mt-2">
+                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">🔁 Again (1d)</button>
+                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">👍 Good (3d)</button>
+                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">⭐ Easy (7d)</button>
                 </div>
-                <p class="text-center text-xs text-gray-400 mt-3">💡 Tap the card or FLIP button to flip. For quiz cards, tap/type answer then flip!</p>
+                <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or FLIP to flip</p>
             </div>
         `;
         appEl.innerHTML = html;
