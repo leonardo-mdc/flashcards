@@ -317,10 +317,6 @@
         const result = await response.json();
         if (result.success) {
             alert('Card saved successfully!');
-            const newSetId = editSetId ? parseInt(editSetId.value) : 0;
-            if (newSetId && newSetId !== parseInt(setSelector.value)) {
-                setSelector.value = newSetId;
-            }
             if (setSelector.value) loadCards(setSelector.value);
             if (result.id && (!editCardId.value || editCardId.value == 0)) {
                 editCardId.value = result.id;

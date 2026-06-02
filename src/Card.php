@@ -75,8 +75,8 @@ class Card
         $contentData = json_encode($data['content_data'] ?? []);
 
         if ($id > 0) {
-            $stmt = $pdo->prepare("UPDATE cards SET title=?, pattern_type=?, level=?, question_text=?, content_data=? WHERE id=?");
-            $stmt->execute([$title, $patternType, $level, $questionText, $contentData, $id]);
+            $stmt = $pdo->prepare("UPDATE cards SET set_id=?, title=?, pattern_type=?, level=?, question_text=?, content_data=? WHERE id=?");
+            $stmt->execute([$setId, $title, $patternType, $level, $questionText, $contentData, $id]);
             return $id;
         } else {
             $stmt = $pdo->prepare("INSERT INTO cards (set_id, title, pattern_type, level, question_text, content_data) VALUES (?,?,?,?,?,?)");
