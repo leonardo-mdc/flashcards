@@ -56,7 +56,7 @@ if (!$loggedInStudent) {
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/app.css?v=2">
 </head>
 <body class="flex items-center justify-center">
     <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
