@@ -286,7 +286,7 @@
                         </div>
                         <div class="mt-3">
                             <div class="text-xs text-gray-500 mb-1">📊 Progress:</div>
-                            <div class="progress-bar-container" style="max-width:100%;"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%" data-pct="${Math.round(currentStudent?.progress || 0)}%"></div></div>
+                            <div class="progress-bar-container" style="max-width:100%;" data-pct="${Math.round(currentStudent?.progress || 0)}%"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%"></div></div>
                         </div>
                     </div>
                     ` : ''}
@@ -593,7 +593,7 @@
                         <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs md:text-sm">Exit</button>
                     </div>
                 </div>
-                <div class="progress-bar-container mb-2"><div class="progress-bar-fill" style="width: ${progressPercent}%" data-pct="${Math.round(progressPercent)}%"></div></div>
+                <div class="progress-bar-container mb-2" data-pct="${Math.round(progressPercent)}%"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
                 <div class="text-center mb-2">
                     <span class="text-xs md:text-sm text-gray-500 title-font">📚 ${escapeHtml(card.set_name || '')}</span>
                 </div>
