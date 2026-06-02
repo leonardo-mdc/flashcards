@@ -1,0 +1,23 @@
+name: Deploy to InfinityFree
+
+on:
+  push:
+    branches:
+      - main # Change this if your production branch uses a different name
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Sync files to InfinityFree via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0  # <--- Corrigido com o 'v' e atualizado
+        with:
+          server: ftpupload.net
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: /flashcards.my-board.org/htdocs/ # Use /yourdomain.com/htdocs/ if hosting multiple domains
