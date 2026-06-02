@@ -74,8 +74,8 @@ body {
 .btn-chalk:hover { transform: translateY(2px); box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.2); }
 .flip-btn { cursor: pointer; transition: all 0.2s; background: #f1f5f9; border: 2px solid #64748b; }
 .flip-btn:active { transform: scale(0.96); }
-.progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 3px; position: relative; }
-.progress-bar-container::before { content: attr(data-pct); position: absolute; left: 4px; top: -6px; font-size: 12px; font-weight: 700; color: #2563eb; white-space: nowrap; z-index: 1; }
+.progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 3px; position: relative; padding-left: 28px; }
+.progress-bar-container::before { content: attr(data-pct); position: absolute; left: 4px; top: -6px; font-size: 12px; font-weight: 700; color: #2563eb; white-space: nowrap; }
 .progress-bar-fill { background: linear-gradient(90deg, #3b82f6, #2563eb); height: 100%; border-radius: 20px; transition: width 0.3s; position: relative; }
 .level-chip { background: #e0e7ff; color: #1e3a8a; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.65rem, 1.8vw, 0.75rem); }
 .student-badge { background: #dbeafe; color: #1e40af; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.7rem, 2vw, 0.8rem); }

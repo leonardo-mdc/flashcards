@@ -796,5 +796,32 @@
         }
     });
 
+    // --- Import CSV ---
+    document.getElementById('importCsvBtn')?.addEventListener('click', () => {
+        document.getElementById('importCsvInput').click();
+    });
+    document.getElementById('importCsvInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('csv', file);
+        try {
+            const response = await fetch('api/import_csv.php', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (result.success) {
+                let msg = `✅ Imported ${result.imported} cards.`;
+                if (result.errors.length) msg += `\n⚠️ ${result.errors.length} errors:\n` + result.errors.slice(0, 10).join('\n');
+                if (result.errors.length > 10) msg += `\n...and ${result.errors.length - 10} more`;
+                alert(msg);
+                if (setSelector.value) loadCards(setSelector.value);
+            } else {
+                alert('❌ Import failed: ' + (result.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('❌ Network error during import');
+        }
+        e.target.value = '';
+    });
+
     loadCardSets();
 })();

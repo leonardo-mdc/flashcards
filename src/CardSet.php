@@ -39,6 +39,15 @@ class CardSet
         return (int) $pdo->lastInsertId();
     }
 
+    public static function getIdByName(string $name): ?int
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT id FROM card_sets WHERE name = ?");
+        $stmt->execute([$name]);
+        $row = $stmt->fetch();
+        return $row ? (int) $row['id'] : null;
+    }
+
     public static function update(int $id, string $name): void
     {
         $pdo = Database::getConnection();
