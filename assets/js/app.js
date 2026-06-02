@@ -70,16 +70,30 @@
         return availableCardSets;
     }
 
+    let allDueReviewed = false;
+
     async function loadCardsFromAPI(setId, levels, studentId, randomMode = false, studentLevel = '') {
+        allDueReviewed = false;
         try {
-            const res = await apiCall('api/get_cards.php', 'POST', {
+            const body = {
                 set_id: (randomMode || setId === null) ? '' : setId.toString(),
                 student_id: studentId,
                 levels: levels,
                 random_mode: randomMode ? 'true' : 'false',
                 student_level: studentLevel
-            });
-            if (res && res.success && res.cards && res.cards.length > 0) return res.cards;
+            };
+            if (randomMode && phpCardSets && phpCardSets.length > 0) {
+                const filtered = phpCardSets.filter(s => s.id);
+                const restrictedSets = currentStudent?.accessible_set_ids;
+                if (restrictedSets && restrictedSets.length > 0) {
+                    body.set_ids = restrictedSets;
+                }
+            }
+            const res = await apiCall('api/get_cards.php', 'POST', body);
+            if (res && res.success) {
+                if (res.all_due_reviewed) allDueReviewed = true;
+                if (res.cards && res.cards.length > 0) return res.cards;
+            }
         } catch (e) {}
         return [];
     }
@@ -350,6 +364,13 @@
 
             const cards = await loadCardsFromAPI(setId, levelsToUse, currentStudent.id, randomMode, studentLevel);
             if (!cards || cards.length === 0) {
+                if (allDueReviewed) {
+                    currentCards = [];
+                    currentIndex = 0;
+                    currentView = 'study';
+                    render();
+                    return;
+                }
                 if (selectedLevels.length === 0) {
                     displayStatusMessage('No cards at your level. Trying all levels...', 'warning');
                     const fallback = await loadCardsFromAPI(setId, ['Beginner', 'Intermediate', 'Advanced'], currentStudent.id, randomMode);
@@ -545,7 +566,10 @@
 
     function renderStudyScreen() {
         if (!currentCards.length || currentIndex >= currentCards.length) {
-            appEl.innerHTML = `<div class="whiteboard-card p-6 md:p-12 text-center"><div class="text-7xl md:text-8xl mb-3">🏆✨</div><h2 class="text-3xl md:text-5xl text-green-800 marker-underline mb-3">All caught up!</h2><p class="text-base md:text-xl mb-5">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p><button id="backToWelcomeBtn" class="bg-gray-800 text-white px-6 md:px-8 py-2 md:py-3 text-lg md:text-xl rounded-xl btn-chalk">← Back to Dashboard</button></div>`;
+            const message = allDueReviewed
+                ? `<div class="text-7xl md:text-8xl mb-3">🎉📚</div><h2 class="text-3xl md:text-5xl text-blue-800 marker-underline mb-3">All cards viewed!</h2><p class="text-base md:text-xl mb-5">You've seen all due cards for this set.<br>Try another set or come back later!</p>`
+                : `<div class="text-7xl md:text-8xl mb-3">🏆✨</div><h2 class="text-3xl md:text-5xl text-green-800 marker-underline mb-3">All caught up!</h2><p class="text-base md:text-xl mb-5">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>`;
+            appEl.innerHTML = `<div class="whiteboard-card p-6 md:p-12 text-center">${message}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-6 md:px-8 py-2 md:py-3 text-lg md:text-xl rounded-xl btn-chalk">← Back to Dashboard</button></div>`;
             document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
             return;
         }

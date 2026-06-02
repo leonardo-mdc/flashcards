@@ -15,6 +15,7 @@ try {
     $selectedLevels = [];
     $studentLevel = null;
     $randomMode = false;
+    $setIds = [];
 
     $input = json_decode(file_get_contents('php://input'), true);
     if ($input) {
@@ -23,6 +24,7 @@ try {
         $selectedLevels = isset($input['levels']) ? $input['levels'] : [];
         $randomMode = isset($input['random_mode']) && ($input['random_mode'] === true || $input['random_mode'] === 'true');
         $studentLevel = isset($input['student_level']) ? $input['student_level'] : null;
+        $setIds = isset($input['set_ids']) ? (array) $input['set_ids'] : [];
     }
 
     if (!$input) {
@@ -47,6 +49,11 @@ try {
                 $selectedLevels = explode(',', $_GET['levels']);
             }
         }
+        if (isset($_POST['set_ids'])) {
+            $setIds = is_array($_POST['set_ids']) ? $_POST['set_ids'] : explode(',', $_POST['set_ids']);
+        } elseif (isset($_GET['set_ids'])) {
+            $setIds = explode(',', $_GET['set_ids']);
+        }
     }
 
     if (empty($selectedLevels)) {
@@ -59,7 +66,38 @@ try {
 
     Review::checkAndResetCycle($studentId);
 
-    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $studentId);
+    $totalAvailable = 0;
+    $pdo = Database::getConnection();
+    $countSql = "SELECT COUNT(*) FROM cards c WHERE 1=1";
+    $countParams = [];
+
+    if (!$randomMode && $setId !== null && $setId > 0) {
+        $countSql .= " AND c.set_id = ?";
+        $countParams[] = $setId;
+    } elseif (!$randomMode && ($setId === null || $setId === 0)) {
+        $countSql .= " AND c.set_id = 1";
+    }
+    if ($randomMode && !empty($setIds)) {
+        $placeholders = implode(',', array_fill(0, count($setIds), '?'));
+        $countSql .= " AND c.set_id IN ($placeholders)";
+        foreach ($setIds as $sid) {
+            $countParams[] = (int) $sid;
+        }
+    }
+    if (!empty($selectedLevels)) {
+        $placeholders = implode(',', array_fill(0, count($selectedLevels), '?'));
+        $countSql .= " AND c.level IN ($placeholders)";
+        foreach ($selectedLevels as $lvl) {
+            $countParams[] = $lvl;
+        }
+    }
+    $stmt = $pdo->prepare($countSql);
+    $stmt->execute($countParams);
+    $totalAvailable = (int) $stmt->fetchColumn();
+
+    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $studentId, !empty($setIds) ? $setIds : null);
+
+    $allDueReviewed = $totalAvailable > 0 && empty($cards);
 
     $setName = null;
     if (!$randomMode && $setId !== null && $setId > 0) {
@@ -78,6 +116,8 @@ try {
         'set_name' => $setName,
         'random_mode' => $randomMode,
         'levels_used' => $selectedLevels,
+        'all_due_reviewed' => $allDueReviewed,
+        'total_available' => $totalAvailable,
     ]);
 } catch (PDOException $e) {
     echo json_encode([

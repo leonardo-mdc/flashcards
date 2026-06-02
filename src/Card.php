@@ -7,7 +7,8 @@ class Card
         array $levels,
         bool $randomMode = false,
         int $limit = 500,
-        ?int $excludeUserId = null
+        ?int $excludeUserId = null,
+        ?array $setIds = null
     ): array {
         $pdo = Database::getConnection();
         $sql = "SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name FROM cards c LEFT JOIN card_sets s ON c.set_id = s.id WHERE 1=1";
@@ -18,6 +19,14 @@ class Card
             $params[] = $setId;
         } elseif (!$randomMode && ($setId === null || $setId === 0)) {
             $sql .= " AND c.set_id = 1";
+        }
+
+        if ($randomMode && !empty($setIds)) {
+            $placeholders = implode(',', array_fill(0, count($setIds), '?'));
+            $sql .= " AND c.set_id IN ($placeholders)";
+            foreach ($setIds as $sid) {
+                $params[] = (int) $sid;
+            }
         }
 
         if (!empty($levels)) {

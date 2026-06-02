@@ -6,6 +6,7 @@ require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/User.php';
+require_once __DIR__ . '/src/Review.php';
 
 $dbConnected = Database::testConnection();
 $cardSets = $dbConnected ? CardSet::getWithCards() : [];
@@ -66,7 +67,13 @@ if (!$loggedInStudent) {
         window.FLASHCARD_DATA = {
             cardSets: <?= json_encode($cardSets) ?>,
             dbConnected: <?= $dbConnected ? 'true' : 'false' ?>,
-            loggedInStudent: <?= json_encode($loggedInStudent) ?>
+            loggedInStudent: <?php
+                $studentData = $loggedInStudent;
+                if ($studentData && isset($studentData['id'])) {
+                    $studentData['accessible_set_ids'] = Review::getAccessibleSets((int) $studentData['id']);
+                }
+                echo json_encode($studentData);
+            ?>
         };
     </script>
     <script src="assets/js/app.js"></script>
