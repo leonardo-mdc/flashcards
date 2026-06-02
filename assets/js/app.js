@@ -280,7 +280,7 @@
         const html = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
                 <div class="flex justify-end mb-2">
-                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.full_name || currentStudent?.username || currentStudent?.name)}</span>
+                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
                     <a href="?logout=1" class="ml-2 text-xs text-gray-500 underline">Logout</a>
                 </div>
                 <div class="text-center mb-6 md:mb-8">
@@ -293,11 +293,11 @@
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Student</label>
                             <div class="flex gap-2 items-center">
-                                <span class="student-badge">✅ ${escapeHtml(currentStudent?.full_name || currentStudent?.username || currentStudent?.name)}</span>
+                                <span class="student-badge">✅ ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
                                 <button id="editProfileBtn" class="text-xs text-blue-600 underline whitespace-nowrap">✏️ Edit</button>
                             </div>
                         </div>
-                        <div class="text-sm text-gray-500 mt-1">@${escapeHtml(currentStudent?.username)}</div>
+                        <div class="text-sm text-gray-500 mt-1">📝 ${escapeHtml(currentStudent?.full_name || currentStudent?.username)}</div>
                         <div class="flex gap-4 mt-2 text-sm">
                             <span>📊 Progress: <strong>${currentStudent?.progress || 0}%</strong></span>
                             <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
@@ -454,8 +454,7 @@
             const options = data.options || ['Option A', 'Option B', 'Option C'];
             return `
                 <div class="text-center">
-                    <div class="text-5xl mb-4">❓</div>
-                    <p class="text-xl mb-6 font-bold">${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
+                    <p class="text-xl mb-6 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
                     <div class="space-y-3" id="mcqOptionsContainer">
                         ${options.map((opt, idx) => `<div class="quiz-option" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                     </div>
@@ -467,8 +466,7 @@
             const hint = getGapFillHint(card);
             return `
                 <div class="text-center">
-                    <div class="text-5xl mb-4">✏️</div>
-                    <p class="text-xl mb-2 font-bold">Complete the sentence:</p>
+                    <p class="text-xl mb-2 font-bold">✏️ Complete the sentence:</p>
                     <p class="text-base bg-gray-100 p-4 rounded-xl mb-2">${escapeHtml(sentence)}</p>
                     <div class="context-hint">${hint}</div>
                     <input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-3 text-base border-2 rounded-xl mb-4">
