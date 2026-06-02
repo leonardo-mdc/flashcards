@@ -99,7 +99,7 @@
             const res = await apiCall('api/get_cards.php', 'POST', {
                 set_id: (randomMode || setId === null) ? '' : setId.toString(),
                 student_id: studentId,
-                levels: JSON.stringify(levels),
+                levels: levels,
                 random_mode: randomMode ? 'true' : 'false'
             });
             if (res && res.success && res.cards && res.cards.length > 0) return res.cards;
