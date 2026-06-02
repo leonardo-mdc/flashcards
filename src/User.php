@@ -7,7 +7,8 @@ class User
         $pdo = Database::getConnection();
         $pdo->exec("CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) NOT NULL UNIQUE,
+            username VARCHAR(30) NOT NULL UNIQUE,
+            full_name VARCHAR(100) NOT NULL DEFAULT '',
             password_hash VARCHAR(255) NOT NULL,
             is_admin TINYINT(1) DEFAULT 0,
             progress INT DEFAULT 0,
@@ -15,6 +16,10 @@ class User
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'full_name'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN full_name VARCHAR(100) NOT NULL DEFAULT '' AFTER username");
+        }
         $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'progress'");
         if (!$stmt->fetch()) {
             $pdo->exec("ALTER TABLE users ADD COLUMN progress INT DEFAULT 0 AFTER is_admin");
@@ -29,36 +34,38 @@ class User
     {
         self::ensureTable();
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT id, username, password_hash, is_admin, progress, english_level FROM users WHERE username = ?");
+        $stmt = $pdo->prepare("SELECT id, username, full_name, password_hash, is_admin, progress, english_level FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['password_hash'])) {
             unset($user['password_hash']);
             $user['is_admin'] = (bool) $user['is_admin'];
+            $user['full_name'] = $user['full_name'] ?? '';
             return $user;
         }
 
         return null;
     }
 
-    public static function create(string $username, string $password, bool $isAdmin = false): array
+    public static function create(string $username, string $password, bool $isAdmin = false, string $fullName = '', string $englishLevel = 'Beginner'): array
     {
         self::ensureTable();
         $pdo = Database::getConnection();
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)");
-        $stmt->execute([$username, $hash, $isAdmin ? 1 : 0]);
+        $stmt = $pdo->prepare("INSERT INTO users (username, full_name, password_hash, is_admin, english_level) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$username, $fullName, $hash, $isAdmin ? 1 : 0, $englishLevel]);
         return [
             'id' => (int) $pdo->lastInsertId(),
             'username' => $username,
+            'full_name' => $fullName,
             'is_admin' => $isAdmin,
             'progress' => 0,
-            'english_level' => 'Beginner',
+            'english_level' => $englishLevel,
         ];
     }
 
-    public static function register(string $username, string $password): ?array
+    public static function register(string $username, string $password, string $fullName = '', string $englishLevel = 'Beginner'): ?array
     {
         self::ensureTable();
         $pdo = Database::getConnection();
@@ -69,14 +76,14 @@ class User
             return null;
         }
 
-        return self::create($username, $password, false);
+        return self::create($username, $password, false, $fullName, $englishLevel);
     }
 
     public static function getAll(): array
     {
         self::ensureTable();
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT id, username, is_admin, progress, english_level, created_at FROM users ORDER BY id ASC");
+        $stmt = $pdo->query("SELECT id, username, full_name, is_admin, progress, english_level, created_at FROM users ORDER BY id ASC");
         $users = $stmt->fetchAll();
         foreach ($users as &$user) {
             $user['is_admin'] = (bool) $user['is_admin'];
@@ -88,7 +95,7 @@ class User
     {
         self::ensureTable();
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT id, username, is_admin, progress, english_level, created_at FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, username, full_name, is_admin, progress, english_level, created_at FROM users WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         if ($row) {

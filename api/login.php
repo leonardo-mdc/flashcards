@@ -17,12 +17,19 @@ try {
         exit;
     }
 
+    if (strlen($name) > 30) {
+        echo json_encode(['success' => false, 'error' => 'Username must be 30 characters or less']);
+        exit;
+    }
+
     if ($action === 'register') {
         if (strlen($password) < 4) {
             echo json_encode(['success' => false, 'error' => 'Password must be at least 4 characters']);
             exit;
         }
-        $user = User::register($name, $password);
+        $fullName = isset($input['full_name']) ? trim($input['full_name']) : '';
+        $englishLevel = isset($input['english_level']) ? trim($input['english_level']) : 'Beginner';
+        $user = User::register($name, $password, $fullName, $englishLevel);
         if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Name already taken. Please log in.']);
             exit;

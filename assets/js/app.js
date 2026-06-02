@@ -24,9 +24,6 @@
         if (loggedInStudent && loggedInStudent.id) {
             currentStudent = loggedInStudent;
             currentView = 'welcome';
-        } else {
-            const saved = localStorage.getItem(STUDENT_STORAGE_KEY);
-            if (saved) try { currentStudent = JSON.parse(saved); currentView = 'welcome'; } catch (e) {}
         }
         const session = sessionStorage.getItem(SESSION_STATE_KEY);
         if (session) try { const s = JSON.parse(session);
@@ -38,7 +35,6 @@
         if (prog) try { localProgress = JSON.parse(prog); } catch (e) {}
     }
 
-    function saveStudent(student) { if (student?.id) localStorage.setItem(STUDENT_STORAGE_KEY, JSON.stringify(student)); }
     function saveSessionState() {
         sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify({ selectedLevels, currentSet, isRandomMode }));
     }
@@ -58,7 +54,6 @@
     }
 
     function clearStudent() {
-        localStorage.removeItem(STUDENT_STORAGE_KEY);
         currentStudent = null;
         currentView = 'login';
         render();
@@ -112,10 +107,9 @@
         return [];
     }
 
-    async function loginOrRegister(name, password, action) {
-        const res = await apiCall('api/login.php', 'POST', { name, password, action });
+    async function loginOrRegister(name, password, action, fullName = '', englishLevel = 'Beginner') {
+        const res = await apiCall('api/login.php', 'POST', { name, password, action, full_name: fullName, english_level: englishLevel });
         if (res && res.success && res.student) {
-            saveStudent(res.student);
             currentStudent = res.student;
             currentView = 'welcome';
             render();
@@ -152,6 +146,8 @@
         else renderStudyScreen();
     }
 
+    let isRegisterMode = false;
+
     function renderLoginScreen() {
         appEl.innerHTML = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
@@ -162,8 +158,22 @@
                 </div>
                 <div class="space-y-5 md:space-y-7 max-w-md mx-auto">
                     <div class="marker-border p-4 md:p-5 bg-white/80">
-                        <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Name</label>
-                        <input type="text" id="authNameInput" placeholder="Enter your name" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
+                        <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Username</label>
+                        <input type="text" id="authNameInput" placeholder="Username (max 30 chars)" maxlength="30" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
+                    </div>
+                    <div id="registerFields" class="space-y-5 ${isRegisterMode ? '' : 'hidden'}">
+                        <div class="marker-border p-4 md:p-5 bg-white/80">
+                            <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">📝 Full Name</label>
+                            <input type="text" id="authFullNameInput" placeholder="Your full name" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2">
+                        </div>
+                        <div class="marker-border p-4 md:p-5 bg-white/80">
+                            <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">🎯 English Level</label>
+                            <select id="authLevelInput" class="w-full p-2 md:p-3 text-lg md:text-xl border-2 rounded-xl mt-2 bg-white">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">🔒 Password</label>
@@ -192,12 +202,25 @@
         });
 
         document.getElementById('registerBtn').addEventListener('click', async () => {
+            if (!isRegisterMode) {
+                isRegisterMode = true;
+                document.getElementById('registerFields').classList.remove('hidden');
+                document.getElementById('registerBtn').textContent = '✅ CONFIRM REGISTER';
+                return;
+            }
             const name = document.getElementById('authNameInput').value.trim();
             const password = document.getElementById('authPasswordInput').value;
+            const fullName = document.getElementById('authFullNameInput').value.trim();
+            const englishLevel = document.getElementById('authLevelInput').value;
             if (!name || !password) { showError('Please fill in all fields'); return; }
             if (password.length < 4) { showError('Password must be at least 4 characters'); return; }
-            const result = await loginOrRegister(name, password, 'register');
-            if (!result) showError('Name already taken. Try logging in.');
+            const result = await loginOrRegister(name, password, 'register', fullName, englishLevel);
+            if (!result) {
+                showError('Name already taken. Try logging in.');
+                isRegisterMode = false;
+                document.getElementById('registerFields').classList.add('hidden');
+                document.getElementById('registerBtn').textContent = '✨ REGISTER';
+            }
         });
 
         document.getElementById('authPasswordInput').addEventListener('keydown', (e) => {
@@ -257,7 +280,7 @@
         const html = `
             <div class="whiteboard-card p-5 md:p-10 shadow-2xl">
                 <div class="flex justify-end mb-2">
-                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
+                    <span class="student-badge">👤 ${escapeHtml(currentStudent?.full_name || currentStudent?.username || currentStudent?.name)}</span>
                     <a href="?logout=1" class="ml-2 text-xs text-gray-500 underline">Logout</a>
                 </div>
                 <div class="text-center mb-6 md:mb-8">
@@ -269,7 +292,12 @@
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <label class="text-xl md:text-2xl font-bold text-gray-800 title-font">👤 Student</label>
-                            <span class="student-badge">✅ ${escapeHtml(currentStudent?.username || currentStudent?.name)}</span>
+                            <span class="student-badge">✅ ${escapeHtml(currentStudent?.full_name || currentStudent?.username || currentStudent?.name)}</span>
+                        </div>
+                        <div class="text-sm text-gray-500 mt-1">@${escapeHtml(currentStudent?.username)}</div>
+                        <div class="flex gap-4 mt-2 text-sm">
+                            <span>📊 Progress: <strong>${currentStudent?.progress || 0}%</strong></span>
+                            <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
                         </div>
                     </div>
                     <div class="marker-border p-4 md:p-5 bg-white/80">
