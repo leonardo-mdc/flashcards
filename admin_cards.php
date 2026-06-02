@@ -225,7 +225,8 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         <?php endforeach; ?>
                     </select>
                     <button id="manageSetsBtn" class="btn btn-secondary text-sm">⚙️ Manage</button>
-                    <button id="importCsvBtn" class="btn btn-secondary text-sm">📥 Import CSV</button>
+                    <button id="importCsvBtn" class="btn btn-secondary text-sm">📥 Import</button>
+                    <a href="api/export_csv.php" class="btn btn-secondary text-sm">📤 Export</a>
                     <input type="file" id="importCsvInput" accept=".csv" class="hidden">
                     <div class="flex gap-2">
                         <button id="saveCardBtn" class="btn btn-success">💾 SAVE</button>
