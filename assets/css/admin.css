@@ -486,33 +486,26 @@ body {
 .import-flip-card {
     border-radius: 10px;
     overflow: hidden;
-    cursor: pointer;
-    min-height: 260px;
-    position: relative;
-    perspective: 600px;
-    transition: box-shadow 0.2s;
-}
-.import-flip-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 .import-flip-front,
 .import-flip-back {
-    min-height: 260px;
+    min-height: 120px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    border-radius: 10px;
+    padding: 16px;
+    border-radius: 8px;
     border: 2px solid #e5e7eb;
-    transition: none;
 }
 .import-flip-front {
     background: white;
 }
 .import-flip-back {
     background: linear-gradient(135deg, #fef9e8, #ffffff);
-    display: none;
 }
 
 /* Import row checkbox */
@@ -530,7 +523,7 @@ body {
 @media (max-width: 1024px) {
     .import-body { flex-direction: column; }
     .import-right { width: 100%; }
-    .import-flip-card, .import-flip-front, .import-flip-back { min-height: 200px; }
+    .import-flip-front, .import-flip-back { min-height: 100px; }
 }
 @media (max-width: 768px) {
     .import-modal-content { padding: 12px; width: 98%; }
@@ -538,5 +531,5 @@ body {
     .import-table { font-size: 0.7rem; }
     .import-table th, .import-table td { padding: 4px 6px; }
     .import-records-container { max-height: 180px; }
-    .import-flip-card, .import-flip-front, .import-flip-back { min-height: 160px; }
+    .import-flip-front, .import-flip-back { min-height: 80px; }
 }

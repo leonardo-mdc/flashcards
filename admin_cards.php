@@ -544,7 +544,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                     <div class="text-gray-400 text-sm text-center p-4">Flip to see the answer</div>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-400 text-center mt-2">👆 Click card to flip</p>
                         </div>
                     </div>
                 </div>

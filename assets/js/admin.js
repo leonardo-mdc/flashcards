@@ -880,8 +880,6 @@
     const importSelectAll = document.getElementById('importSelectAll');
     const importCardPreview = document.getElementById('importCardPreview');
 
-    let importPreviewFlipped = false;
-
     function openImportModal() {
         importModal.classList.remove('hidden');
         importStepFile.classList.remove('hidden');
@@ -898,14 +896,13 @@
     }
 
     function resetImportCardPreview() {
-        importPreviewFlipped = false;
         if (importCardPreview) {
             importCardPreview.innerHTML = `
                 <div class="import-flip-front">
                     <div class="text-gray-400 text-sm text-center p-4">Select a row to preview</div>
                 </div>
                 <div class="import-flip-back">
-                    <div class="text-gray-400 text-sm text-center p-4">Flip to see the answer</div>
+                    <div class="text-gray-400 text-sm text-center p-4">Back side</div>
                 </div>
             `;
         }
@@ -1130,8 +1127,6 @@
             tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
         });
 
-        // Render the visual card preview
-        importPreviewFlipped = false;
         renderImportCardPreview(row);
     }
 
@@ -1184,54 +1179,51 @@
         if (style === 'multiple_choice') {
             frontHtml = `
                 <div class="text-center">
-                    <div class="text-3xl mb-2">❓</div>
+                    <div class="text-3xl mb-1">❓</div>
                     <p class="text-lg font-bold">${escapeHtml(title)}</p>
                     <p class="text-sm text-gray-600 mt-1">${escapeHtml(definition || 'Select the correct answer:')}</p>
-                    <div class="mt-2 text-xs text-gray-400">(options shown on card)</div>
-                    <p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p>
+                    <div class="mt-1 text-xs text-gray-400">(options shown on card)</div>
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
-                    <div class="text-xl text-green-700 marker-underline mb-2">✓ Answer</div>
-                    <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300">
-                        <p class="text-lg font-bold">${escapeHtml(extra || 'Correct Answer')}</p>
+                    <div class="text-base text-green-700 marker-underline mb-1">✓ Answer</div>
+                    <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300">
+                        <p class="text-base font-bold">${escapeHtml(extra || 'Correct Answer')}</p>
                     </div>
-                    ${example ? `<p class="text-sm text-gray-600 mt-2">${escapeHtml(example)}</p>` : ''}
+                    ${example ? `<p class="text-xs text-gray-600 mt-1">${escapeHtml(example)}</p>` : ''}
                 </div>
             `;
         } else if (style === 'gap_fill') {
             frontHtml = `
                 <div class="text-center">
-                    <div class="text-3xl mb-2">✏️</div>
-                    <p class="text-sm text-gray-500 mb-1">Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-2 rounded-lg">${escapeHtml(definition || 'Complete: ______')}</p>
-                    <p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p>
+                    <div class="text-3xl mb-1">✏️</div>
+                    <p class="text-xs text-gray-500 mb-1">Complete the sentence:</p>
+                    <p class="text-sm bg-gray-100 p-2 rounded-lg">${escapeHtml(definition || 'Complete: ______')}</p>
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
-                    <div class="text-xl text-green-700 marker-underline mb-2">✓ Correct</div>
-                    <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300">
-                        <p class="text-lg font-bold">${escapeHtml(extra || 'Answer')}</p>
+                    <div class="text-base text-green-700 marker-underline mb-1">✓ Correct</div>
+                    <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300">
+                        <p class="text-base font-bold">${escapeHtml(extra || 'Answer')}</p>
                     </div>
-                    ${example ? `<p class="text-sm text-gray-600 mt-2">📝 ${escapeHtml(example)}</p>` : ''}
+                    ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${escapeHtml(example)}</p>` : ''}
                 </div>
             `;
         } else {
             frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="text-3xl text-center font-bold">${escapeHtml(title)}</div>
-                    <p class="text-xs text-gray-400 mt-3">👆 Tap to flip</p>
+                <div class="flex flex-col items-center justify-center">
+                    <div class="text-2xl text-center font-bold">${escapeHtml(title)}</div>
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
-                    <div class="text-xl text-blue-700 marker-underline mb-2">${escapeHtml(title)}</div>
-                    <div class="bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
-                        <p class="text-base">${escapeHtml(definition || 'Definition')}</p>
+                    <div class="text-base text-blue-700 marker-underline mb-1">${escapeHtml(title)}</div>
+                    <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
+                        <p class="text-sm">${escapeHtml(definition || 'Definition')}</p>
                     </div>
-                    ${example ? `<p class="text-sm text-gray-600 mt-2">📝 ${escapeHtml(example)}</p>` : ''}
+                    ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${escapeHtml(example)}</p>` : ''}
                 </div>
             `;
         }
@@ -1240,24 +1232,6 @@
             <div class="import-flip-front">${frontHtml}</div>
             <div class="import-flip-back">${backHtml}</div>
         `;
-
-        importPreviewFlipped = false;
-        const front = importCardPreview.querySelector('.import-flip-front');
-        const back = importCardPreview.querySelector('.import-flip-back');
-        if (front) front.style.display = 'flex';
-        if (back) back.style.display = 'none';
-
-        // Remove old listener and add new one
-        importCardPreview.onclick = (e) => {
-            e.stopPropagation();
-            importPreviewFlipped = !importPreviewFlipped;
-            const f = importCardPreview.querySelector('.import-flip-front');
-            const b = importCardPreview.querySelector('.import-flip-back');
-            if (f && b) {
-                f.style.display = importPreviewFlipped ? 'none' : 'flex';
-                b.style.display = importPreviewFlipped ? 'flex' : 'none';
-            }
-        };
     }
 
     document.getElementById('importApplyCardBtn')?.addEventListener('click', () => {
@@ -1346,7 +1320,6 @@
     // Live preview update on editor field changes
     function refreshImportPreviewFromEditor() {
         if (importSelectedIdx >= 0 && importRows[importSelectedIdx]) {
-            importPreviewFlipped = false;
             renderImportCardPreview({
                 title: importEditTitle.value,
                 type: importEditStyle.value,
