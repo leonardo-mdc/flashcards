@@ -39,8 +39,43 @@ try {
         )");
         echo "✓ users table recreated with correct columns\n";
 
-        echo "</pre><p style='color:green;font-weight:bold;'>Migration complete!</p>";
-        echo "<p>Visit <a href='admin_cards.php'>admin_cards.php</a> to create the first admin user.</p>";
+        // 4. Create admin user
+        $adminUser = trim($_GET['admin_user'] ?? '');
+        $adminPass = $_GET['admin_pass'] ?? '';
+        if ($adminUser === '' || strlen($adminPass) < 6) {
+            echo "</pre><p style='color:orange;font-weight:bold;'>⚠ Migration ran, but no admin was created.</p>";
+            echo "<p>Use the form below to create the admin user:</p>";
+            echo "<form method='get' style='margin-top:12px;'>";
+            echo "<input type='hidden' name='action' value='create_admin'>";
+            echo "<input type='text' name='admin_user' placeholder='Username' required style='padding:6px;margin-right:4px;'>";
+            echo "<input type='password' name='admin_pass' placeholder='Password (min 6)' required style='padding:6px;margin-right:4px;'>";
+            echo "<button type='submit' style='background:#15803d;color:#fff;padding:6px 16px;border:none;border-radius:4px;cursor:pointer;'>➕ Create Admin</button>";
+            echo "</form>";
+        } else {
+            $hash = password_hash($adminPass, PASSWORD_BCRYPT);
+            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)");
+            $stmt->execute([$adminUser, $hash]);
+            echo "✓ Admin user '<strong>" . htmlspecialchars($adminUser) . "</strong>' created\n";
+            echo "</pre><p style='color:green;font-weight:bold;'>Migration complete! Admin user created.</p>";
+            echo "<p><a href='admin_cards.php' style='background:#1d4ed8;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;'>→ Go to Admin Panel</a></p>";
+        }
+        echo "<p><a href='fix_db.php'>← Back to schema check</a></p>";
+        exit;
+    }
+
+    if ($action === 'create_admin') {
+        require_once __DIR__ . '/src/User.php';
+        echo "<hr><h3>Creating admin user...</h3><pre>";
+        $adminUser = trim($_GET['admin_user'] ?? '');
+        $adminPass = $_GET['admin_pass'] ?? '';
+        if ($adminUser === '' || strlen($adminPass) < 6) {
+            echo "ERROR: Username required and password min 6 characters.</pre>";
+            echo "<p><a href='fix_db.php'>← Back</a></p>";
+            exit;
+        }
+        $user = User::create($adminUser, $adminPass, true);
+        echo "✓ Admin user '<strong>" . htmlspecialchars($user['username']) . "</strong>' created (ID: {$user['id']})\n";
+        echo "</pre><p><a href='admin_cards.php' style='background:#1d4ed8;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;'>→ Go to Admin Panel</a></p>";
         echo "<p><a href='fix_db.php'>← Back to schema check</a></p>";
         exit;
     }
@@ -87,9 +122,22 @@ try {
 
     if ($hasIssues) {
         echo "<hr><p style='color:#d00;font-weight:bold;'>⚠ Schema issues detected — columns in <span style='background:#ffd700;'>yellow</span> are unexpected, <span style='background:#ff6b6b;color:#fff;'>red</span> are missing.</p>";
-        echo "<p><a href='?action=migrate' onclick='return confirm(\"This will reset ALL users and progress but KEEP card data. Continue?\")' style='background:#d00;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;'>🔄 Run Schema Migration</a></p>";
+        echo "<form method='get' style='margin:12px 0;padding:12px;border:2px solid #d00;border-radius:8px;background:#fff5f5;'>";
+        echo "<p style='margin:0 0 8px;font-weight:bold;'>🔄 Migrate schema & create admin user:</p>";
+        echo "<input type='hidden' name='action' value='migrate'>";
+        echo "<input type='text' name='admin_user' placeholder='Admin username' required style='padding:6px;margin-right:4px;border:1px solid #ccc;border-radius:4px;'>";
+        echo "<input type='password' name='admin_pass' placeholder='Password (min 6)' required style='padding:6px;margin-right:4px;border:1px solid #ccc;border-radius:4px;'>";
+        echo "<button type='submit' onclick='return confirm(\"This will reset ALL users and progress but KEEP card data. Continue?\")' style='background:#d00;color:#fff;padding:6px 16px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;'>🔄 Migrate + Create Admin</button>";
+        echo "</form>";
     } else {
         echo "<p style='color:green;font-weight:bold;'>✓ All tables have the correct columns.</p>";
+        echo "<hr><h3>Create Admin User</h3>";
+        echo "<form method='get' style='margin:12px 0;padding:12px;border:2px solid #15803d;border-radius:8px;background:#f0fdf4;'>";
+        echo "<input type='hidden' name='action' value='create_admin'>";
+        echo "<input type='text' name='admin_user' placeholder='Username' required style='padding:6px;margin-right:4px;border:1px solid #ccc;border-radius:4px;'>";
+        echo "<input type='password' name='admin_pass' placeholder='Password (min 6)' required style='padding:6px;margin-right:4px;border:1px solid #ccc;border-radius:4px;'>";
+        echo "<button type='submit' style='background:#15803d;color:#fff;padding:6px 16px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;'>➕ Create Admin</button>";
+        echo "</form>";
     }
 
 } catch (Exception $e) {
