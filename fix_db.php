@@ -67,6 +67,14 @@ try {
         exit;
     }
 
+    if ($action === 'fix_pattern_type') {
+        echo "<hr><h3>Fixing corrupted pattern_type...</h3><pre>";
+        $count = $pdo->exec("UPDATE cards SET pattern_type = 'usage_cases' WHERE pattern_type = '' OR pattern_type IS NULL");
+        echo "✓ Updated $count cards with empty pattern_type to 'usage_cases'\n";
+        echo "</pre><p><a href='fix_db.php'>← Back</a></p>";
+        exit;
+    }
+
     if ($action === 'create_admin') {
         require_once __DIR__ . '/src/User.php';
         echo "<hr><h3>Creating admin user...</h3><pre>";
@@ -135,6 +143,14 @@ try {
         echo "</form>";
     } else {
         echo "<p style='color:green;font-weight:bold;'>✓ All tables have the correct columns.</p>";
+
+        echo "<hr><h3>Fix Card Data</h3>";
+        echo "<form method='get' style='margin:12px 0;padding:12px;border:2px solid #d97706;border-radius:8px;background:#fffbeb;'>";
+        echo "<input type='hidden' name='action' value='fix_pattern_type'>";
+        echo "<p style='margin:0 0 8px;'>Updates cards with empty pattern_type (from ENUM change) to 'usage_cases'</p>";
+        echo "<button type='submit' style='background:#d97706;color:#fff;padding:6px 16px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;'>🔧 Fix Pattern Types</button>";
+        echo "</form>";
+
         echo "<hr><h3>Create Admin User</h3>";
         echo "<form method='get' style='margin:12px 0;padding:12px;border:2px solid #15803d;border-radius:8px;background:#f0fdf4;'>";
         echo "<input type='hidden' name='action' value='create_admin'>";
