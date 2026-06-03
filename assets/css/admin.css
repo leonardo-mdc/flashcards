@@ -463,15 +463,15 @@ body {
     min-height: 0;
 }
 .import-left {
-    flex: 1;
+    flex: 0 0 65%;
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-width: 0;
 }
 .import-right {
-    width: 420px;
-    flex-shrink: 0;
+    flex: 0 0 35%;
+    min-width: 0;
 }
 
 .import-preview-panel {
