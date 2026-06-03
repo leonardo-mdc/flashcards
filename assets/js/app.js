@@ -10,12 +10,67 @@
     let currentCardObj = null;
     let availableCardSets = [];
     let isRandomMode = false;
+    let allDueReviewed = false;
+    let currentQuizState = null;
+    let isFlipped = false;
+    let streakDays = 0;
 
     const SESSION_STATE_KEY = 'flashcard_session';
 
     const phpCardSets = window.FLASHCARD_DATA.cardSets;
     const dbConnected = window.FLASHCARD_DATA.dbConnected;
     const loggedInStudent = window.FLASHCARD_DATA.loggedInStudent;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+    }
+
+    function formatBreaks(text) {
+        if (!text) return '';
+        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
+    }
+
+    const SoundFX = {
+        _ctx: null,
+        _getCtx() {
+            if (!this._ctx) {
+                try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+            }
+            return this._ctx;
+        },
+        _play(freq, duration, type, vol) {
+            const ctx = this._getCtx();
+            if (!ctx) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type || 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duration);
+        },
+        correct() {
+            this._play(523.25, 0.15, 'sine', 0.12);
+            setTimeout(() => this._play(659.25, 0.15, 'sine', 0.12), 100);
+            setTimeout(() => this._play(783.99, 0.25, 'sine', 0.12), 200);
+        },
+        incorrect() {
+            this._play(311.13, 0.2, 'sawtooth', 0.08);
+            setTimeout(() => this._play(233.08, 0.35, 'sawtooth', 0.08), 150);
+        },
+        flip() {
+            this._play(800, 0.08, 'sine', 0.05);
+        },
+        complete() {
+            const notes = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+            notes.forEach((n, i) => setTimeout(() => this._play(n, 0.2, 'sine', 0.1), i * 100));
+        },
+        click() { this._play(600, 0.04, 'sine', 0.04); }
+    };
 
     function loadSavedData() {
         if (loggedInStudent && loggedInStudent.id) {
@@ -70,8 +125,6 @@
         return availableCardSets;
     }
 
-    let allDueReviewed = false;
-
     async function loadCardsFromAPI(setId, levels, studentId, randomMode = false, studentLevel = '') {
         allDueReviewed = false;
         try {
@@ -114,13 +167,37 @@
             const res = await apiCall('api/record_review.php', 'POST', { card_id: cardId, user_id: studentId, quality, correct: wasCorrect });
             if (res && res.progress !== undefined) {
                 currentStudent.progress = res.progress;
+                if (res.streak_days !== undefined) streakDays = res.streak_days;
             }
+            return res;
         } catch (e) {}
+        return null;
     }
 
     async function loadStats() {
         const res = await apiCall('api/get_stats.php', 'POST', { user_id: currentStudent?.id });
+        if (res?.stats) {
+            streakDays = res.stats.streak_days || 0;
+        }
         return res?.stats || null;
+    }
+
+    function spawnConfetti(count = 60) {
+        const colors = ['#fbbf24', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#ec4899', '#f97316'];
+        const container = document.body;
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'confetti-piece';
+            el.style.left = Math.random() * 100 + 'vw';
+            el.style.background = colors[Math.floor(Math.random() * colors.length)];
+            el.style.width = (Math.random() * 8 + 4) + 'px';
+            el.style.height = (Math.random() * 8 + 4) + 'px';
+            el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            el.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            el.style.animationDelay = (Math.random() * 1.5) + 's';
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
+        }
     }
 
     let statusTimeout;
@@ -130,7 +207,7 @@
         const colors = { success: '#16a34a', error: '#dc2626', warning: '#d97706', info: '#2563eb' };
         const div = document.createElement('div');
         div.id = 'statusMessage';
-        div.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: ${colors[type]}; color: white; padding: 10px 16px; border-radius: 8px; font-size: 12px; z-index: 1000;`;
+        div.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: ${colors[type]}; color: white; padding: 10px 16px; border-radius: 8px; font-size: 12px; z-index: 1000; animation: fadeIn 0.2s;`;
         div.innerHTML = message;
         document.body.appendChild(div);
         if (statusTimeout) clearTimeout(statusTimeout);
@@ -147,7 +224,7 @@
 
     function renderLoginScreen() {
         appEl.innerHTML = `
-            <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
+            <div class="whiteboard-card p-4 md:p-6 shadow-2xl screen-fade-in">
                 <div class="text-center mb-4 md:mb-5">
                     <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline"><span class="text-3xl md:text-4xl">🎓</span> Flashcard Studio <span class="text-xl md:text-2xl">✏️</span></h1>
                     <p class="text-gray-600 text-sm md:text-lg mt-1">sign in to start studying</p>
@@ -176,6 +253,7 @@
             const name = document.getElementById('authNameInput').value.trim();
             const password = document.getElementById('authPasswordInput').value;
             if (!name || !password) { showError('Please fill in all fields'); return; }
+            SoundFX.click();
             const result = await loginOrRegister(name, password, 'login');
             if (!result) showError('Invalid name or password');
         });
@@ -183,16 +261,6 @@
         document.getElementById('authPasswordInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') document.getElementById('loginBtn').click();
         });
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
-    }
-
-    function formatBreaks(text) {
-        if (!text) return '';
-        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
     }
 
     function getGapFillHint(card) {
@@ -228,7 +296,7 @@
     }
 
     async function renderWelcomeScreen() {
-        appEl.innerHTML = `<div class="whiteboard-card p-4 text-center"><div class="loader mx-auto mb-2"></div><p>Loading card sets...</p></div>`;
+        appEl.innerHTML = `<div class="whiteboard-card p-4 text-center screen-fade-in"><div class="loader mx-auto mb-2"></div><p>Loading card sets...</p></div>`;
         const sets = await loadCardSetsFromAPI();
         const randomSelected = (currentSet === null || isRandomMode);
         const setsHtml = `<option value="" ${randomSelected ? 'selected' : ''}>🎲 RANDOM MODE - All Sets</option>` +
@@ -236,8 +304,12 @@
 
         const stats = await loadStats();
 
+        const streakHtml = streakDays > 0
+            ? `<div class="streak-badge">${streakDays} day${streakDays > 1 ? 's' : ''}</div>`
+            : '';
+
         const html = `
-            <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
+            <div class="whiteboard-card p-4 md:p-6 shadow-2xl screen-fade-in">
                 <div class="text-center mb-4 md:mb-5">
                     <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline"><span class="text-3xl md:text-4xl">🎓</span> Flashcard Studio <span class="text-xl md:text-2xl">✏️</span></h1>
                     <p class="text-gray-600 text-sm md:text-lg mt-1">spaced repetition · tap card to flip</p>
@@ -253,8 +325,9 @@
                             </div>
                         </div>
                         <div class="text-sm text-gray-500 mt-1">📝 ${escapeHtml(currentStudent?.full_name || currentStudent?.username)}</div>
-                        <div class="flex gap-4 mt-2 text-sm items-center">
+                        <div class="flex gap-4 mt-2 text-sm items-center flex-wrap">
                             <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
+                            ${streakHtml}
                             <a href="?logout=1" class="text-xs text-red-600 underline ml-auto">Logout</a>
                         </div>
                     </div>
@@ -275,14 +348,21 @@
                                 <div class="text-xs text-gray-600">Incorrect</div>
                             </div>
                             <div class="bg-purple-50 p-3 rounded-xl">
-                                <div class="text-2xl font-bold text-purple-700">${stats.cards_reviewed}</div>
-                                <div class="text-xs text-gray-600">Cards Seen</div>
+                                <div class="text-2xl font-bold text-purple-700">${stats.learned_count}</div>
+                                <div class="text-xs text-gray-600">Cards Learned</div>
                             </div>
                         </div>
                         <div class="mt-3">
-                            <div class="text-xs text-gray-500 mb-1">📊 Progress:</div>
-                            <div class="progress-bar-container" style="max-width:100%;" data-pct="${Math.round(currentStudent?.progress || 0)}%"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%"></div></div>
+                            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>📊 Learning Progress:</span>
+                                <span>${stats.learned_count}/${stats.total_cards}</span>
+                            </div>
+                            <div class="progress-bar-container" style="max-width:100%;">
+                                <div class="progress-bar-fill ${stats.progress < 100 ? 'progress-pulse' : ''}" style="width: ${stats.progress || 0}%"></div>
+                                <span class="pct-label">${stats.progress || 0}%</span>
+                            </div>
                         </div>
+                        ${stats.due_today > 0 ? `<p class="text-xs text-orange-600 mt-2 font-bold">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</p>` : ''}
                     </div>
                     ` : ''}
                     </div>
@@ -313,6 +393,7 @@
 
         document.querySelectorAll('.level-picker').forEach(btn => {
             btn.addEventListener('click', () => {
+                SoundFX.click();
                 const lvl = btn.getAttribute('data-level');
                 if (selectedLevels.includes(lvl)) {
                     selectedLevels = selectedLevels.filter(l => l !== lvl);
@@ -328,6 +409,7 @@
         });
 
         document.getElementById('refreshSetsBtn')?.addEventListener('click', async () => {
+            SoundFX.click();
             displayStatusMessage('Refreshing card sets (non-empty only)...', 'info');
             const freshSets = await loadCardSetsFromAPI();
             const selectEl = document.getElementById('setSelect');
@@ -335,13 +417,14 @@
                 const randomSelectedNow = (currentSet === null || isRandomMode);
                 selectEl.innerHTML = '<option value="" ' + (randomSelectedNow ? 'selected' : '') + '>🎲 RANDOM MODE - All Sets</option>' +
                     freshSets.map(s => `<option value="${s.id}" ${currentSet?.id == s.id && !randomSelectedNow ? 'selected' : ''}>📚 ${escapeHtml(s.name)}</option>`).join('');
-                displayStatusMessage(`Loaded ${freshSets.length} card sets (only those with cards)`, 'success');
+                displayStatusMessage(`Loaded ${freshSets.length} card sets`, 'success');
             } else {
                 displayStatusMessage('No card sets with cards found!', 'warning');
             }
         });
 
         document.getElementById('launchStudyBtn')?.addEventListener('click', async () => {
+            SoundFX.click();
             const setSelect = document.getElementById('setSelect');
             const selectedValue = setSelect?.value;
             const randomMode = (selectedValue === "");
@@ -393,7 +476,6 @@
         });
 
         document.getElementById('switchStudentBtn')?.addEventListener('click', () => clearStudent());
-
         document.getElementById('editProfileBtn')?.addEventListener('click', openEditProfileModal);
     }
 
@@ -403,7 +485,7 @@
 
         const modal = document.createElement('div');
         modal.id = 'editProfileModal';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn 0.2s;';
         modal.innerHTML = `
             <div class="whiteboard-card" style="max-width:400px;width:90%;padding:24px;">
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit Profile</h3>
@@ -473,7 +555,7 @@
                     <p class="text-lg mb-1 font-bold">✏️ Complete the sentence:</p>
                     <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${escapeHtml(sentence)}</p>
                     <div class="context-hint">${hint}</div>
-                    <input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2">
+                    <input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" autocomplete="off">
                     <p class="text-sm text-gray-400 mt-1">👆 Type answer, then flip to check</p>
                 </div>
             `;
@@ -487,7 +569,7 @@
         }
     }
 
-    function renderCardBack(card, quizState = null) {
+    function renderCardBack(card, quizState) {
         const data = card.content_data || {};
         const pattern = card.pattern_type;
         const title = card.title || 'Flashcard';
@@ -507,9 +589,11 @@
                         <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">
                             <p class="text-base font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(correctAnswer)}</p>
                         </div>
+                        ${selectedIdx !== null ? `
                         <div class="p-2 rounded-lg mb-2 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
                             <p class="text-sm">${isCorrect ? '✅ Correct!' : `❌ Incorrect. The correct answer is ${String.fromCharCode(65+correctIdx)}.`}</p>
                         </div>
+                        ` : ''}
                         ${explanation ? `<div class="text-sm text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 ${explanation}</div>` : ''}
                         <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
@@ -528,9 +612,11 @@
                         <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">
                             <p class="text-base font-bold">${escapeHtml(correctAnswers.join(' / '))}</p>
                         </div>
+                        ${userAnswer ? `
                         <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
                             <p class="text-sm">${isMatch ? '✅ Correct!' : `❌ Incorrect. Your answer: "${escapeHtml(userAnswer)}"`}</p>
                         </div>
+                        ` : ''}
                         ${example ? `<div class="text-sm text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 Example: ${example}</div>` : ''}
                         <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
@@ -559,13 +645,62 @@
         }
     }
 
+    function handleFlip(card, quizState, flashcardEl) {
+        if (flashcardEl.classList.contains('flipped')) return;
+
+        const pattern = card.pattern_type;
+        if (pattern === 'multiple_choice') {
+            const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
+            if (selected) {
+                quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
+                quizState.answered = true;
+            }
+        } else if (pattern === 'gap_fill') {
+            const input = document.getElementById('gapFillInput');
+            if (input) {
+                quizState.userAnswer = input.value.trim();
+                quizState.answered = true;
+            }
+        }
+
+        SoundFX.flip();
+        isFlipped = true;
+
+        const backDiv = document.getElementById('cardBack');
+        if (backDiv && quizState.answered) {
+            backDiv.innerHTML = renderCardBack(card, quizState);
+        } else if (backDiv && !quizState.answered && pattern !== 'usage_cases' && pattern !== 'deep_dive' && pattern !== 'formula_table') {
+            backDiv.innerHTML = renderCardBack(card, quizState);
+        }
+
+        flashcardEl.classList.add('flipped');
+    }
+
+    function handleAutoFlip(card, quizState) {
+        setTimeout(() => {
+            if (!isFlipped) {
+                SoundFX.flip();
+                isFlipped = true;
+                const flashcardEl = document.getElementById('flashcardEl');
+                if (flashcardEl) {
+                    const backDiv = document.getElementById('cardBack');
+                    if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
+                    flashcardEl.classList.add('flipped');
+                }
+            }
+        }, 400);
+    }
+
     function renderStudyScreen() {
         if (!currentCards.length || currentIndex >= currentCards.length) {
-            const message = allDueReviewed
-                ? `<div class="text-5xl md:text-6xl mb-2">🎉📚</div><h2 class="text-2xl md:text-3xl text-blue-800 marker-underline mb-2">All cards viewed!</h2><p class="text-sm md:text-base mb-3">You've seen all due cards for this set.<br>Try another set or come back later!</p>`
-                : `<div class="text-5xl md:text-6xl mb-2">🏆✨</div><h2 class="text-2xl md:text-3xl text-green-800 marker-underline mb-2">All caught up!</h2><p class="text-sm md:text-base mb-3">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>`;
-            appEl.innerHTML = `<div class="whiteboard-card p-4 md:p-8 text-center">${message}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-4 md:px-6 py-1 md:py-2 text-base md:text-lg rounded-xl btn-chalk">← Back</button></div>`;
+            const isAllDue = allDueReviewed;
+            const msg = isAllDue
+                ? `<div class="text-5xl md:text-6xl mb-2 celebration-pop">🎉📚</div><h2 class="text-2xl md:text-3xl text-blue-800 marker-underline mb-2">All cards viewed!</h2><p class="text-sm md:text-base mb-3">You've seen all due cards for this set.<br>Try another set or come back later!</p>`
+                : `<div class="text-5xl md:text-6xl mb-2 celebration-pop">🏆✨</div><h2 class="text-2xl md:text-3xl text-green-800 marker-underline mb-2">All caught up!</h2><p class="text-sm md:text-base mb-3">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>`;
+            appEl.innerHTML = `<div class="whiteboard-card p-4 md:p-8 text-center screen-fade-in">${msg}${streakDays > 1 ? `<div class="streak-badge text-lg my-3">${streakDays} day streak!</div>` : ''}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-4 md:px-6 py-1 md:py-2 text-base md:text-lg rounded-xl btn-chalk">← Back</button></div>`;
             document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
+            SoundFX.complete();
+            if (!isAllDue) spawnConfetti(80);
             return;
         }
 
@@ -573,22 +708,28 @@
         const card = currentCardObj;
         const pattern = card.pattern_type || 'usage_cases';
         const progressPercent = ((currentIndex + 1) / currentCards.length) * 100;
+        isFlipped = false;
 
-        let quizState = { selectedIdx: null, userAnswer: '', answered: false, isCorrect: false };
+        currentQuizState = { selectedIdx: null, userAnswer: '', answered: false, isCorrect: false };
 
         const html = `
-            <div class="whiteboard-card p-3 md:p-4">
+            <div class="whiteboard-card p-3 md:p-4 screen-fade-in">
                 <div class="flex justify-between items-center flex-wrap gap-1 mb-2">
                     <div class="flex gap-2 items-center">
                         <span class="level-chip">${escapeHtml(card.level || 'Beginner')}</span>
                         <span class="text-xs text-gray-500">${currentIndex + 1}/${currentCards.length}</span>
+                        ${streakDays > 0 ? `<span class="streak-badge" style="font-size:10px;padding:2px 8px;">${streakDays}d</span>` : ''}
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 items-center">
+                        <span class="kb-hint">space</span>
                         <button id="flipCardBtn" class="flip-btn px-3 py-1 md:px-4 md:py-1 rounded-xl text-xs md:text-xs font-bold">🔄 FLIP</button>
                         <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs">Exit</button>
                     </div>
                 </div>
-                <div class="progress-bar-container mb-1" data-pct="${Math.round(progressPercent)}%"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
+                <div class="progress-bar-container mb-1" style="height:10px;">
+                    <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+                    <span class="pct-label">${currentIndex + 1}/${currentCards.length}</span>
+                </div>
                 <div class="text-center mb-1">
                     <span class="text-lg text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')}</span>
                 </div>
@@ -598,69 +739,33 @@
                             ${renderCardFront(card)}
                         </div>
                         <div class="card-back p-4 md:p-5 overflow-y-auto border-4 border-blue-300 shadow-xl" id="cardBack">
-                            ${renderCardBack(card, quizState)}
+                            ${renderCardBack(card, currentQuizState)}
                         </div>
                     </div>
                 </div>
                 <div class="flex flex-wrap justify-center gap-1 md:gap-2 mt-2">
-                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">🔁 Again (1d)</button>
-                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">👍 Good (3d)</button>
-                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">⭐ Easy (7d)</button>
+                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">1</span> Again</button>
+                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">2</span> Good</button>
+                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">3</span> Easy</button>
                 </div>
-                <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or FLIP to flip</p>
+                <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or press <span class="kb-hint">Space</span> to flip · <span class="kb-hint">1</span><span class="kb-hint">2</span><span class="kb-hint">3</span> to rate</p>
             </div>
         `;
         appEl.innerHTML = html;
 
         const flashcard = document.getElementById('flashcardEl');
 
-        document.getElementById('flipCardBtn')?.addEventListener('click', () => {
-            if (!flashcard.classList.contains('flipped')) {
-                if (pattern === 'multiple_choice') {
-                    const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
-                    if (selected) {
-                        quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                } else if (pattern === 'gap_fill') {
-                    const input = document.getElementById('gapFillInput');
-                    if (input) {
-                        quizState.userAnswer = input.value.trim();
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                }
-            }
-            flashcard.classList.toggle('flipped');
-        });
+        function flipHandler() {
+            handleFlip(card, currentQuizState, flashcard);
+        }
+
+        document.getElementById('flipCardBtn')?.addEventListener('click', flipHandler);
 
         flashcard?.addEventListener('click', (e) => {
-            if (e.target.closest('.quiz-option') || e.target.closest('#gapFillInput') || e.target.closest('.btn-chalk')) {
+            if (e.target.closest('.quiz-option') || e.target.closest('#gapFillInput') || e.target.closest('.btn-chalk') || e.target.closest('#flipCardBtn')) {
                 return;
             }
-            if (!flashcard.classList.contains('flipped')) {
-                if (pattern === 'multiple_choice') {
-                    const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
-                    if (selected) {
-                        quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                } else if (pattern === 'gap_fill') {
-                    const input = document.getElementById('gapFillInput');
-                    if (input) {
-                        quizState.userAnswer = input.value.trim();
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                }
-            }
-            flashcard.classList.toggle('flipped');
+            flipHandler();
         });
 
         if (pattern === 'multiple_choice') {
@@ -668,29 +773,50 @@
             options.forEach(opt => {
                 opt.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    SoundFX.click();
                     options.forEach(o => o.classList.remove('selected'));
                     opt.classList.add('selected');
-                    quizState.selectedIdx = parseInt(opt.getAttribute('data-idx'));
+                    currentQuizState.selectedIdx = parseInt(opt.getAttribute('data-idx'));
+                    currentQuizState.answered = true;
+                    handleAutoFlip(card, currentQuizState);
                 });
             });
+        }
+
+        if (pattern === 'gap_fill') {
+            const input = document.getElementById('gapFillInput');
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        currentQuizState.userAnswer = input.value.trim();
+                        currentQuizState.answered = true;
+                        handleAutoFlip(card, currentQuizState);
+                    }
+                });
+            }
         }
 
         document.getElementById('exitStudyBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
 
         const handleReview = async (quality) => {
+            SoundFX.click();
             let wasCorrect = false;
-            if (pattern === 'multiple_choice' || pattern === 'gap_fill') {
-                if (pattern === 'multiple_choice') {
-                    const correctIdx = card.content_data?.correct_index || 1;
-                    wasCorrect = (quizState.selectedIdx === correctIdx);
-                } else if (pattern === 'gap_fill') {
-                    const correctAnswers = card.content_data?.correct_answers || ['answer'];
-                    wasCorrect = correctAnswers.some(ans => ans.toLowerCase() === quizState.userAnswer.toLowerCase());
-                }
+            if (pattern === 'multiple_choice') {
+                const correctIdx = card.content_data?.correct_index || 1;
+                wasCorrect = (currentQuizState.selectedIdx === correctIdx);
+            } else if (pattern === 'gap_fill') {
+                const correctAnswers = card.content_data?.correct_answers || ['answer'];
+                wasCorrect = correctAnswers.some(ans => ans.toLowerCase() === currentQuizState.userAnswer.toLowerCase());
             } else {
                 wasCorrect = true;
             }
-            await recordReview(card.id, currentStudent.id, quality, wasCorrect);
+
+            if (wasCorrect) SoundFX.correct();
+            else SoundFX.incorrect();
+
+            const res = await recordReview(card.id, currentStudent.id, quality, wasCorrect);
+            if (res?.streak_days !== undefined) streakDays = res.streak_days;
             currentIndex++;
             render();
         };
@@ -699,6 +825,43 @@
         document.getElementById('goodBtn')?.addEventListener('click', () => handleReview(2));
         document.getElementById('easyBtn')?.addEventListener('click', () => handleReview(3));
     }
+
+    // Global keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        if (currentView === 'study') {
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    const flipBtn = document.getElementById('flipCardBtn');
+                    if (flipBtn) {
+                        flipBtn.click();
+                    } else if (!document.getElementById('flashcardEl')?.classList.contains('flipped')) {
+                        const el = document.getElementById('flashcardEl');
+                        if (el && currentCardObj) handleFlip(currentCardObj, currentQuizState, el);
+                    }
+                    break;
+                case '1':
+                    document.getElementById('againBtn')?.click();
+                    break;
+                case '2':
+                    document.getElementById('goodBtn')?.click();
+                    break;
+                case '3':
+                    document.getElementById('easyBtn')?.click();
+                    break;
+                case 'Escape':
+                    document.getElementById('exitStudyBtn')?.click();
+                    break;
+            }
+        } else if (currentView === 'welcome') {
+            if (e.key === 'Enter') {
+                document.getElementById('launchStudyBtn')?.click();
+            }
+        }
+    });
 
     loadSavedData();
     render();

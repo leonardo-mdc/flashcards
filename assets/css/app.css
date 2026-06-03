@@ -42,12 +42,60 @@ body {
     border: 8px solid #374151;
     border-radius: 4px;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.03), 12px 12px 24px rgba(0,0,0,0.1);
+    animation: cardFadeIn 0.3s ease-out;
+}
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes confettiFall {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes streakGlow {
+    0%, 100% { box-shadow: 0 0 5px rgba(251, 191, 36, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.8); }
+}
+.confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    z-index: 9999;
+    pointer-events: none;
+    animation: confettiFall 3s ease-in forwards;
+}
+.streak-badge {
+    animation: streakGlow 2s infinite;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 40px;
+    padding: 4px 14px;
+    display: inline-block;
+    font-weight: bold;
+    color: #78350f;
+}
+.streak-badge::before {
+    content: '🔥 ';
+}
+.screen-fade-in {
+    animation: fadeIn 0.25s ease-in;
+}
+.celebration-pop {
+    animation: popIn 0.5s ease-out;
 }
 .marker-border { border: 3px solid #1f2937; border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; }
 .marker-underline { display: inline-block; position: relative; }
 .marker-underline::after { content: ""; position: absolute; left: 0; bottom: -6px; width: 100%; height: 6px; background: #be123c; border-radius: 100% 5% 100% 5%; opacity: 0.7; }
 .flashcard-container { perspective: 1600px; }
-.flashcard { transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; min-height: 400px; position: relative; cursor: pointer; }
+.flashcard { transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; min-height: 400px; position: relative; cursor: pointer; }
 .flashcard.flipped { transform: rotateY(180deg); }
 .card-front, .card-back { backface-visibility: hidden; border-radius: 1rem; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; }
 .card-front { transform: rotateY(0deg); z-index: 2; background: white; }
@@ -72,11 +120,14 @@ body {
 .quiz-option.wrong-highlight { background: #fee2e2; border-color: #be123c; }
 .btn-chalk { transition: all 0.15s; box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.2); cursor: pointer; border: none; }
 .btn-chalk:hover { transform: translateY(2px); box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.2); }
+.btn-chalk:active { transform: translateY(3px); box-shadow: 0px 0px 0px 0px rgba(0,0,0,0.2); }
 .flip-btn { cursor: pointer; transition: all 0.2s; background: #f1f5f9; border: 2px solid #64748b; }
 .flip-btn:active { transform: scale(0.96); }
-.progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 3px; position: relative; padding-left: 28px; }
-.progress-bar-container::before { content: attr(data-pct); position: absolute; left: 4px; top: -6px; font-size: 12px; font-weight: 700; color: #2563eb; white-space: nowrap; }
-.progress-bar-fill { background: linear-gradient(90deg, #3b82f6, #2563eb); height: 100%; border-radius: 20px; transition: width 0.3s; position: relative; }
+.flip-btn.hidden-btn { display: none; }
+.progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 10px; position: relative; overflow: visible; }
+.progress-bar-container::before { content: attr(data-pct); position: absolute; left: -9999px; }
+.progress-bar-container .pct-label { position: absolute; right: -38px; top: -5px; font-size: 11px; font-weight: 700; color: #2563eb; white-space: nowrap; }
+.progress-bar-fill { background: linear-gradient(90deg, #3b82f6, #2563eb, #7c3aed); height: 100%; border-radius: 20px; transition: width 0.4s ease; position: relative; }
 .level-chip { background: #e0e7ff; color: #1e3a8a; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.65rem, 1.8vw, 0.75rem); }
 .student-badge { background: #dbeafe; color: #1e40af; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.7rem, 2vw, 0.8rem); }
 .loader { border: 3px solid #e2e8f0; border-top: 3px solid #1d4ed8; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.7s linear infinite; display: inline-block; }
@@ -112,6 +163,7 @@ body {
     margin-top: 4px; 
     margin-bottom: 6px;
     text-align: center;
+    animation: fadeIn 0.3s ease-in;
 }
 .admin-link {
     position: fixed;
@@ -125,6 +177,7 @@ body {
     font-size: clamp(0.65rem, 1.8vw, 0.8rem);
     z-index: 100;
     font-family: 'Bubble Sans', sans-serif !important;
+    transition: background 0.2s;
 }
 .admin-link:hover { background: #374151; }
 
@@ -144,12 +197,33 @@ body {
     border-color: #1e3a8a !important;
 }
 
+.progress-bar-container .progress-pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.kb-hint {
+    display: inline-block;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 0 5px;
+    font-size: 11px;
+    font-family: monospace !important;
+    color: #475569;
+}
+
 @media (max-width: 480px) {
     .flashcard-container { min-height: 320px !important; }
     .flashcard { min-height: 320px !important; }
     .card-front, .card-back { padding: 8px !important; }
     #againBtn, #goodBtn, #easyBtn { font-size: clamp(0.55rem, 2.5vw, 0.7rem) !important; padding: 4px 8px !important; }
     .flip-btn { font-size: clamp(0.55rem, 2.5vw, 0.7rem) !important; padding: 3px 8px !important; }
+    .progress-bar-container { height: 8px; }
+    .progress-bar-container .pct-label { right: -32px; font-size: 9px; }
 }
 
 @media (max-width: 380px) {

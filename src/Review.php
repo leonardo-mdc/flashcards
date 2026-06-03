@@ -2,6 +2,9 @@
 
 class Review
 {
+    private const MIN_EF = 1.3;
+    private const INITIAL_EF = 2.5;
+
     public static function ensureTable(): void
     {
         $pdo = Database::getConnection();
@@ -11,6 +14,7 @@ class Review
             card_id INT NOT NULL,
             ease_factor FLOAT DEFAULT 2.5,
             interval_days INT DEFAULT 0,
+            repetitions INT DEFAULT 0,
             next_review DATE,
             last_review DATE,
             correct_streak INT DEFAULT 0,
@@ -30,6 +34,11 @@ class Review
         if (!$stmt->fetch()) {
             $pdo->exec("ALTER TABLE user_card_progress CHANGE student_id user_id INT NOT NULL");
         }
+
+        $stmt = $pdo->query("SHOW COLUMNS FROM user_card_progress LIKE 'repetitions'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE user_card_progress ADD COLUMN repetitions INT DEFAULT 0 AFTER interval_days");
+        }
     }
 
     public static function ensureHistoryTable(): void
@@ -47,39 +56,63 @@ class Review
         )");
     }
 
+    /**
+     * SM-2 algorithm implementation.
+     * Quality mapping: 0=Again(blackout), 2=Good(recalled with effort), 3=Easy(perfect)
+     */
     public static function record(int $cardId, int $userId, int $quality, bool $wasCorrect): void
     {
         self::ensureTable();
         self::ensureHistoryTable();
         $pdo = Database::getConnection();
 
-        $daysToAdd = match ($quality) {
-            0 => 1,
-            2 => 3,
-            3 => 7,
-            default => 1,
-        };
+        $stmt = $pdo->prepare("SELECT id, ease_factor, interval_days, repetitions, correct_streak FROM user_card_progress WHERE user_id = ? AND card_id = ?");
+        $stmt->execute([$userId, $cardId]);
+        $progress = $stmt->fetch();
 
-        $nextReview = date('Y-m-d', strtotime("+$daysToAdd days"));
         $today = date('Y-m-d');
 
-        $stmt = $pdo->prepare("SELECT id FROM user_card_progress WHERE user_id = ? AND card_id = ?");
-        $stmt->execute([$userId, $cardId]);
-        $exists = $stmt->fetch();
+        if ($wasCorrect && $quality >= 2) {
+            $ef = $progress ? (float) $progress['ease_factor'] : self::INITIAL_EF;
+            $rep = $progress ? (int) $progress['repetitions'] : 0;
+            $prevInterval = $progress ? (int) $progress['interval_days'] : 0;
 
-        if ($exists) {
+            $newEF = $ef + (0.1 - (5 - $quality) * (0.08 + (5 - $quality) * 0.02));
+            if ($newEF < self::MIN_EF) $newEF = self::MIN_EF;
+
+            if ($rep === 0) {
+                $interval = 1;
+            } elseif ($rep === 1) {
+                $interval = 6;
+            } else {
+                $interval = (int) round($prevInterval * $ef);
+            }
+
+            $rep++;
+            $streak = $progress ? (int) $progress['correct_streak'] + 1 : 1;
+            $nextReview = date('Y-m-d', strtotime("+$interval days"));
+        } else {
+            $newEF = $progress ? (float) $progress['ease_factor'] : self::INITIAL_EF;
+            $interval = 1;
+            $rep = 0;
+            $streak = 0;
+            $nextReview = date('Y-m-d', strtotime('+1 day'));
+        }
+
+        if ($progress) {
             $stmt = $pdo->prepare("
                 UPDATE user_card_progress
-                SET next_review = ?, last_review = ?, was_correct = ?, total_reviews = total_reviews + 1
+                SET ease_factor = ?, interval_days = ?, repetitions = ?, next_review = ?,
+                    last_review = ?, correct_streak = ?, was_correct = ?, total_reviews = total_reviews + 1
                 WHERE user_id = ? AND card_id = ?
             ");
-            $stmt->execute([$nextReview, $today, $wasCorrect ? 1 : 0, $userId, $cardId]);
+            $stmt->execute([$newEF, $interval, $rep, $nextReview, $today, $streak, $wasCorrect ? 1 : 0, $userId, $cardId]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO user_card_progress (user_id, card_id, next_review, last_review, was_correct, total_reviews)
-                VALUES (?, ?, ?, ?, ?, 1)
+                INSERT INTO user_card_progress (user_id, card_id, ease_factor, interval_days, repetitions, next_review, last_review, correct_streak, was_correct, total_reviews)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ");
-            $stmt->execute([$userId, $cardId, $nextReview, $today, $wasCorrect ? 1 : 0]);
+            $stmt->execute([$userId, $cardId, $newEF, $interval, $rep, $nextReview, $today, $streak, $wasCorrect ? 1 : 0]);
         }
 
         $stmt = $pdo->prepare("INSERT INTO review_history (user_id, card_id, quality, was_correct) VALUES (?, ?, ?, ?)");
@@ -158,6 +191,49 @@ class Review
         return false;
     }
 
+    public static function getStreakDays(int $userId): int
+    {
+        self::ensureHistoryTable();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT DATE(reviewed_at) as review_date
+            FROM review_history
+            WHERE user_id = ?
+            ORDER BY review_date DESC
+        ");
+        $stmt->execute([$userId]);
+        $dates = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+        if (empty($dates)) return 0;
+
+        $streak = 0;
+        $today = new \DateTime();
+        $checkDate = clone $today;
+
+        foreach ($dates as $dateStr) {
+            $date = new \DateTime($dateStr);
+            $diff = (int) $checkDate->diff($date)->days;
+
+            if ($streak === 0) {
+                if ($diff <= 1) {
+                    $streak = 1;
+                    $checkDate = $date;
+                } else {
+                    break;
+                }
+            } else {
+                if ($diff === 1) {
+                    $streak++;
+                    $checkDate = $date;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return $streak;
+    }
+
     public static function getStats(int $userId): array
     {
         self::ensureHistoryTable();
@@ -189,6 +265,18 @@ class Review
         $upcoming->execute([$userId]);
         $dueToday = (int) $upcoming->fetchColumn();
 
+        $streak = self::getStreakDays($userId);
+
+        $totalCards = $pdo->prepare("SELECT COUNT(*) FROM cards");
+        $totalCards->execute();
+        $totalCardCount = (int) $totalCards->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM user_card_progress WHERE user_id = ? AND repetitions > 1");
+        $stmt->execute([$userId]);
+        $learnedCount = (int) $stmt->fetchColumn();
+
+        $progress = $totalCardCount > 0 ? (int) round(($learnedCount / $totalCardCount) * 100) : 0;
+
         return [
             'total_reviews' => $totalReviews,
             'correct_count' => $correctCount,
@@ -196,6 +284,10 @@ class Review
             'cards_reviewed' => $cardsReviewed,
             'daily' => $dailyStats,
             'due_today' => $dueToday,
+            'streak_days' => $streak,
+            'learned_count' => $learnedCount,
+            'total_cards' => $totalCardCount,
+            'progress' => $progress,
         ];
     }
 }

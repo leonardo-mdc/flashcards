@@ -237,7 +237,9 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 </div>
             </div>
             <div class="flex gap-4 mt-4 flex-wrap items-center">
-                <span class="font-bold">Filter by level:</span>
+                <span class="font-bold">🔍 Search:</span>
+                <input type="text" id="cardSearchInput" placeholder="Search by title..." class="form-input" style="width:180px;font-size:0.85rem;">
+                <span class="font-bold ml-2">Filter by level:</span>
                 <label class="flex items-center gap-1"><input type="checkbox" id="levelBeginner" value="Beginner"> Beginner</label>
                 <label class="flex items-center gap-1"><input type="checkbox" id="levelIntermediate" value="Intermediate"> Intermediate</label>
                 <label class="flex items-center gap-1"><input type="checkbox" id="levelAdvanced" value="Advanced"> Advanced</label>
@@ -297,17 +299,15 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 </div>
 
                 <div class="preview-grid">
-                    <div class="card-preview">
+                    <div class="card-preview" id="previewCard">
                         <div class="card-front-preview" style="position: relative; min-height: 350px;">
-                            <span class="preview-label">📖 FRONT PREVIEW</span>
+                            <span class="preview-label">📖 FRONT (click to flip)</span>
                             <div id="frontPreviewContent" class="flex items-center justify-center min-h-[280px]">
                                 <div class="text-center text-gray-400">Edit card to see preview</div>
                             </div>
                         </div>
-                    </div>
-                    <div class="card-preview">
                         <div class="card-back-preview" style="position: relative; min-height: 350px;">
-                            <span class="preview-label">🔍 BACK PREVIEW</span>
+                            <span class="preview-label">🔍 BACK (click to flip)</span>
                             <div id="backPreviewContent" class="flex items-center justify-center min-h-[280px]">
                                 <div class="text-center text-gray-400">Edit card to see preview</div>
                             </div>

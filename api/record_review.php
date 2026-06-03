@@ -28,29 +28,18 @@ try {
     Review::record($cardId, $userId, $quality, $wasCorrect);
 
     $stats = Review::getStats($userId);
-    $totalCards = 0;
-    $pdo = Database::getConnection();
-    $stmt = $pdo->query("SELECT COUNT(*) FROM cards");
-    $totalCards = (int) $stmt->fetchColumn();
-    $progressPercent = $totalCards > 0 ? min(100, (int) round(($stats['cards_reviewed'] / $totalCards) * 100)) : 0;
+    $progressPercent = $stats['progress'];
     $user = User::getById($userId);
     User::updateProgress($userId, $progressPercent, $user['english_level'] ?? 'Beginner');
-
-    $daysToAdd = match ($quality) {
-        0 => 1,
-        2 => 3,
-        3 => 7,
-        default => 1,
-    };
-    $nextReview = date('Y-m-d', strtotime("+$daysToAdd days"));
 
     echo json_encode([
         'success' => true,
         'message' => 'Review recorded',
-        'next_review' => $nextReview,
-        'days_added' => $daysToAdd,
         'quality' => $quality,
         'progress' => $progressPercent,
+        'streak_days' => $stats['streak_days'],
+        'learned_count' => $stats['learned_count'],
+        'total_cards' => $stats['total_cards'],
     ]);
 } catch (PDOException $e) {
     echo json_encode([

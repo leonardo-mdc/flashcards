@@ -66,10 +66,23 @@
         }
     }
 
+    function getSearchTerm() {
+        const input = document.getElementById('cardSearchInput');
+        return input ? input.value.trim().toLowerCase() : '';
+    }
+
     function renderCardList(levelFilter = []) {
         let filteredCards = currentCards;
+
+        const searchTerm = getSearchTerm();
+        if (searchTerm) {
+            filteredCards = filteredCards.filter(card =>
+                (card.title || '').toLowerCase().includes(searchTerm)
+            );
+        }
+
         if (levelFilter.length > 0) {
-            filteredCards = currentCards.filter(card => levelFilter.includes(card.level));
+            filteredCards = filteredCards.filter(card => levelFilter.includes(card.level));
         }
 
         if (!filteredCards.length) {
@@ -220,6 +233,8 @@
         return contentData;
     }
 
+    let previewFlipped = false;
+
     function updatePreviews() {
         const patternType = editPatternType.value;
         const title = editTitle.value || 'Flashcard';
@@ -233,7 +248,7 @@
                     <div class="text-4xl mb-3">❓</div>
                     <p class="text-lg mb-4 font-bold">${escapeHtml(contentData.question_text || 'Select the correct answer:')}</p>
                     ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
-                    <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
         } else if (patternType === 'gap_fill') {
@@ -243,7 +258,7 @@
                     <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
                     <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(contentData.sentence || 'Complete: ______')}</p>
                     <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
-                    <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
         } else {
@@ -293,6 +308,26 @@
 
         frontPreviewContent.innerHTML = frontHtml;
         backPreviewContent.innerHTML = backHtml;
+        previewFlipped = false;
+
+        document.querySelectorAll('.card-preview').forEach(el => {
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', function previewClick(e) {
+                e.stopPropagation();
+                previewFlipped = !previewFlipped;
+                const front = this.querySelector('.card-front-preview');
+                const back = this.querySelector('.card-back-preview');
+                if (front && back) {
+                    if (previewFlipped) {
+                        front.style.display = 'none';
+                        back.style.display = 'flex';
+                    } else {
+                        front.style.display = 'flex';
+                        back.style.display = 'none';
+                    }
+                }
+            });
+        });
     }
 
     async function saveCard() {
@@ -614,6 +649,21 @@
     document.getElementById('filterCardsBtn').addEventListener('click', () => {
         if (setSelector.value) loadCards(setSelector.value);
     });
+
+    const searchInput = document.getElementById('cardSearchInput');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const levels = [];
+                if (document.getElementById('levelBeginner').checked) levels.push('Beginner');
+                if (document.getElementById('levelIntermediate').checked) levels.push('Intermediate');
+                if (document.getElementById('levelAdvanced').checked) levels.push('Advanced');
+                renderCardList(levels);
+            }, 200);
+        });
+    }
 
     setInterval(() => {
         if (document.activeElement && (document.activeElement.classList?.contains('form-input') ||

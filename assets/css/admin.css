@@ -66,6 +66,9 @@ body {
     min-height: 380px;
     padding: 24px;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 .card-front-preview {
     background: white;
@@ -73,6 +76,14 @@ body {
 }
 .card-back-preview {
     background: linear-gradient(135deg, #fef9e8, #ffffff);
+    display: none;
+}
+.card-preview {
+    transition: transform 0.3s ease;
+}
+.card-preview:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
 }
 .preview-label {
     position: absolute;
