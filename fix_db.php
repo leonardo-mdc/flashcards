@@ -17,11 +17,15 @@ try {
         $pdo->exec("ALTER TABLE cards MODIFY pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill') DEFAULT 'usage_cases'");
         echo "✓ cards.pattern_type ENUM updated\n";
 
-        // 2. Drop old student_progress, new one gets auto-created by Review::ensureTable()
+        // 2. Fix cards where pattern_type was corrupted by previous ENUM change (vocabulary/text → '')
+        $pdo->exec("UPDATE cards SET pattern_type = 'usage_cases' WHERE pattern_type = '' OR pattern_type IS NULL");
+        echo "✓ Cards with empty pattern_type set to 'usage_cases'\n";
+
+        // 3. Drop old student_progress, new one gets auto-created by Review::ensureTable()
         $pdo->exec("DROP TABLE IF EXISTS student_progress");
         echo "✓ Dropped old student_progress table (will be recreated as user_card_progress)\n";
 
-        // 3. Fix users table — since we clear users, drop and recreate
+        // 4. Fix users table — since we clear users, drop and recreate
         $pdo->exec("DROP TABLE IF EXISTS review_history");
         $pdo->exec("DROP TABLE IF EXISTS student_set_access");
         $pdo->exec("DROP TABLE IF EXISTS user_card_progress");
@@ -39,7 +43,7 @@ try {
         )");
         echo "✓ users table recreated with correct columns\n";
 
-        // 4. Create admin user
+        // 5. Create admin user
         $adminUser = trim($_GET['admin_user'] ?? '');
         $adminPass = $_GET['admin_pass'] ?? '';
         if ($adminUser === '' || strlen($adminPass) < 6) {

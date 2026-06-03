@@ -236,6 +236,7 @@ class Review
 
     public static function getStats(int $userId): array
     {
+        self::ensureTable();
         self::ensureHistoryTable();
         $pdo = Database::getConnection();
 

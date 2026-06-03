@@ -64,6 +64,7 @@ try {
         }
     }
 
+    Review::ensureTable();
     Review::checkAndResetCycle($studentId);
 
     $totalAvailable = 0;
