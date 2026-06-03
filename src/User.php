@@ -114,6 +114,7 @@ class User
 
     public static function update(int $id, string $username, string $fullName, string $englishLevel, bool $isAdmin): void
     {
+        self::ensureTable();
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ? WHERE id = ?");
         $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $id]);
@@ -121,6 +122,7 @@ class User
 
     public static function delete(int $id): void
     {
+        self::ensureTable();
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
         $stmt->execute([$id]);
@@ -128,6 +130,7 @@ class User
 
     public static function updateProgress(int $id, int $progress, string $englishLevel): void
     {
+        self::ensureTable();
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("UPDATE users SET progress = ?, english_level = ? WHERE id = ?");
         $stmt->execute([$progress, $englishLevel, $id]);
@@ -135,6 +138,7 @@ class User
 
     public static function resetProgress(int $id): void
     {
+        self::ensureTable();
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("UPDATE users SET progress = 0 WHERE id = ?");
         $stmt->execute([$id]);

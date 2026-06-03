@@ -17,7 +17,8 @@
 
     function escapeHtml(str) {
         if (!str) return '';
-        return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(str).replace(/[&<>"']/g, m => map[m]);
     }
 
     function formatBreaks(text) {
@@ -525,7 +526,10 @@
         `;
         document.body.appendChild(modal);
 
-        // Load card sets and user's current access
+        document.getElementById('cancelEditUserBtn').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+        const saveBtn = document.getElementById('saveEditUserBtn');
         (async () => {
             const [setsRes, accessRes] = await Promise.all([
                 fetch('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
@@ -546,37 +550,34 @@
                     </label>
                 `).join('');
             }
-        })();
+        })().then(() => {
+            saveBtn.addEventListener('click', async () => {
+                const id = parseInt(document.getElementById('editUserId').value);
+                const username = document.getElementById('editUserUsername').value.trim();
+                const fullName = document.getElementById('editUserFullName').value.trim();
+                const englishLevel = document.getElementById('editUserLevel').value;
+                const isAdmin = document.getElementById('editUserIsAdmin').checked;
 
-        document.getElementById('cancelEditUserBtn').addEventListener('click', () => modal.remove());
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+                if (!username) { alert('Username is required'); return; }
 
-        document.getElementById('saveEditUserBtn').addEventListener('click', async () => {
-            const id = parseInt(document.getElementById('editUserId').value);
-            const username = document.getElementById('editUserUsername').value.trim();
-            const fullName = document.getElementById('editUserFullName').value.trim();
-            const englishLevel = document.getElementById('editUserLevel').value;
-            const isAdmin = document.getElementById('editUserIsAdmin').checked;
+                const response = await fetch('admin_cards.php?action=update_user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin })
+                });
+                const result = await response.json();
+                if (!result.success) { alert(result.error || 'Error saving user'); return; }
 
-            if (!username) { alert('Username is required'); return; }
+                const checkedSets = [...document.querySelectorAll('.user-set-checkbox:checked')].map(cb => parseInt(cb.value));
+                await fetch('admin_cards.php?action=set_user_sets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ user_id: id, set_ids: checkedSets })
+                });
 
-            const response = await fetch('admin_cards.php?action=update_user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin })
+                modal.remove();
+                loadUsers();
             });
-            const result = await response.json();
-            if (!result.success) { alert(result.error || 'Error saving user'); return; }
-
-            const checkedSets = [...document.querySelectorAll('.user-set-checkbox:checked')].map(cb => parseInt(cb.value));
-            await fetch('admin_cards.php?action=set_user_sets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ user_id: id, set_ids: checkedSets })
-            });
-
-            modal.remove();
-            loadUsers();
         });
     }
 

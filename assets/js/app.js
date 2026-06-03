@@ -23,7 +23,8 @@
 
     function escapeHtml(str) {
         if (!str) return '';
-        return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(str).replace(/[&<>"']/g, m => map[m]);
     }
 
     function formatBreaks(text) {
@@ -216,7 +217,12 @@
 
     const appEl = document.getElementById('appRoot');
 
+    if (!appEl) {
+        console.error('Flashcard Studio: #appRoot element not found');
+    }
+
     function render() {
+        if (!appEl) return;
         if (currentView === 'login') renderLoginScreen();
         else if (currentView === 'welcome') renderWelcomeScreen();
         else renderStudyScreen();
@@ -250,12 +256,16 @@
         };
 
         document.getElementById('loginBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('loginBtn');
+            if (btn.disabled) return;
             const name = document.getElementById('authNameInput').value.trim();
             const password = document.getElementById('authPasswordInput').value;
             if (!name || !password) { showError('Please fill in all fields'); return; }
+            btn.disabled = true;
+            btn.textContent = '⏳ Signing in...';
             SoundFX.click();
             const result = await loginOrRegister(name, password, 'login');
-            if (!result) showError('Invalid name or password');
+            if (!result) { showError('Invalid name or password'); btn.disabled = false; btn.textContent = '🔑 LOG IN'; }
         });
 
         document.getElementById('authPasswordInput').addEventListener('keydown', (e) => {
@@ -424,6 +434,9 @@
         });
 
         document.getElementById('launchStudyBtn')?.addEventListener('click', async () => {
+            const launchBtn = document.getElementById('launchStudyBtn');
+            if (launchBtn.disabled) return;
+            launchBtn.disabled = true;
             SoundFX.click();
             const setSelect = document.getElementById('setSelect');
             const selectedValue = setSelect?.value;
@@ -440,6 +453,7 @@
             currentSet = randomMode ? null : { id: setId };
             saveSessionState();
 
+            if (!currentStudent) { if (launchBtn) launchBtn.disabled = false; displayStatusMessage('Not logged in', 'error'); return; }
             const cards = await loadCardsFromAPI(setId, levelsToUse, currentStudent.id, randomMode, studentLevel);
             if (!cards || cards.length === 0) {
                 if (allDueReviewed) {
@@ -451,7 +465,7 @@
                 }
                 if (selectedLevels.length === 0) {
                     displayStatusMessage('No cards at your level. Trying all levels...', 'warning');
-                    const fallback = await loadCardsFromAPI(setId, ['Beginner', 'Intermediate', 'Advanced'], currentStudent.id, randomMode);
+                    const fallback = await loadCardsFromAPI(setId, ['Beginner', 'Intermediate', 'Advanced'], currentStudent?.id, randomMode);
                     if (fallback && fallback.length > 0) {
                         currentCards = fallback;
                         currentIndex = 0;
@@ -460,6 +474,7 @@
                         return;
                     }
                 }
+                if (launchBtn) launchBtn.disabled = false;
                 alert('No cards found for the selected filters! Try different difficulty levels.');
                 return;
             }
@@ -815,6 +830,7 @@
             if (wasCorrect) SoundFX.correct();
             else SoundFX.incorrect();
 
+            if (!currentStudent) { displayStatusMessage('Not logged in', 'error'); return; }
             const res = await recordReview(card.id, currentStudent.id, quality, wasCorrect);
             if (res?.streak_days !== undefined) streakDays = res.streak_days;
             currentIndex++;

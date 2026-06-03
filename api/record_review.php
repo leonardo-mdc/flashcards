@@ -30,6 +30,10 @@ try {
     $stats = Review::getStats($userId);
     $progressPercent = $stats['progress'];
     $user = User::getById($userId);
+    if (!$user) {
+        echo json_encode(['success' => false, 'error' => 'User not found']);
+        exit;
+    }
     User::updateProgress($userId, $progressPercent, $user['english_level'] ?? 'Beginner');
 
     echo json_encode([

@@ -24,7 +24,7 @@ $stmt = $pdo->query("
 $cards = $stmt->fetchAll();
 
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename="cards_export.csv');
+header('Content-Disposition: attachment; filename=cards_export.csv');
 
 $out = fopen('php://output', 'w');
 

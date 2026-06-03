@@ -2,6 +2,9 @@
 
 session_start();
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/User.php';
@@ -57,6 +60,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'Name already taken. Please log in.']);
             exit;
         }
+        session_regenerate_id(true);
         $_SESSION['student_user'] = $user;
         if (!empty($user['is_admin'])) {
             $_SESSION['admin_user'] = $user;
@@ -68,6 +72,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'Invalid name or password']);
             exit;
         }
+        session_regenerate_id(true);
         $_SESSION['student_user'] = $user;
         if (!empty($user['is_admin'])) {
             $_SESSION['admin_user'] = $user;

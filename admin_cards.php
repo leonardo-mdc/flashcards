@@ -11,18 +11,29 @@ require_once __DIR__ . '/src/Review.php';
 
 $currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
 $isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
-$needsSetup = !User::hasAdmins();
+
+try {
+    $needsSetup = !User::hasAdmins();
+} catch (Exception $e) {
+    $needsSetup = true;
+    $dbError = 'Database connection error: ' . $e->getMessage();
+}
 
 if (isset($_POST['setup'])) {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     if ($username !== '' && strlen($password) >= 6) {
-        User::create($username, $password, true);
-        $user = User::authenticate($username, $password);
-        if ($user) {
-            $_SESSION['admin_user'] = $user;
-            $currentUser = $user;
-            $isLoggedIn = true;
+        try {
+            User::create($username, $password, true);
+            $user = User::authenticate($username, $password);
+            if ($user) {
+                session_regenerate_id(true);
+                $_SESSION['admin_user'] = $user;
+                $currentUser = $user;
+                $isLoggedIn = true;
+            }
+        } catch (Exception $e) {
+            $setupError = 'Error: ' . $e->getMessage();
         }
     } else {
         $setupError = 'Please fill in all fields (password min 6 chars).';
@@ -32,8 +43,14 @@ if (isset($_POST['setup'])) {
 if (isset($_POST['login'])) {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
-    $user = User::authenticate($username, $password);
+    try {
+        $user = User::authenticate($username, $password);
+    } catch (Exception $e) {
+        $user = null;
+        $loginError = 'Database error: ' . $e->getMessage();
+    }
     if ($user && $user['is_admin']) {
+        session_regenerate_id(true);
         $_SESSION['admin_user'] = $user;
         $currentUser = $user;
         $isLoggedIn = true;
@@ -210,6 +227,11 @@ if ($isAjax && isset($_GET['action'])) {
 }
 
 if (!$isLoggedIn) {
+    if (isset($dbError) && $needsSetup) {
+        $setupError = $dbError;
+    } elseif (isset($dbError)) {
+        $loginError = $dbError;
+    }
     if ($needsSetup) {
         require __DIR__ . '/src/templates/admin_setup.php';
     } else {
