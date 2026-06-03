@@ -459,73 +459,93 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </div>
                 </div>
 
-                <div class="import-records-container">
-                    <table class="import-table" id="importPreviewTable">
-                        <thead>
-                            <tr>
-                                <th style="width:32px;">#</th>
-                                <th style="width:140px;">Card Set</th>
-                                <th style="width:120px;">Style</th>
-                                <th>Title</th>
-                                <th>Level</th>
-                                <th>Content Preview</th>
-                            </tr>
-                        </thead>
-                        <tbody id="importPreviewBody">
-                            <tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                <div class="import-body">
+                    <div class="import-left">
+                        <div class="import-records-container">
+                            <table class="import-table" id="importPreviewTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;"><input type="checkbox" id="importSelectAll" checked></th>
+                                        <th style="width:32px;">#</th>
+                                        <th style="width:140px;">Card Set</th>
+                                        <th style="width:120px;">Style</th>
+                                        <th>Title</th>
+                                        <th>Level</th>
+                                        <th>Content Preview</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="importPreviewBody">
+                                    <tr><td colspan="7" class="text-center text-gray-400 py-4">No data</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                <div class="import-editor-panel" id="importEditorPanel">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="panel-title" style="margin-bottom:0;">✏️ Edit Selected Card</h3>
-                        <div class="flex gap-2">
-                            <button id="importApplyCardBtn" class="btn btn-primary btn-sm">Apply</button>
-                            <button id="importApplyAllBtn" class="btn btn-secondary btn-sm">Apply to all</button>
-                            <button id="importDeleteCardBtn" class="btn btn-danger btn-sm">🗑 Remove</button>
+                        <div class="import-editor-panel" id="importEditorPanel">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="panel-title" style="margin-bottom:0;">✏️ Edit Selected Card</h3>
+                                <div class="flex gap-2">
+                                    <button id="importApplyCardBtn" class="btn btn-primary btn-sm">Apply</button>
+                                    <button id="importApplyAllBtn" class="btn btn-secondary btn-sm">Apply to all</button>
+                                    <button id="importDeleteCardBtn" class="btn btn-danger btn-sm">🗑 Remove</button>
+                                </div>
+                            </div>
+                            <div class="import-edit-grid">
+                                <div>
+                                    <label class="field-label">Title</label>
+                                    <input type="text" id="importEditTitle" class="form-input" placeholder="Card title">
+                                </div>
+                                <div>
+                                    <label class="field-label">Card Set</label>
+                                    <select id="importEditSetId" class="form-select">
+                                        <option value="">-- Select Set --</option>
+                                        <?php foreach ($cardSets as $set): ?>
+                                            <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Style</label>
+                                    <select id="importEditStyle" class="form-select">
+                                        <option value="usage_cases">📘 Usage Cases</option>
+                                        <option value="deep_dive">🧠 Deep Dive</option>
+                                        <option value="formula_table">📐 Formula Table</option>
+                                        <option value="multiple_choice">❓ Multiple Choice</option>
+                                        <option value="gap_fill">✏️ Gap Fill</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Level</label>
+                                    <select id="importEditLevel" class="form-select">
+                                        <option value="Beginner">🔰 Beginner</option>
+                                        <option value="Intermediate">📚 Intermediate</option>
+                                        <option value="Advanced">🎓 Advanced</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="field-label">Definition / Question</label>
+                                <textarea id="importEditDefinition" class="form-textarea" rows="3" placeholder="Definition, question text, or sentence..."></textarea>
+                            </div>
+                            <div>
+                                <label class="field-label">Example / Options / Answers</label>
+                                <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, options (comma-sep), or correct answer..."></textarea>
+                            </div>
                         </div>
                     </div>
-                    <div class="import-edit-grid">
-                        <div>
-                            <label class="field-label">Title</label>
-                            <input type="text" id="importEditTitle" class="form-input" placeholder="Card title">
+
+                    <div class="import-right">
+                        <div class="import-preview-panel">
+                            <h3 class="panel-title" style="margin-bottom:8px;">📖 Card Preview</h3>
+                            <div class="import-flip-card" id="importCardPreview">
+                                <div class="import-flip-front">
+                                    <div class="text-gray-400 text-sm text-center p-4">Select a row to preview</div>
+                                </div>
+                                <div class="import-flip-back">
+                                    <div class="text-gray-400 text-sm text-center p-4">Flip to see the answer</div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 text-center mt-2">👆 Click card to flip</p>
                         </div>
-                        <div>
-                            <label class="field-label">Card Set</label>
-                            <select id="importEditSetId" class="form-select">
-                                <option value="">-- Select Set --</option>
-                                <?php foreach ($cardSets as $set): ?>
-                                    <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="field-label">Style</label>
-                            <select id="importEditStyle" class="form-select">
-                                <option value="usage_cases">📘 Usage Cases</option>
-                                <option value="deep_dive">🧠 Deep Dive</option>
-                                <option value="formula_table">📐 Formula Table</option>
-                                <option value="multiple_choice">❓ Multiple Choice</option>
-                                <option value="gap_fill">✏️ Gap Fill</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="field-label">Level</label>
-                            <select id="importEditLevel" class="form-select">
-                                <option value="Beginner">🔰 Beginner</option>
-                                <option value="Intermediate">📚 Intermediate</option>
-                                <option value="Advanced">🎓 Advanced</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="field-label">Definition / Question</label>
-                        <textarea id="importEditDefinition" class="form-textarea" rows="3" placeholder="Definition, question text, or sentence..."></textarea>
-                    </div>
-                    <div>
-                        <label class="field-label">Example / Options / Answers</label>
-                        <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, options (comma-sep), or correct answer..."></textarea>
                     </div>
                 </div>
             </div>

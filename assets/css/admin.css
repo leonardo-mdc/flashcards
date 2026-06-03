@@ -457,10 +457,86 @@ body {
     gap: 8px;
 }
 
+.import-body {
+    display: flex;
+    gap: 12px;
+    min-height: 0;
+}
+.import-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+.import-right {
+    width: 340px;
+    flex-shrink: 0;
+}
+
+.import-preview-panel {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px;
+    position: sticky;
+    top: 0;
+}
+
+.import-flip-card {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    min-height: 260px;
+    position: relative;
+    perspective: 600px;
+    transition: box-shadow 0.2s;
+}
+.import-flip-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.import-flip-front,
+.import-flip-back {
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    transition: none;
+}
+.import-flip-front {
+    background: white;
+}
+.import-flip-back {
+    background: linear-gradient(135deg, #fef9e8, #ffffff);
+    display: none;
+}
+
+/* Import row checkbox */
+.import-row-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+.import-table tr.dimmed td {
+    opacity: 0.45;
+    transition: opacity 0.15s;
+}
+
+@media (max-width: 1024px) {
+    .import-body { flex-direction: column; }
+    .import-right { width: 100%; }
+    .import-flip-card, .import-flip-front, .import-flip-back { min-height: 200px; }
+}
 @media (max-width: 768px) {
     .import-modal-content { padding: 12px; width: 98%; }
     .import-edit-grid { grid-template-columns: 1fr; }
     .import-table { font-size: 0.7rem; }
     .import-table th, .import-table td { padding: 4px 6px; }
     .import-records-container { max-height: 180px; }
+    .import-flip-card, .import-flip-front, .import-flip-back { min-height: 160px; }
 }

@@ -877,6 +877,10 @@
     const importEditLevel = document.getElementById('importEditLevel');
     const importEditDefinition = document.getElementById('importEditDefinition');
     const importEditExtra = document.getElementById('importEditExtra');
+    const importSelectAll = document.getElementById('importSelectAll');
+    const importCardPreview = document.getElementById('importCardPreview');
+
+    let importPreviewFlipped = false;
 
     function openImportModal() {
         importModal.classList.remove('hidden');
@@ -888,7 +892,23 @@
         importFileHandle = null;
         importFileName.textContent = '';
         importRowCount.textContent = '';
-        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
+        importPreviewBody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-4">No data</td></tr>';
+        if (importSelectAll) importSelectAll.checked = true;
+        resetImportCardPreview();
+    }
+
+    function resetImportCardPreview() {
+        importPreviewFlipped = false;
+        if (importCardPreview) {
+            importCardPreview.innerHTML = `
+                <div class="import-flip-front">
+                    <div class="text-gray-400 text-sm text-center p-4">Select a row to preview</div>
+                </div>
+                <div class="import-flip-back">
+                    <div class="text-gray-400 text-sm text-center p-4">Flip to see the answer</div>
+                </div>
+            `;
+        }
     }
 
     function closeImportModal() {
@@ -934,6 +954,14 @@
 
     document.getElementById('importCsvBtn')?.addEventListener('click', openImportModal);
 
+    // Select all / deselect all
+    importSelectAll?.addEventListener('change', () => {
+        const checked = importSelectAll.checked;
+        importRows.forEach(row => { row._selected = checked; });
+        renderImportPreview();
+        if (importSelectedIdx >= 0) selectImportRow(importSelectedIdx);
+    });
+
     async function loadCsvPreview(file) {
         importFileHandle = file;
         importFileName.textContent = file.name;
@@ -941,7 +969,7 @@
         const formData = new FormData();
         formData.append('csv', file);
 
-        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
+        importPreviewBody.innerHTML = '<tr><td colspan="7" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
 
         try {
             const response = await fetch('admin_cards.php?action=preview_csv&t=' + Date.now(), {
@@ -971,6 +999,7 @@
                 return {
                     ...row,
                     _setName: (row.set || '').trim(),
+                    _selected: true,
                     type: type,
                     level: level,
                 };
@@ -995,6 +1024,7 @@
             gap_fill: '✏️ Gap Fill',
         };
 
+        let selectedCount = 0;
         let html = '';
         importRows.forEach((row, idx) => {
             const isSelected = idx === importSelectedIdx;
@@ -1005,8 +1035,11 @@
             const preview = row.definition || row.question_text || row.sentence || '';
             const previewTrim = preview.length > 60 ? preview.substring(0, 60) + '...' : preview;
             const styleClass = style === 'multiple_choice' ? 'mcq' : (style === 'gap_fill' ? 'gap' : 'text');
+            const checked = row._selected !== false;
+            if (checked) selectedCount++;
 
-            html += `<tr class="${isSelected ? 'selected' : ''}" data-idx="${idx}">
+            html += `<tr class="${isSelected ? 'selected' : ''} ${!checked ? 'dimmed' : ''}" data-idx="${idx}">
+                <td><input type="checkbox" class="import-row-checkbox" data-idx="${idx}" ${checked ? 'checked' : ''}></td>
                 <td class="text-gray-400 text-xs">${idx + 1}</td>
                 <td>${escapeHtml(setName)}</td>
                 <td><span class="card-type ${styleClass}">${styleLabels[style] || style}</span></td>
@@ -1017,17 +1050,49 @@
         });
 
         importPreviewBody.innerHTML = html;
+        updateImportRowCount(selectedCount);
 
+        // Row click (excluding checkbox clicks)
         importPreviewBody.querySelectorAll('tr').forEach(tr => {
-            tr.addEventListener('click', () => {
+            tr.addEventListener('click', (e) => {
+                if (e.target.type === 'checkbox') return;
                 const idx = parseInt(tr.dataset.idx);
                 selectImportRow(idx);
             });
         });
 
+        // Checkbox toggle
+        importPreviewBody.querySelectorAll('.import-row-checkbox').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                if (idx >= 0 && idx < importRows.length) {
+                    importRows[idx]._selected = e.target.checked;
+                }
+                renderImportPreview();
+                if (importSelectedIdx >= 0) selectImportRow(importSelectedIdx);
+                updateImportSelectAll();
+            });
+        });
+
         if (importRows.length > 0 && importSelectedIdx < 0) {
             selectImportRow(0);
+        } else if (importSelectedIdx >= 0 && importSelectedIdx < importRows.length) {
+            renderImportCardPreview(importRows[importSelectedIdx]);
         }
+    }
+
+    function updateImportRowCount(selectedCount) {
+        const total = importRows.length;
+        importRowCount.textContent = selectedCount === total
+            ? `(${total} rows)`
+            : `(${selectedCount}/${total} selected)`;
+    }
+
+    function updateImportSelectAll() {
+        if (!importSelectAll) return;
+        const allChecked = importRows.every(r => r._selected !== false);
+        importSelectAll.checked = allChecked;
+        importSelectAll.indeterminate = !allChecked && importRows.some(r => r._selected !== false);
     }
 
     function selectImportRow(idx) {
@@ -1064,6 +1129,10 @@
         importPreviewBody.querySelectorAll('tr').forEach(tr => {
             tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
         });
+
+        // Render the visual card preview
+        importPreviewFlipped = false;
+        renderImportCardPreview(row);
     }
 
     function updateRowFromEditor(idx) {
@@ -1099,6 +1168,96 @@
             row.tip = extra;
             row.usage1 = extra;
         }
+    }
+
+    function renderImportCardPreview(row) {
+        if (!importCardPreview || !row) { resetImportCardPreview(); return; }
+        const style = row.type || 'usage_cases';
+        const title = row.title || 'Flashcard';
+        const definition = row.definition || row.question_text || row.sentence || '';
+        const example = row.example1 || row.usage1 || row.tip || '';
+        const extra = row.correct_answer || row.tip || '';
+
+        let frontHtml = '';
+        let backHtml = '';
+
+        if (style === 'multiple_choice') {
+            frontHtml = `
+                <div class="text-center">
+                    <div class="text-3xl mb-2">❓</div>
+                    <p class="text-lg font-bold">${escapeHtml(title)}</p>
+                    <p class="text-sm text-gray-600 mt-1">${escapeHtml(definition || 'Select the correct answer:')}</p>
+                    <div class="mt-2 text-xs text-gray-400">(options shown on card)</div>
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p>
+                </div>
+            `;
+            backHtml = `
+                <div class="text-center">
+                    <div class="text-xl text-green-700 marker-underline mb-2">✓ Answer</div>
+                    <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300">
+                        <p class="text-lg font-bold">${escapeHtml(extra || 'Correct Answer')}</p>
+                    </div>
+                    ${example ? `<p class="text-sm text-gray-600 mt-2">${escapeHtml(example)}</p>` : ''}
+                </div>
+            `;
+        } else if (style === 'gap_fill') {
+            frontHtml = `
+                <div class="text-center">
+                    <div class="text-3xl mb-2">✏️</div>
+                    <p class="text-sm text-gray-500 mb-1">Complete the sentence:</p>
+                    <p class="text-base bg-gray-100 p-2 rounded-lg">${escapeHtml(definition || 'Complete: ______')}</p>
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p>
+                </div>
+            `;
+            backHtml = `
+                <div class="text-center">
+                    <div class="text-xl text-green-700 marker-underline mb-2">✓ Correct</div>
+                    <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300">
+                        <p class="text-lg font-bold">${escapeHtml(extra || 'Answer')}</p>
+                    </div>
+                    ${example ? `<p class="text-sm text-gray-600 mt-2">📝 ${escapeHtml(example)}</p>` : ''}
+                </div>
+            `;
+        } else {
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-3xl text-center font-bold">${escapeHtml(title)}</div>
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap to flip</p>
+                </div>
+            `;
+            backHtml = `
+                <div class="text-center">
+                    <div class="text-xl text-blue-700 marker-underline mb-2">${escapeHtml(title)}</div>
+                    <div class="bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
+                        <p class="text-base">${escapeHtml(definition || 'Definition')}</p>
+                    </div>
+                    ${example ? `<p class="text-sm text-gray-600 mt-2">📝 ${escapeHtml(example)}</p>` : ''}
+                </div>
+            `;
+        }
+
+        importCardPreview.innerHTML = `
+            <div class="import-flip-front">${frontHtml}</div>
+            <div class="import-flip-back">${backHtml}</div>
+        `;
+
+        importPreviewFlipped = false;
+        const front = importCardPreview.querySelector('.import-flip-front');
+        const back = importCardPreview.querySelector('.import-flip-back');
+        if (front) front.style.display = 'flex';
+        if (back) back.style.display = 'none';
+
+        // Remove old listener and add new one
+        importCardPreview.onclick = (e) => {
+            e.stopPropagation();
+            importPreviewFlipped = !importPreviewFlipped;
+            const f = importCardPreview.querySelector('.import-flip-front');
+            const b = importCardPreview.querySelector('.import-flip-back');
+            if (f && b) {
+                f.style.display = importPreviewFlipped ? 'none' : 'flex';
+                b.style.display = importPreviewFlipped ? 'flex' : 'none';
+            }
+        };
     }
 
     document.getElementById('importApplyCardBtn')?.addEventListener('click', () => {
@@ -1184,16 +1343,41 @@
         }
     });
 
+    // Live preview update on editor field changes
+    function refreshImportPreviewFromEditor() {
+        if (importSelectedIdx >= 0 && importRows[importSelectedIdx]) {
+            importPreviewFlipped = false;
+            renderImportCardPreview({
+                title: importEditTitle.value,
+                type: importEditStyle.value,
+                level: importEditLevel.value,
+                definition: importEditDefinition.value,
+                question_text: importEditDefinition.value,
+                sentence: importEditDefinition.value,
+                example1: importEditExtra.value,
+                usage1: importEditExtra.value,
+                tip: importEditExtra.value,
+                correct_answer: importEditExtra.value,
+            });
+        }
+    }
+    importEditTitle.addEventListener('input', refreshImportPreviewFromEditor);
+    importEditStyle.addEventListener('change', refreshImportPreviewFromEditor);
+    importEditLevel.addEventListener('change', refreshImportPreviewFromEditor);
+    importEditDefinition.addEventListener('input', refreshImportPreviewFromEditor);
+    importEditExtra.addEventListener('input', refreshImportPreviewFromEditor);
+
     // Execute import
     document.getElementById('importExecuteBtn')?.addEventListener('click', async () => {
-        if (importRows.length === 0) { alert('No rows to import'); return; }
-        if (!confirm(`Import ${importRows.length} cards?`)) return;
+        const selectedRows = importRows.filter(r => r._selected !== false);
+        if (selectedRows.length === 0) { alert('No rows selected for import'); return; }
+        if (!confirm(`Import ${selectedRows.length} card${selectedRows.length > 1 ? 's' : ''}?`)) return;
 
-        // Build CSV from modified rows using fixed columns the import API expects
+        // Build CSV from selected rows
         const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation'];
         const csvRows = [csvCols.join(',')];
 
-        importRows.forEach(row => {
+        selectedRows.forEach(row => {
             const vals = csvCols.map(col => {
                 let val = '';
                 if (col === 'set') {
