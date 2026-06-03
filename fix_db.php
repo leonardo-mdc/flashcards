@@ -100,6 +100,11 @@ try {
         exit;
     }
 
+    echo "<hr><h3>Quick Actions</h3>";
+    echo "<div style='margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;'>";
+    echo "<a href='?action=fix_pattern_type' style='background:#d97706;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;font-weight:bold;'>🔧 Fix Pattern Types</a>";
+    echo "</div>";
+
     echo "<hr><h3>Table Schemas</h3>";
     $hasIssues = false;
     foreach ($tables as $table) {
