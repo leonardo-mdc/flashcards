@@ -34,13 +34,15 @@ try {
         echo json_encode(['success' => false, 'error' => 'User not found']);
         exit;
     }
-    User::updateProgress($userId, $progressPercent, $user['english_level'] ?? 'Beginner');
+    $newLevel = User::calculateLevel($progressPercent);
+    User::updateProgress($userId, $progressPercent, $newLevel);
 
     echo json_encode([
         'success' => true,
         'message' => 'Review recorded',
         'quality' => $quality,
         'progress' => $progressPercent,
+        'english_level' => $newLevel,
         'streak_days' => $stats['streak_days'],
         'learned_count' => $stats['learned_count'],
         'total_cards' => $stats['total_cards'],

@@ -7,6 +7,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/Review.php';
+require_once __DIR__ . '/../src/User.php';
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -24,10 +25,12 @@ try {
     }
 
     $stats = Review::getStats($userId);
+    $user = User::getById($userId);
 
     echo json_encode([
         'success' => true,
         'stats' => $stats,
+        'user' => $user,
     ]);
 } catch (PDOException $e) {
     echo json_encode([

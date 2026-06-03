@@ -168,6 +168,7 @@
             const res = await apiCall('api/record_review.php', 'POST', { card_id: cardId, user_id: studentId, quality, correct: wasCorrect });
             if (res && res.progress !== undefined) {
                 currentStudent.progress = res.progress;
+                if (res.english_level) currentStudent.english_level = res.english_level;
                 if (res.streak_days !== undefined) streakDays = res.streak_days;
             }
             return res;
@@ -179,6 +180,7 @@
         const res = await apiCall('api/get_stats.php', 'POST', { user_id: currentStudent?.id });
         if (res?.stats) {
             streakDays = res.stats.streak_days || 0;
+            if (res?.user) currentStudent.english_level = res.user.english_level;
         }
         return res?.stats || null;
     }

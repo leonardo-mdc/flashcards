@@ -128,6 +128,13 @@ class User
         $stmt->execute([$id]);
     }
 
+    public static function calculateLevel(int $progress): string
+    {
+        if ($progress >= 50) return 'Advanced';
+        if ($progress >= 20) return 'Intermediate';
+        return 'Beginner';
+    }
+
     public static function updateProgress(int $id, int $progress, string $englishLevel): void
     {
         self::ensureTable();

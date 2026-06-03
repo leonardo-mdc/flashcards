@@ -272,7 +272,7 @@ class Review
         $totalCards->execute();
         $totalCardCount = (int) $totalCards->fetchColumn();
 
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM user_card_progress WHERE user_id = ? AND repetitions > 1");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM user_card_progress WHERE user_id = ? AND repetitions >= 1");
         $stmt->execute([$userId]);
         $learnedCount = (int) $stmt->fetchColumn();
 
