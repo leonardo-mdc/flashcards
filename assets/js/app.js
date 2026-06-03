@@ -149,8 +149,7 @@
         appEl.innerHTML = `
             <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
                 <div class="text-center mb-4 md:mb-5">
-                    <div class="text-5xl md:text-6xl mb-1">🎓✏️</div>
-                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline">Flashcard Studio</h1>
+                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline"><span class="text-3xl md:text-4xl">🎓</span> Flashcard Studio <span class="text-xl md:text-2xl">✏️</span></h1>
                     <p class="text-gray-600 text-sm md:text-lg mt-1">sign in to start studying</p>
                 </div>
                 <div class="space-y-4 md:space-y-5 max-w-md mx-auto">
@@ -240,8 +239,7 @@
         const html = `
             <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
                 <div class="text-center mb-4 md:mb-5">
-                    <div class="text-5xl md:text-6xl mb-1">🎓</div>
-                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline">Flashcard Studio <span class="text-2xl md:text-3xl">✏️</span></h1>
+                    <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline"><span class="text-3xl md:text-4xl">🎓</span> Flashcard Studio <span class="text-xl md:text-2xl">✏️</span></h1>
                     <p class="text-gray-600 text-sm md:text-lg mt-1">spaced repetition · tap card to flip</p>
                 </div>
                 <div class="space-y-4 md:space-y-5">
@@ -591,7 +589,7 @@
                     </div>
                 </div>
                 <div class="progress-bar-container mb-1" data-pct="${Math.round(progressPercent)}%"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
-                <div class="text-center mb-1">
+                <div class="text-left mb-1">
                     <span class="text-xs text-gray-500 title-font">📚 ${escapeHtml(card.set_name || '')}</span>
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
