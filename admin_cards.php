@@ -277,7 +277,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <label class="filter-checkbox"><input type="checkbox" id="levelAdvanced"> Advanced</label>
                     <button id="filterCardsBtn" class="btn btn-secondary btn-xs">Filter</button>
                 </div>
-                <span class="text-xs text-gray-400 ml-auto line-break-hint">💡 Use \br for line breaks</span>
+                <span class="text-xs text-gray-400 ml-auto line-break-hint">💡 \br · \b<b>b</b>·\b · \i<i>i</i>·\i · \u<u>u</u>·\u · \em · \strong</span>
             </div>
         </div>
 
@@ -547,6 +547,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         </div>
                     </div>
                 </div>
+                <p class="text-xs text-gray-400 mt-2 text-center">💡 Use <code class="text-gray-500 bg-gray-100 px-1 rounded">\br</code> line break · <code class="text-gray-500 bg-gray-100 px-1 rounded">\b...\b</code> <b>bold</b> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\i...\i</code> <i>italic</i> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\u...\u</code> <u>underline</u> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\em...\em</code> <em>emphasis</em> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\strong...\strong</code> <strong>strong</strong></p>
             </div>
         </div>
     </div>
