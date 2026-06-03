@@ -1181,7 +1181,7 @@
                 <div class="text-center">
                     <div class="text-3xl mb-1">❓</div>
                     <p class="text-lg font-bold">${escapeHtml(title)}</p>
-                    <p class="text-sm text-gray-600 mt-1">${escapeHtml(definition || 'Select the correct answer:')}</p>
+                    <p class="text-sm text-gray-600 mt-1">${formatBreaks(escapeHtml(definition || 'Select the correct answer:'))}</p>
                     <div class="mt-1 text-xs text-gray-400">(options shown on card)</div>
                 </div>
             `;
@@ -1189,9 +1189,9 @@
                 <div class="text-center">
                     <div class="text-base text-green-700 marker-underline mb-1">✓ Answer</div>
                     <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300">
-                        <p class="text-base font-bold">${escapeHtml(extra || 'Correct Answer')}</p>
+                        <p class="text-base font-bold">${formatBreaks(escapeHtml(extra || 'Correct Answer'))}</p>
                     </div>
-                    ${example ? `<p class="text-xs text-gray-600 mt-1">${escapeHtml(example)}</p>` : ''}
+                    ${example ? `<p class="text-xs text-gray-600 mt-1">${formatBreaks(escapeHtml(example))}</p>` : ''}
                 </div>
             `;
         } else if (style === 'gap_fill') {
@@ -1199,16 +1199,16 @@
                 <div class="text-center">
                     <div class="text-3xl mb-1">✏️</div>
                     <p class="text-xs text-gray-500 mb-1">Complete the sentence:</p>
-                    <p class="text-sm bg-gray-100 p-2 rounded-lg">${escapeHtml(definition || 'Complete: ______')}</p>
+                    <p class="text-sm bg-gray-100 p-2 rounded-lg">${formatBreaks(escapeHtml(definition || 'Complete: ______'))}</p>
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
                     <div class="text-base text-green-700 marker-underline mb-1">✓ Correct</div>
                     <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300">
-                        <p class="text-base font-bold">${escapeHtml(extra || 'Answer')}</p>
+                        <p class="text-base font-bold">${formatBreaks(escapeHtml(extra || 'Answer'))}</p>
                     </div>
-                    ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${escapeHtml(example)}</p>` : ''}
+                    ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${formatBreaks(escapeHtml(example))}</p>` : ''}
                 </div>
             `;
         } else {
@@ -1221,9 +1221,9 @@
                 <div class="text-center">
                     <div class="text-base text-blue-700 marker-underline mb-1">${escapeHtml(title)}</div>
                     <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
-                        <p class="text-sm">${escapeHtml(definition || 'Definition')}</p>
+                        <p class="text-sm">${formatBreaks(escapeHtml(definition || 'Definition'))}</p>
                     </div>
-                    ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${escapeHtml(example)}</p>` : ''}
+                    ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${formatBreaks(escapeHtml(example))}</p>` : ''}
                 </div>
             `;
         }

@@ -363,7 +363,7 @@ body {
     background: white;
     border-radius: 12px;
     padding: 20px;
-    max-width: 1100px;
+    max-width: 1400px;
     width: 95%;
     max-height: 90vh;
     overflow-y: auto;
@@ -470,7 +470,7 @@ body {
     min-width: 0;
 }
 .import-right {
-    width: 340px;
+    width: 420px;
     flex-shrink: 0;
 }
 
