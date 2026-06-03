@@ -589,8 +589,8 @@
                     </div>
                 </div>
                 <div class="progress-bar-container mb-1" data-pct="${Math.round(progressPercent)}%"><div class="progress-bar-fill" style="width: ${progressPercent}%"></div></div>
-                <div class="text-left mb-1">
-                    <span class="text-sm md:text-base text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')}</span>
+                <div class="text-center mb-1">
+                    <span class="text-lg text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')}</span>
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">
