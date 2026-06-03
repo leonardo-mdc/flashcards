@@ -2,22 +2,22 @@
 
 ## Common Columns (all card types)
 
-| Column | Description |
-|--------|------------|
-| `id` | Leave empty for new cards, or set an existing ID to update |
-| `set` | Card set name — if the set doesn't exist, it is **created automatically** during import |
+| Column   | Description |
+|----------|------------|
+| `id`     | Leave empty for new cards, or set an existing ID to update |
+| `set`    | Card set name — if the set doesn't exist, it is **created automatically** during import |
 | `set_id` | Optional numeric set ID. If both `set` and `set_id` are given, `set` takes priority |
-| `type` | Card pattern: `usage_cases`, `deep_dive`, `formula_table`, `multiple_choice`, `gap_fill` |
-| `title` | The word, phrase, or main subject of the card |
-| `level` | `A1` `A2` `B1` `B2` `C1` `C2` (will be mapped to Beginner/Intermediate/Advanced on import) |
+| `type`   | Card pattern: `usage_cases`, `deep_dive`, `formula_table`, `multiple_choice`, `gap_fill`  |
+| `title`  | The word, phrase, or main subject of the card |
+| `level`  | `A1` `A2` `B1` `B2` `C1` `C2` (will be mapped to Beginner/Intermediate/Advanced on import) |
 
 ## Level Mapping
 
-| CSV value | Stored as |
-|-----------|-----------|
-| `A1` or `A2` | `Beginner` |
+| CSV value    | Stored as      |
+|--------------|----------------|
+| `A1` or `A2` | `Beginner`     |
 | `B1` or `B2` | `Intermediate` |
-| `C1` or `C2` | `Advanced` |
+| `C1` or `C2` | `Advanced`     |
 
 You can also use `Beginner`, `Intermediate`, `Advanced` directly.
 
@@ -26,52 +26,52 @@ You can also use `Beginner`, `Intermediate`, `Advanced` directly.
 ### usage_cases (Pure Text — Usage Cases)
 Shows the word, then reveals definition, usage context, example, and tip.
 
-| Column | Required | Description |
-|--------|----------|-------------|
-| `definition` | yes | The definition or explanation of the word |
-| `usage1` | no | Usage context (when/where to use this word) |
-| `example1` | no | Example sentence (max 4: `example1` to `example4`) |
-| `tip` | no | Extra tip or memory aid |
+| Column       | Required | Description |
+|--------------|----------|-------------|
+| `definition` | yes      | The definition or explanation of the word |
+| `usage1`     | yes      | Usage context (when/where to use this word) |
+| `example1`   | yes      | Example sentence (max 4: `example1` to `example4`) |
+| `tip`        | if >=b2  | Extra tip or memory aid |
 
 ### deep_dive (Pure Text — Deep Dive)
 Shows the word, then reveals definition and example.
 
-| Column | Required | Description |
-|--------|----------|-------------|
-| `definition` | yes | Deep definition or explanation |
-| `example1` | no | Example sentence (max 4: `example1` to `example4`) |
-| `tip` | no | Extra note |
+| Column       | Required | Description |
+|--------------|----------|-------------|
+| `definition` | yes      | Deep definition or explanation |
+| `example1`   | yes      | Example sentence (max 4: `example1` to `example4`) |
+| `tip`        | yes      | Extra note |
 
 ### formula_table (Pure Text — Formula Table)
 Shows the word, then reveals definition and example.
 
-| Column | Required | Description |
-|--------|----------|-------------|
-| `definition` | yes | The formula, structure, or rule |
-| `example1` | no | Example sentence (max 4) |
-| `tip` | no | Extra note |
+| Column       | Required | Description |
+|--------------|----------|-------------|
+| `definition` | yes      | The formula, structure, or rule |
+| `example1`   | yes      | Example sentence (max 4: `example1` to `example4`) |
+| `tip`        | yes      | Extra note |
 
 ### multiple_choice (Quiz)
 Shows a question with clickable answer options.
 
-| Column | Required | Description |
-|--------|----------|-------------|
-| `question_text` | yes | The question to display (e.g. "Which tense is correct?") |
-| `opt1` | yes | Answer option 1 (max 4 options: `opt1` to `opt4`) |
-| `opt2` | yes | Answer option 2 |
-| `opt3` | no | Answer option 3 |
-| `opt4` | no | Answer option 4 |
-| `correct_answer` | yes | Zero-based index of the correct option (0, 1, 2, or 3) |
-| `explanation` | no | Text shown after answering explaining why it's correct |
+| Column           | Required | Description |
+|------------------|----------|-------------|
+| `question_text`  | yes      | The question to display (e.g. "Which tense is correct?") |
+| `opt1`           | yes      | Answer option 1 (max 4 options: `opt1` to `opt4`) |
+| `opt2`           | yes      | Answer option 2 |
+| `opt3`           | no       | Answer option 3 |
+| `opt4`           | no       | Answer option 4 |
+| `correct_answer` | yes      | Zero-based index of the correct option (0, 1, 2, or 3) |
+| `explanation`    | no       | Text shown after answering explaining why it's correct |
 
 ### gap_fill (Quiz)
 Shows a sentence with a blank, user types the answer.
 
-| Column | Required | Description |
-|--------|----------|-------------|
-| `sentence` | yes | The sentence with `______` indicating the blank |
-| `correct_answer` | yes | One correct answer, or multiple comma-separated (e.g. `go,goes,went`) |
-| `example1` | no | Example sentence (max 4) |
+| Column           | Required | Description |
+|------------------|----------|-------------|
+| `sentence`       | yes      | The sentence with `______` indicating the blank |
+| `correct_answer` | yes      | One correct answer, or multiple comma-separated (e.g. `go,goes,went`) |
+| `example1`       | no       | Example sentence (max 4) |
 
 ## Example CSV
 
