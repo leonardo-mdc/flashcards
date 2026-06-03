@@ -193,7 +193,9 @@ body {
 .card-preview {
     border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
     transition: box-shadow 0.2s;
 }
 .card-preview:hover {
@@ -206,6 +208,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    flex: 1;
 }
 .card-front-preview {
     background: white;
@@ -216,8 +219,6 @@ body {
     background: linear-gradient(135deg, #fef9e8, #ffffff);
     border: 2px solid #e5e7eb;
     border-radius: 8px;
-    display: none;
-    margin-top: 8px;
 }
 .preview-label {
     position: absolute;

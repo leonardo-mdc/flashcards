@@ -329,7 +329,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 </div>
 
                 <div class="preview-panel">
-                    <h2 class="panel-title">📖 Preview <span class="text-xs text-gray-400 font-normal">(click to flip)</span></h2>
+                    <h2 class="panel-title">📖 Preview</h2>
                     <div class="card-preview" id="previewCard">
                         <div class="card-front-preview">
                             <span class="preview-label">FRONT</span>
@@ -485,7 +485,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                 <h3 class="panel-title" style="margin-bottom:0;">✏️ Edit Selected Card</h3>
                                 <div class="flex gap-2">
                                     <button id="importApplyCardBtn" class="btn btn-primary btn-sm">Apply</button>
-                                    <button id="importApplyAllBtn" class="btn btn-secondary btn-sm">Apply to all</button>
                                     <button id="importDeleteCardBtn" class="btn btn-danger btn-sm">🗑 Remove</button>
                                 </div>
                             </div>

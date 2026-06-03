@@ -1,0 +1,32 @@
+
+
+import csv to database
+
+file: ----                                     | edit | import | cancel
+------------------------------------------------------------------------------
+card set (drop down with cardsets in the system)
+[ ] apply to all cards
+create new cardset [                              ]
+------------------------------------------------------------------------------
+
+cardset | card style | +++relevant card fields from csv - short selection +++
+ [ ]    |   rolling list with up to 10 visible records
+ [ ]    |   rolling list with up to 10 visible records
+ [ ]    |   rolling list with up to 10 visible records
+ [ ]    |   rolling list with up to 10 visible records
+--------------------------------------------------------------------------------
+card preview (editable)                | apply | apply to all | delete card    |
+--------------------------------------------------------------------------------
+    front                              |   back                                |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |
+                                       |                                       |

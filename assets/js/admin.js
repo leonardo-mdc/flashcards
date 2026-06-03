@@ -239,8 +239,6 @@
         return contentData;
     }
 
-    let previewFlipped = false;
-
     function updatePreviews() {
         const patternType = editPatternType.value;
         const title = editTitle.value || 'Flashcard';
@@ -314,26 +312,6 @@
 
         frontPreviewContent.innerHTML = frontHtml;
         backPreviewContent.innerHTML = backHtml;
-        previewFlipped = false;
-
-        document.querySelectorAll('.card-preview').forEach(el => {
-            el.style.cursor = 'pointer';
-            el.addEventListener('click', function previewClick(e) {
-                e.stopPropagation();
-                previewFlipped = !previewFlipped;
-                const front = this.querySelector('.card-front-preview');
-                const back = this.querySelector('.card-back-preview');
-                if (front && back) {
-                    if (previewFlipped) {
-                        front.style.display = 'none';
-                        back.style.display = 'flex';
-                    } else {
-                        front.style.display = 'flex';
-                        back.style.display = 'none';
-                    }
-                }
-            });
-        });
     }
 
     async function saveCard() {
@@ -1246,15 +1224,6 @@
         updateRowFromEditor(importSelectedIdx);
         renderImportPreview();
         selectImportRow(importSelectedIdx);
-    });
-
-    document.getElementById('importApplyAllBtn')?.addEventListener('click', () => {
-        if (importRows.length === 0) return;
-        for (let i = 0; i < importRows.length; i++) {
-            updateRowFromEditor(i);
-        }
-        renderImportPreview();
-        if (importSelectedIdx >= 0) selectImportRow(importSelectedIdx);
     });
 
     document.getElementById('importDeleteCardBtn')?.addEventListener('click', () => {
