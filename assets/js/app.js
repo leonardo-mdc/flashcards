@@ -661,7 +661,11 @@
     }
 
     function handleFlip(card, quizState, flashcardEl) {
-        if (flashcardEl.classList.contains('flipped')) return;
+        if (flashcardEl.classList.contains('flipped')) {
+            flashcardEl.classList.remove('flipped');
+            isFlipped = false;
+            return;
+        }
 
         const pattern = card.pattern_type;
         if (pattern === 'multiple_choice') {
