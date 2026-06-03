@@ -125,8 +125,7 @@ body {
 .flip-btn:active { transform: scale(0.96); }
 .flip-btn.hidden-btn { display: none; }
 .progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 10px; position: relative; overflow: visible; }
-.progress-bar-container::before { content: attr(data-pct); position: absolute; left: -9999px; }
-.progress-bar-container .pct-label { position: absolute; right: -38px; top: -5px; font-size: 11px; font-weight: 700; color: #2563eb; white-space: nowrap; }
+.progress-bar-container .pct-label { position: absolute; left: 6px; top: -5px; font-size: 11px; font-weight: 700; color: #2563eb; white-space: nowrap; z-index: 1; }
 .progress-bar-fill { background: linear-gradient(90deg, #3b82f6, #2563eb, #7c3aed); height: 100%; border-radius: 20px; transition: width 0.4s ease; position: relative; }
 .level-chip { background: #e0e7ff; color: #1e3a8a; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.65rem, 1.8vw, 0.75rem); }
 .student-badge { background: #dbeafe; color: #1e40af; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.7rem, 2vw, 0.8rem); }
@@ -212,7 +211,6 @@ body {
     border-radius: 4px;
     padding: 0 5px;
     font-size: 11px;
-    font-family: monospace !important;
     color: #475569;
 }
 
@@ -223,7 +221,7 @@ body {
     #againBtn, #goodBtn, #easyBtn { font-size: clamp(0.55rem, 2.5vw, 0.7rem) !important; padding: 4px 8px !important; }
     .flip-btn { font-size: clamp(0.55rem, 2.5vw, 0.7rem) !important; padding: 3px 8px !important; }
     .progress-bar-container { height: 8px; }
-    .progress-bar-container .pct-label { right: -32px; font-size: 9px; }
+    .progress-bar-container .pct-label { left: 4px; font-size: 9px; }
 }
 
 @media (max-width: 380px) {

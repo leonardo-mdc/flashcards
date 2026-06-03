@@ -108,11 +108,10 @@
             html += `
                 <div class="card-item ${isSelected ? 'selected' : ''}" data-id="${card.id}">
                     <div class="flex justify-between items-center">
-                        <span class="font-bold">${escapeHtml(card.title || 'Untitled')}</span>
+                        <span class="card-title">${escapeHtml(card.title || 'Untitled')}</span>
                         <span class="card-type ${typeClass}">${typeLabel}</span>
                     </div>
-                    <div class="text-sm text-gray-500 mt-1">${escapeHtml(card.level || 'Beginner')}</div>
-                    <div class="text-xs text-gray-400">ID: ${card.id}</div>
+                    <div class="card-meta">${escapeHtml(card.level || 'Beginner')} · ID ${card.id}</div>
                 </div>
             `;
         });
@@ -438,19 +437,19 @@
             return;
         }
 
-        let html = '<table class="w-full" style="border-collapse:collapse;">';
-        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Name</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Progress</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Level</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
+        let html = '<table class="users-table">';
+        html += '<tr><th>Name</th><th>Username</th><th>Role</th><th>Progress</th><th>Level</th><th>Actions</th></tr>';
         users.forEach(user => {
             html += `<tr>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.full_name || user.username)}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.username)}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">Student</span>'}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.progress || 0}%</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.english_level || 'Beginner')}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
-                    <button class="edit-user-btn btn btn-primary text-xs" data-id="${user.id}" data-username="${escapeHtml(user.username)}" data-fullname="${escapeHtml(user.full_name || '')}" data-level="${escapeHtml(user.english_level || 'Beginner')}" data-admin="${user.is_admin}" style="padding:4px 10px;font-size:0.7rem;">✏️ Edit</button>
-                    <button class="reset-user-btn btn btn-warning text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🔄 Reset</button>
-                    <button class="delete-user-btn btn btn-danger text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🗑 Delete</button>
+                <td>${escapeHtml(user.full_name || user.username)}</td>
+                <td>${escapeHtml(user.username)}</td>
+                <td>${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">Student</span>'}</td>
+                <td>${user.progress || 0}%</td>
+                <td>${escapeHtml(user.english_level || 'Beginner')}</td>
+                <td>
+                    <button class="edit-user-btn btn btn-primary btn-xs" data-id="${user.id}" data-username="${escapeHtml(user.username)}" data-fullname="${escapeHtml(user.full_name || '')}" data-level="${escapeHtml(user.english_level || 'Beginner')}" data-admin="${user.is_admin}">✏️</button>
+                    <button class="reset-user-btn btn btn-warning btn-xs" data-id="${user.id}">🔄</button>
+                    <button class="delete-user-btn btn btn-danger btn-xs" data-id="${user.id}">🗑</button>
                 </td>
             </tr>`;
         });
@@ -697,10 +696,10 @@
                 <div class="set-item" data-id="${set.id}">
                     <span class="set-name-display font-bold">${escapeHtml(set.name)}</span>
                     <input type="text" class="set-name-input hidden" value="${escapeHtml(set.name)}">
-                    <button class="edit-set-btn btn btn-primary text-xs" style="padding:4px 10px;font-size:0.7rem;">✏️</button>
-                    <button class="save-set-btn btn btn-success text-xs hidden" style="padding:4px 10px;font-size:0.7rem;">💾</button>
-                    <button class="cancel-set-btn btn btn-secondary text-xs hidden" style="padding:4px 10px;font-size:0.7rem;">✕</button>
-                    <button class="delete-set-btn btn btn-danger text-xs" style="padding:4px 10px;font-size:0.7rem;">🗑</button>
+                    <button class="edit-set-btn btn btn-primary btn-xs">✏️</button>
+                    <button class="save-set-btn btn btn-success btn-xs hidden">💾</button>
+                    <button class="cancel-set-btn btn btn-secondary btn-xs hidden">✕</button>
+                    <button class="delete-set-btn btn btn-danger btn-xs">🗑</button>
                 </div>`;
         });
         setListContainer.innerHTML = html;
