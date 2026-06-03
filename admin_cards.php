@@ -1,3 +1,196 @@
+<?php
+
+session_start();
+
+require_once __DIR__ . '/src/Database.php';
+require_once __DIR__ . '/src/helpers.php';
+require_once __DIR__ . '/src/User.php';
+require_once __DIR__ . '/src/CardSet.php';
+require_once __DIR__ . '/src/Card.php';
+require_once __DIR__ . '/src/Review.php';
+
+$currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
+$isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
+$needsSetup = !User::hasAdmins();
+
+if (isset($_POST['setup'])) {
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    if ($username !== '' && strlen($password) >= 6) {
+        User::create($username, $password, true);
+        $user = User::authenticate($username, $password);
+        if ($user) {
+            $_SESSION['admin_user'] = $user;
+            $currentUser = $user;
+            $isLoggedIn = true;
+        }
+    } else {
+        $setupError = 'Please fill in all fields (password min 6 chars).';
+    }
+}
+
+if (isset($_POST['login'])) {
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $user = User::authenticate($username, $password);
+    if ($user && $user['is_admin']) {
+        $_SESSION['admin_user'] = $user;
+        $currentUser = $user;
+        $isLoggedIn = true;
+    } else {
+        $loginError = 'Invalid credentials or insufficient permissions.';
+    }
+}
+
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: admin_cards.php');
+    exit;
+}
+
+$isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+    && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+if ($isAjax && isset($_GET['action'])) {
+    header('Content-Type: application/json');
+    if (!$isLoggedIn) {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
+
+    try {
+        $action = $_GET['action'];
+
+        if ($action === 'get_cards') {
+            $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
+            echo json_encode(['success' => true, 'cards' => Card::getBySet($setId)]);
+        } elseif ($action === 'get_sets') {
+            echo json_encode(['success' => true, 'sets' => CardSet::getAll()]);
+        } elseif ($action === 'get_card') {
+            $cardId = isset($_GET['card_id']) ? (int) $_GET['card_id'] : 0;
+            $card = Card::getById($cardId);
+            if ($card) {
+                $card['content_data'] = json_decode($card['content_data'], true);
+                echo json_encode(['success' => true, 'card' => $card]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Card not found']);
+            }
+        } elseif ($action === 'save_card') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $id = Card::save($data);
+            echo json_encode(['success' => true, 'id' => $id]);
+        } elseif ($action === 'delete_card') {
+            $cardId = isset($_GET['card_id']) ? (int) $_GET['card_id'] : 0;
+            Card::delete($cardId);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'get_users') {
+            echo json_encode(['success' => true, 'users' => User::getAll()]);
+        } elseif ($action === 'create_user') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $username = trim($data['username'] ?? '');
+            $password = $data['password'] ?? '';
+            $isAdmin = !empty($data['is_admin']);
+            $fullName = trim($data['full_name'] ?? '');
+            $englishLevel = $data['english_level'] ?? 'Beginner';
+            if ($username === '' || strlen($password) < 6) {
+                echo json_encode(['success' => false, 'error' => 'Username required, password min 6 chars']);
+                exit;
+            }
+            $user = User::create($username, $password, $isAdmin, $fullName, $englishLevel);
+            echo json_encode(['success' => true, 'user' => $user]);
+        } elseif ($action === 'update_user') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $userId = (int) ($data['id'] ?? 0);
+            $username = trim($data['username'] ?? '');
+            $fullName = trim($data['full_name'] ?? '');
+            $englishLevel = $data['english_level'] ?? 'Beginner';
+            $isAdmin = !empty($data['is_admin']);
+            if ($userId <= 0 || $username === '') {
+                echo json_encode(['success' => false, 'error' => 'Invalid data']);
+                exit;
+            }
+            User::update($userId, $username, $fullName, $englishLevel, $isAdmin);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'reset_user_progress') {
+            $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid user']);
+                exit;
+            }
+            Review::resetForUser($userId);
+            User::resetProgress($userId);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'delete_user') {
+            $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+            if ($userId === $currentUser['id']) {
+                echo json_encode(['success' => false, 'error' => 'Cannot delete yourself']);
+                exit;
+            }
+            User::delete($userId);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'create_set') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $name = trim($data['name'] ?? '');
+            if ($name === '') {
+                echo json_encode(['success' => false, 'error' => 'Name is required']);
+                exit;
+            }
+            $id = CardSet::create($name);
+            echo json_encode(['success' => true, 'id' => $id, 'name' => $name]);
+        } elseif ($action === 'update_set') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $id = (int) ($data['id'] ?? 0);
+            $name = trim($data['name'] ?? '');
+            if ($id <= 0 || $name === '') {
+                echo json_encode(['success' => false, 'error' => 'Invalid data']);
+                exit;
+            }
+            CardSet::update($id, $name);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'delete_set') {
+            $id = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 0;
+            if ($id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid set']);
+                exit;
+            }
+            CardSet::delete($id);
+            echo json_encode(['success' => true]);
+        } elseif ($action === 'get_user_sets') {
+            $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+            $setIds = Review::getAccessibleSets($userId);
+            echo json_encode(['success' => true, 'set_ids' => $setIds]);
+        } elseif ($action === 'set_user_sets') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $userId = (int) ($data['user_id'] ?? 0);
+            $setIds = array_map('intval', $data['set_ids'] ?? []);
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid user']);
+                exit;
+            }
+            Review::setAccessibleSets($userId, $setIds);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Invalid action']);
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+
+    exit;
+}
+
+if (!$isLoggedIn) {
+    if ($needsSetup) {
+        require __DIR__ . '/src/templates/admin_setup.php';
+    } else {
+        require __DIR__ . '/src/templates/admin_login.php';
+    }
+    exit;
+}
+
+$dbConnected = Database::testConnection();
+$cardSets = $dbConnected ? CardSet::getAll() : [];
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

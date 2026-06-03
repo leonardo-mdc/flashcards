@@ -803,7 +803,7 @@
             SoundFX.click();
             let wasCorrect = false;
             if (pattern === 'multiple_choice') {
-                const correctIdx = card.content_data?.correct_index || 1;
+                const correctIdx = card.content_data?.correct_index ?? 1;
                 wasCorrect = (currentQuizState.selectedIdx === correctIdx);
             } else if (pattern === 'gap_fill') {
                 const correctAnswers = card.content_data?.correct_answers || ['answer'];
