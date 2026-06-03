@@ -76,9 +76,13 @@ try {
             continue;
         }
 
-        if (!in_array($level, ['Beginner', 'Intermediate', 'Advanced'])) {
-            $level = 'Beginner';
-        }
+        $levelMap = [
+            'beginner' => 'Beginner', 'a1' => 'Beginner', 'a2' => 'Beginner',
+            'intermediate' => 'Intermediate', 'b1' => 'Intermediate', 'b2' => 'Intermediate',
+            'advanced' => 'Advanced', 'c1' => 'Advanced', 'c2' => 'Advanced',
+        ];
+        $levelKey = strtolower(trim($level));
+        $level = $levelMap[$levelKey] ?? 'Beginner';
 
         $setId = 0;
         if ($setIdRaw !== '' && is_numeric($setIdRaw) && (int)$setIdRaw > 0) {

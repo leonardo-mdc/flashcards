@@ -480,7 +480,7 @@
         } else {
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
-                    <div class="card-word">${escapeHtml(title)}</div>
+                    <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
                     <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
