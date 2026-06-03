@@ -59,8 +59,8 @@
             setTimeout(() => this._play(783.99, 0.25, 'sine', 0.12), 200);
         },
         incorrect() {
-            this._play(311.13, 0.2, 'sawtooth', 0.08);
-            setTimeout(() => this._play(233.08, 0.35, 'sawtooth', 0.08), 150);
+            this._play(150, 0.15, 'sine', 0.12);
+            setTimeout(() => this._play(120, 0.3, 'sine', 0.1), 100);
         },
         flip() {
             this._play(800, 0.08, 'sine', 0.05);
