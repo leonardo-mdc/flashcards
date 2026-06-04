@@ -538,6 +538,10 @@
         modal.innerHTML = `
             <div class="whiteboard-card" style="max-width:400px;width:90%;padding:24px;">
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit Profile</h3>
+                <div class="flex gap-2 mb-3">
+                    <button id="saveProfileBtn" class="flex-1 bg-blue-700 text-white py-2 rounded-xl font-bold">💾 Save</button>
+                    <button id="cancelProfileBtn" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-xl font-bold">Cancel</button>
+                </div>
                 <label class="block font-bold mb-1">Full Name:</label>
                 <input type="text" id="editProfileFullName" class="form-input w-full p-2 border-2 rounded-xl mb-3" value="${escapeHtml(currentStudent?.full_name || '')}">
                 <label class="block font-bold mb-1">English Level:</label>
@@ -546,10 +550,6 @@
                     <option value="Intermediate" ${currentStudent?.english_level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
                     <option value="Advanced" ${currentStudent?.english_level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
                 </select>
-                <div class="flex gap-2">
-                    <button id="saveProfileBtn" class="flex-1 bg-blue-700 text-white py-2 rounded-xl font-bold">💾 Save</button>
-                    <button id="cancelProfileBtn" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-xl font-bold">Cancel</button>
-                </div>
                 <p id="editProfileError" class="text-red-600 text-center mt-2 hidden"></p>
             </div>
         `;
