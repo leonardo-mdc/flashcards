@@ -815,7 +815,7 @@
                     <span class="pct-label">${currentIndex + 1}/${currentCards.length}</span>
                 </div>
                 <div class="text-center mb-1">
-                    <span class="text-lg text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')}</span>
+                    <span class="text-lg text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')} · ${escapeHtml(card.title || '')}</span>
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">
