@@ -15,12 +15,28 @@ require_once __DIR__ . '/../src/CardSet.php';
 require_once __DIR__ . '/../src/Card.php';
 
 $pdo = Database::getConnection();
-$stmt = $pdo->query("
-    SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name
-    FROM cards c
-    LEFT JOIN card_sets s ON c.set_id = s.id
-    ORDER BY s.name, c.id
-");
+
+$setIds = isset($_GET['set_ids']) ? array_map('intval', explode(',', $_GET['set_ids'])) : [];
+$setIds = array_filter($setIds, fn($id) => $id > 0);
+
+if (!empty($setIds)) {
+    $placeholders = implode(',', array_fill(0, count($setIds), '?'));
+    $stmt = $pdo->prepare("
+        SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name
+        FROM cards c
+        LEFT JOIN card_sets s ON c.set_id = s.id
+        WHERE c.set_id IN ($placeholders)
+        ORDER BY s.name, c.id
+    ");
+    $stmt->execute($setIds);
+} else {
+    $stmt = $pdo->query("
+        SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name
+        FROM cards c
+        LEFT JOIN card_sets s ON c.set_id = s.id
+        ORDER BY s.name, c.id
+    ");
+}
 $cards = $stmt->fetchAll();
 
 header('Content-Type: text/csv; charset=utf-8');

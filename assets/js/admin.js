@@ -1084,6 +1084,32 @@
 
     document.getElementById('importCsvBtn')?.addEventListener('click', openImportModal);
 
+    // === Export Modal ===
+    const exportModal = document.getElementById('exportModal');
+    document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
+        exportModal.classList.remove('hidden');
+    });
+    document.getElementById('closeExportBtn')?.addEventListener('click', () => {
+        exportModal.classList.add('hidden');
+    });
+    document.getElementById('closeExportBtn2')?.addEventListener('click', () => {
+        exportModal.classList.add('hidden');
+    });
+    exportModal?.addEventListener('click', (e) => {
+        if (e.target === exportModal) exportModal.classList.add('hidden');
+    });
+    document.getElementById('exportSelectAll')?.addEventListener('change', function () {
+        document.querySelectorAll('.export-set-cb').forEach(cb => cb.checked = this.checked);
+    });
+    document.getElementById('doExportBtn')?.addEventListener('click', () => {
+        const selected = [];
+        document.querySelectorAll('.export-set-cb:checked').forEach(cb => selected.push(cb.value));
+        if (selected.length === 0) { alert('Select at least one card set.'); return; }
+        const url = 'api/export_csv.php?set_ids=' + selected.join(',');
+        window.open(url, '_blank');
+        exportModal.classList.add('hidden');
+    });
+
     // Select all / deselect all
     importSelectAll?.addEventListener('change', () => {
         const checked = importSelectAll.checked;

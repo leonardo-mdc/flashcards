@@ -280,7 +280,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </select>
                     <button id="manageSetsBtn" class="btn btn-secondary btn-sm">⚙️</button>
                     <button id="importCsvBtn" class="btn btn-secondary btn-sm">📥 Import</button>
-                    <a href="api/export_csv.php" class="btn btn-secondary btn-sm">📤 Export</a>
+                    <button id="exportCsvBtn" class="btn btn-secondary btn-sm">📤 Export</button>
                 </div>
                 <div class="toolbar-group">
                     <?php if (isset($_GET['return_url'])): ?>
@@ -604,6 +604,33 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </div>
                 </div>
                 <p class="text-xs text-gray-400 mt-2 text-center">💡 Use <code class="text-gray-500 bg-gray-100 px-1 rounded">\br</code> line break · <code class="text-gray-500 bg-gray-100 px-1 rounded">\b...\b</code> <b>bold</b> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\i...\i</code> <i>italic</i> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\u...\u</code> <u>underline</u> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\em...\em</code> <em>emphasis</em> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\strong...\strong</code> <strong>strong</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg marker-underline">📤 Export Cards</h3>
+                <button id="closeExportBtn" class="text-gray-500 text-xl font-bold">&times;</button>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Select the card sets to export. The CSV includes the card <code>id</code> column so you can edit and reimport to update existing cards.</p>
+            <div id="exportSetList" class="mb-3 space-y-1">
+                <label class="flex items-center gap-2 font-bold text-sm mb-1">
+                    <input type="checkbox" id="exportSelectAll" checked>
+                    All sets
+                </label>
+                <?php foreach ($cardSets as $set): ?>
+                    <label class="flex items-center gap-2 text-sm ml-4">
+                        <input type="checkbox" class="export-set-cb" value="<?= $set['id'] ?>" checked>
+                        <?= escapeHtml($set['name']) ?>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <div class="flex gap-2 justify-end">
+                <button id="closeExportBtn2" class="btn btn-secondary">Cancel</button>
+                <button id="doExportBtn" class="btn btn-success">📤 Download CSV</button>
             </div>
         </div>
     </div>
