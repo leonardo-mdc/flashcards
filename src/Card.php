@@ -103,6 +103,9 @@ class Card
         $questionText = $data['question_text'] ?? '';
         $contentData = json_encode($data['content_data'] ?? []);
 
+        // Auto-fix ENUM if it doesn't include the pattern type yet
+        static::ensurePatternTypeEnum($patternType);
+
         if ($id > 0) {
             $stmt = $pdo->prepare("UPDATE cards SET set_id=?, title=?, pattern_type=?, level=?, question_text=?, content_data=? WHERE id=?");
             $stmt->execute([$setId, $title, $patternType, $level, $questionText, $contentData, $id]);
@@ -123,5 +126,22 @@ class Card
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("DELETE FROM cards WHERE id = ?");
         $stmt->execute([$id]);
+    }
+
+    private static function ensurePatternTypeEnum(string $type): void
+    {
+        $known = ['usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening'];
+        if (!in_array($type, $known)) return;
+
+        $pdo = Database::getConnection();
+        $col = $pdo->query("SHOW COLUMNS FROM cards WHERE Field = 'pattern_type'")->fetch();
+        if (!$col) return;
+
+        $enum = $col['Type']; // e.g. "enum('usage_cases','deep_dive',...)"
+        if (strpos($enum, $type) !== false) return; // already present
+
+        // Rebuild ENUM with all known types
+        $escaped = array_map(fn($v) => "'" . str_replace("'", "''", $v) . "'", $known);
+        $pdo->exec("ALTER TABLE cards MODIFY pattern_type ENUM(" . implode(',', $escaped) . ") DEFAULT 'usage_cases'");
     }
 }

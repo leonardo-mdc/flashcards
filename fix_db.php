@@ -33,11 +33,15 @@ try {
             echo "ℹ card_sets.created_at already exists\n";
         }
 
-        // 3. Fix cards.pattern_type ENUM (preserves data)
-        $pdo->exec("ALTER TABLE cards MODIFY pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening') DEFAULT 'usage_cases'");
-        echo "✓ cards.pattern_type ENUM updated\n";
+        // 3. Convert cards.pattern_type from ENUM to VARCHAR to avoid ENUM maintenance issues
+        try {
+            $pdo->exec("ALTER TABLE cards MODIFY pattern_type VARCHAR(50) DEFAULT 'usage_cases'");
+            echo "✓ cards.pattern_type converted to VARCHAR\n";
+        } catch (Exception $e) {
+            echo "⚠ pattern_type conversion: " . $e->getMessage() . "\n";
+        }
 
-        // 4. Fix cards where pattern_type was corrupted by previous ENUM change (vocabulary/text → '')
+        // 4. Fix cards where pattern_type was corrupted by previous ENUM misses
         $pdo->exec("UPDATE cards SET pattern_type = 'usage_cases' WHERE pattern_type = '' OR pattern_type IS NULL");
         echo "✓ Cards with empty pattern_type set to 'usage_cases'\n";
 
