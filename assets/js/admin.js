@@ -130,19 +130,42 @@
                         <span class="card-type ${typeClass}">${typeLabel}</span>
                     </div>
                     <div class="card-meta">${escapeHtml(card.level || 'Beginner')} · ID ${card.id}</div>
+                    <button class="card-delete-btn" title="Delete card">&times;</button>
                 </div>
             `;
         });
         cardListContainer.innerHTML = html;
 
         document.querySelectorAll('.card-item').forEach(el => {
-            el.addEventListener('click', () => {
+            el.addEventListener('click', (e) => {
+                if (e.target.classList.contains('card-delete-btn')) return;
                 const id = parseInt(el.dataset.id);
                 const card = currentCards.find(c => c.id === id);
                 if (card) loadCardIntoEditor(card);
                 document.querySelectorAll('.card-item').forEach(i => i.classList.remove('selected'));
                 el.classList.add('selected');
                 selectedCardId = id;
+            });
+        });
+
+        document.querySelectorAll('.card-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const el = btn.closest('.card-item');
+                const id = parseInt(el.dataset.id);
+                const card = currentCards.find(c => c.id === id);
+                const title = card ? card.title : 'this card';
+                if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+                const response = await fetch(`admin_cards.php?action=delete_card&card_id=${id}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    if (selectedCardId === id) newCard();
+                    if (setSelector.value) loadCards(setSelector.value);
+                } else {
+                    alert('Error deleting card');
+                }
             });
         });
     }
