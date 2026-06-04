@@ -1631,13 +1631,15 @@
         if (!confirm(`Import ${selectedRows.length} card${selectedRows.length > 1 ? 's' : ''}?`)) return;
 
         // Build CSV from selected rows
-        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation', 'opt1', 'opt2', 'opt3', 'opt4'];
+        const csvCols = ['id', 'set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation', 'opt1', 'opt2', 'opt3', 'opt4'];
         const csvRows = [csvCols.join(',')];
 
         selectedRows.forEach(row => {
             const vals = csvCols.map(col => {
                 let val = '';
-                if (col === 'set') {
+                if (col === 'id') {
+                    val = row.id || '';
+                } else if (col === 'set') {
                     val = row._setName || '';
                 } else if (col === 'set_id') {
                     val = row.set_id || '';
