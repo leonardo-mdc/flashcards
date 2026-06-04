@@ -55,6 +55,7 @@ try {
     }
 
     $imported = 0;
+    $skipped = 0;
     $errors = [];
     $rowNum = 1;
 
@@ -160,6 +161,11 @@ try {
 
         $cardId = isset($data['id']) && is_numeric($data['id']) ? (int) $data['id'] : 0;
 
+        if ($cardId === 0 && Card::findDuplicate($setId, $title, $type) !== null) {
+            $skipped++;
+            continue;
+        }
+
         Card::save([
             'id' => $cardId,
             'set_id' => $setId,
@@ -177,6 +183,7 @@ try {
     echo json_encode([
         'success' => true,
         'imported' => $imported,
+        'skipped' => $skipped,
         'errors' => $errors,
     ]);
 } catch (Exception $e) {

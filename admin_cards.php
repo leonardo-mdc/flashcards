@@ -543,13 +543,26 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                     </select>
                                 </div>
                             </div>
-                            <div>
+                            <div id="importEditDefGroup">
                                 <label class="field-label">Definition / Question</label>
                                 <textarea id="importEditDefinition" class="form-textarea" rows="3" placeholder="Definition, question text, or sentence..."></textarea>
                             </div>
-                            <div>
-                                <label class="field-label">Example / Options / Answers</label>
-                                <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, options (comma-sep), or correct answer..."></textarea>
+                            <div id="importEditExtraGroup">
+                                <label class="field-label">Example / Answers</label>
+                                <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, comma-separated answers, or explanation..."></textarea>
+                            </div>
+                            <div id="importEditMcqFields" class="hidden">
+                                <label class="field-label mt-2">MCQ Options</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="text-xs text-gray-500">Option 1</label><input type="text" id="importEditOpt1" class="form-input" placeholder="Option A"></div>
+                                    <div><label class="text-xs text-gray-500">Option 2</label><input type="text" id="importEditOpt2" class="form-input" placeholder="Option B"></div>
+                                    <div><label class="text-xs text-gray-500">Option 3</label><input type="text" id="importEditOpt3" class="form-input" placeholder="Option C"></div>
+                                    <div><label class="text-xs text-gray-500">Option 4</label><input type="text" id="importEditOpt4" class="form-input" placeholder="Option D"></div>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="text-xs text-gray-500">Correct index (0-based)</label>
+                                    <input type="number" id="importEditCorrectIdx" class="form-input" value="0" min="0" max="3" style="width:80px;">
+                                </div>
                             </div>
                         </div>
                     </div>

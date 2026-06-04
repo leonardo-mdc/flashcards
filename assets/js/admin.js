@@ -863,6 +863,14 @@
     const importEditLevel = document.getElementById('importEditLevel');
     const importEditDefinition = document.getElementById('importEditDefinition');
     const importEditExtra = document.getElementById('importEditExtra');
+    const importEditMcqFields = document.getElementById('importEditMcqFields');
+    const importEditOpt1 = document.getElementById('importEditOpt1');
+    const importEditOpt2 = document.getElementById('importEditOpt2');
+    const importEditOpt3 = document.getElementById('importEditOpt3');
+    const importEditOpt4 = document.getElementById('importEditOpt4');
+    const importEditCorrectIdx = document.getElementById('importEditCorrectIdx');
+    const importEditDefGroup = document.getElementById('importEditDefGroup');
+    const importEditExtraGroup = document.getElementById('importEditExtraGroup');
     const importSelectAll = document.getElementById('importSelectAll');
     const importCardPreview = document.getElementById('importCardPreview');
 
@@ -1108,7 +1116,15 @@
         importEditDefinition.value = def;
         importEditExtra.value = extra;
 
-        // Highlight row
+        // Type-specific fields
+        if (row.type === 'multiple_choice') {
+            if (importEditOpt1) importEditOpt1.value = row.opt1 || '';
+            if (importEditOpt2) importEditOpt2.value = row.opt2 || '';
+            if (importEditOpt3) importEditOpt3.value = row.opt3 || '';
+            if (importEditOpt4) importEditOpt4.value = row.opt4 || '';
+            if (importEditCorrectIdx) importEditCorrectIdx.value = row.correct_answer || '0';
+        }
+        updateImportEditorFields();
         importPreviewBody.querySelectorAll('tr').forEach(tr => {
             tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
         });
@@ -1141,9 +1157,12 @@
         if (row.type === 'gap_fill') {
             row.correct_answer = extra;
         } else if (row.type === 'multiple_choice') {
-            // Parse options from extra (comma-separated, last is correct-index)
-            row.correct_answer = '';
             row.question_text = importEditDefinition.value;
+            row.opt1 = importEditOpt1 ? importEditOpt1.value : '';
+            row.opt2 = importEditOpt2 ? importEditOpt2.value : '';
+            row.opt3 = importEditOpt3 ? importEditOpt3.value : '';
+            row.opt4 = importEditOpt4 ? importEditOpt4.value : '';
+            row.correct_answer = importEditCorrectIdx ? importEditCorrectIdx.value : '0';
         } else {
             row.example1 = extra;
             row.tip = extra;
@@ -1163,21 +1182,25 @@
         let backHtml = '';
 
         if (style === 'multiple_choice') {
+            const opts = [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean);
+            const correctIdx = parseInt(row.correct_answer) || 0;
+            const correctText = opts[correctIdx] || extra;
             frontHtml = `
                 <div class="text-center">
                     <div class="text-3xl mb-1">❓</div>
                     <p class="text-lg font-bold">${escapeHtml(title)}</p>
                     <p class="text-sm text-gray-600 mt-1">${formatBreaks(escapeHtml(definition || 'Select the correct answer:'))}</p>
-                    <div class="mt-1 text-xs text-gray-400">(options shown on card)</div>
+                    <div class="mt-2 text-left text-xs space-y-1">
+                        ${opts.map((o, i) => `<div class="bg-gray-100 p-1.5 rounded ${i === correctIdx ? 'ring-2 ring-green-400' : ''}">${escapeHtml(o)}</div>`).join('')}
+                    </div>
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
-                    <div class="text-base text-green-700 marker-underline mb-1">✓ Answer</div>
+                    <div class="text-base text-green-700 marker-underline mb-1">✓ Correct Answer</div>
                     <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300">
-                        <p class="text-base font-bold">${formatBreaks(escapeHtml(extra || 'Correct Answer'))}</p>
+                        <p class="text-base font-bold">${formatBreaks(escapeHtml(correctText))}</p>
                     </div>
-                    ${example ? `<p class="text-xs text-gray-600 mt-1">${formatBreaks(escapeHtml(example))}</p>` : ''}
                 </div>
             `;
         } else if (style === 'gap_fill') {
@@ -1297,25 +1320,62 @@
     // Live preview update on editor field changes
     function refreshImportPreviewFromEditor() {
         if (importSelectedIdx >= 0 && importRows[importSelectedIdx]) {
+            const style = importEditStyle.value;
+            const extra = importEditExtra.value;
+            let correctAnswer = extra;
+            let example = extra;
+            if (style === 'multiple_choice') {
+                correctAnswer = importEditCorrectIdx ? importEditCorrectIdx.value : '0';
+                example = '';
+            }
             renderImportCardPreview({
                 title: importEditTitle.value,
-                type: importEditStyle.value,
+                type: style,
                 level: importEditLevel.value,
                 definition: importEditDefinition.value,
                 question_text: importEditDefinition.value,
                 sentence: importEditDefinition.value,
-                example1: importEditExtra.value,
-                usage1: importEditExtra.value,
-                tip: importEditExtra.value,
-                correct_answer: importEditExtra.value,
+                example1: example,
+                usage1: example,
+                tip: example,
+                correct_answer: correctAnswer,
             });
         }
     }
+    function updateImportEditorFields() {
+        const style = importEditStyle.value;
+        if (style === 'multiple_choice') {
+            importEditMcqFields.classList.remove('hidden');
+            importEditDefGroup.querySelector('.field-label').textContent = 'Question Text';
+            importEditDefinition.placeholder = 'Question text for the MCQ...';
+            importEditExtraGroup.querySelector('.field-label').textContent = 'Explanation';
+            importEditExtra.placeholder = 'Explanation shown after answering...';
+        } else if (style === 'gap_fill') {
+            importEditMcqFields.classList.add('hidden');
+            importEditDefGroup.querySelector('.field-label').textContent = 'Sentence';
+            importEditDefinition.placeholder = 'Sentence with blank (_______)';
+            importEditExtraGroup.querySelector('.field-label').textContent = 'Correct Answers';
+            importEditExtra.placeholder = 'Comma-separated correct answers...';
+        } else {
+            importEditMcqFields.classList.add('hidden');
+            importEditDefGroup.querySelector('.field-label').textContent = 'Definition';
+            importEditDefinition.placeholder = 'Definition, notes...';
+            importEditExtraGroup.querySelector('.field-label').textContent = 'Example / Tip';
+            importEditExtra.placeholder = 'Example, usage1, or tip...';
+        }
+    }
+
+    importEditStyle.addEventListener('change', () => {
+        updateImportEditorFields();
+        refreshImportPreviewFromEditor();
+    });
     importEditTitle.addEventListener('input', refreshImportPreviewFromEditor);
-    importEditStyle.addEventListener('change', refreshImportPreviewFromEditor);
     importEditLevel.addEventListener('change', refreshImportPreviewFromEditor);
     importEditDefinition.addEventListener('input', refreshImportPreviewFromEditor);
     importEditExtra.addEventListener('input', refreshImportPreviewFromEditor);
+    [importEditOpt1, importEditOpt2, importEditOpt3, importEditOpt4, importEditCorrectIdx].forEach(el => {
+        if (el) el.addEventListener('input', refreshImportPreviewFromEditor);
+    });
 
     // Execute import
     document.getElementById('importExecuteBtn')?.addEventListener('click', async () => {
@@ -1324,7 +1384,7 @@
         if (!confirm(`Import ${selectedRows.length} card${selectedRows.length > 1 ? 's' : ''}?`)) return;
 
         // Build CSV from selected rows
-        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation'];
+        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation', 'opt1', 'opt2', 'opt3', 'opt4'];
         const csvRows = [csvCols.join(',')];
 
         selectedRows.forEach(row => {
@@ -1348,6 +1408,8 @@
                     val = row.example1 || row.example2 || '';
                 } else if (col === 'correct_answer') {
                     val = row.correct_answer || '';
+                } else if (col === 'opt1' || col === 'opt2' || col === 'opt3' || col === 'opt4') {
+                    val = row[col] || '';
                 } else {
                     val = row[col] || '';
                 }
@@ -1370,6 +1432,7 @@
             const result = await response.json();
             if (result.success) {
                 let msg = `✅ Imported ${result.imported} cards.`;
+                if (result.skipped > 0) msg += `\n⏭️ ${result.skipped} duplicate(s) skipped.`;
                 if (result.errors.length) msg += `\n⚠️ ${result.errors.length} errors:\n` + result.errors.slice(0, 10).join('\n');
                 if (result.errors.length > 10) msg += `\n...and ${result.errors.length - 10} more`;
                 alert(msg);

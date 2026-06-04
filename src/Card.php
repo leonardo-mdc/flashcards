@@ -77,6 +77,21 @@ class Card
         return $row ?: null;
     }
 
+    public static function findDuplicate(int $setId, string $title, string $patternType, ?int $excludeId = null): ?int
+    {
+        $pdo = Database::getConnection();
+        $sql = "SELECT id FROM cards WHERE set_id = ? AND title = ? AND pattern_type = ?";
+        $params = [$setId, $title, $patternType];
+        if ($excludeId !== null) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return $row ? (int) $row['id'] : null;
+    }
+
     public static function save(array $data): int
     {
         $pdo = Database::getConnection();
@@ -93,6 +108,10 @@ class Card
             $stmt->execute([$setId, $title, $patternType, $level, $questionText, $contentData, $id]);
             return $id;
         } else {
+            $existing = self::findDuplicate($setId, $title, $patternType);
+            if ($existing !== null) {
+                return $existing;
+            }
             $stmt = $pdo->prepare("INSERT INTO cards (set_id, title, pattern_type, level, question_text, content_data) VALUES (?,?,?,?,?,?)");
             $stmt->execute([$setId, $title, $patternType, $level, $questionText, $contentData]);
             return (int) $pdo->lastInsertId();
