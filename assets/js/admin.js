@@ -236,8 +236,12 @@
             html = `
                 <div class="mt-2">
                     <label class="block font-bold mb-1">Image URL:</label>
-                    <input type="url" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
-                    <div class="help-text">Paste a direct link to an image (JPEG, PNG, GIF, WebP)</div>
+                    <div class="flex gap-2">
+                        <input type="url" id="editImageUrl" class="form-input flex-1" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                        <input type="file" id="editImageUpload" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+                        <button type="button" id="editImageUploadBtn" class="px-3 py-1 bg-gray-200 rounded-xl text-xs hover:bg-gray-300 whitespace-nowrap">📁 Upload</button>
+                    </div>
+                    <div class="help-text">Paste a URL or upload a local image (JPEG, PNG, GIF, WebP)</div>
                 </div>
                 <div>
                     <label class="block font-bold mb-1">Description (shown on back):</label>
@@ -248,8 +252,12 @@
             html = `
                 <div class="mt-2">
                     <label class="block font-bold mb-1">Audio URL:</label>
-                    <input type="url" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
-                    <div class="help-text">Paste a direct link to an audio file (MP3, WAV, OGG, etc.)</div>
+                    <div class="flex gap-2">
+                        <input type="url" id="editAudioUrl" class="form-input flex-1" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
+                        <input type="file" id="editAudioUpload" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4" style="display:none">
+                        <button type="button" id="editAudioUploadBtn" class="px-3 py-1 bg-gray-200 rounded-xl text-xs hover:bg-gray-300 whitespace-nowrap">📁 Upload</button>
+                    </div>
+                    <div class="help-text">Paste a URL or upload a local audio file (MP3, WAV, OGG)</div>
                 </div>
                 <div>
                     <label class="block font-bold mb-1">Prompt / Question (optional):</label>
@@ -280,6 +288,45 @@
         }
 
         editFieldsContainer.innerHTML = html;
+        setupUploadHandlers(patternType);
+    }
+
+    function setupUploadHandlers(patternType) {
+        const btnId = patternType === 'image_description' ? 'editImageUploadBtn' : patternType === 'audio_listening' ? 'editAudioUploadBtn' : null;
+        const fileId = patternType === 'image_description' ? 'editImageUpload' : patternType === 'audio_listening' ? 'editAudioUpload' : null;
+        const urlId = patternType === 'image_description' ? 'editImageUrl' : patternType === 'audio_listening' ? 'editAudioUrl' : null;
+        if (!btnId || !fileId || !urlId) return;
+
+        const btn = document.getElementById(btnId);
+        const fileInput = document.getElementById(fileId);
+        const urlInput = document.getElementById(urlId);
+        if (!btn || !fileInput || !urlInput) return;
+
+        btn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files?.[0];
+            if (!file) return;
+            btn.textContent = '⏳ Uploading...';
+            btn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('type', patternType === 'image_description' ? 'image' : 'audio');
+                fd.append(patternType === 'image_description' ? 'image' : 'audio', file);
+                const res = await fetch('api/upload.php', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    urlInput.value = data.url;
+                    updatePreviews();
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Upload error: ' + e.message);
+            }
+            btn.textContent = '📁 Upload';
+            btn.disabled = false;
+            fileInput.value = '';
+        });
     }
 
     function getCurrentContentData() {
@@ -345,7 +392,7 @@
             `;
         } else if (patternType === 'image_description') {
             const imgUrl = contentData.image_url || '';
-            const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://'));
+            const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('uploads/'));
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-4xl mb-2">🖼️</div>
@@ -356,7 +403,7 @@
             `;
         } else if (patternType === 'audio_listening') {
             const audUrl = contentData.audio_url || '';
-            const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://'));
+            const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://') || audUrl.startsWith('uploads/'));
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-4xl mb-2">🎧</div>
@@ -1750,7 +1797,7 @@
             `;
         } else if (pattern === 'audio_listening') {
             const audioUrl = data.audio_url || '';
-            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'));
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
             const prompt = data.prompt || '';
             const isInteractive = !!(prompt || (data.correct_answers && data.correct_answers.length));
             return `

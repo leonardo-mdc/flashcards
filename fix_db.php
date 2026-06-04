@@ -13,7 +13,19 @@ try {
     if ($action === 'migrate') {
         echo "<hr><h3>Running schema migration...</h3><pre>";
 
-        // 1. Add created_at to card_sets if missing
+        // 1. Convert tables to utf8mb4 to fix collation mismatch with PDO charset
+        try {
+            $pdo->exec("ALTER DATABASE `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+            $pdo->exec("ALTER TABLE card_sets CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+            $pdo->exec("ALTER TABLE cards CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+            $pdo->exec("ALTER TABLE users CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+            $pdo->exec("ALTER TABLE user_card_progress CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+            echo "✓ Tables converted to utf8mb4\n";
+        } catch (Exception $e) {
+            echo "⚠ Collation conversion: " . $e->getMessage() . "\n";
+        }
+
+        // 2. Add created_at to card_sets if missing
         try {
             $pdo->exec("ALTER TABLE card_sets ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
             echo "✓ card_sets.created_at added\n";

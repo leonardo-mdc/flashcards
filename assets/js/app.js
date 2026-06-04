@@ -610,7 +610,7 @@
             `;
         } else if (pattern === 'image_description') {
             const imageUrl = data.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</h1>
@@ -620,7 +620,7 @@
             `;
         } else if (pattern === 'audio_listening') {
             const audioUrl = data.audio_url || '';
-            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'));
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
             const prompt = data.prompt || '';
             const isInteractive = !!(prompt || data.correct_answers);
             const isTranscription = !!data.transcript && !data.correct_answers;
