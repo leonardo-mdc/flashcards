@@ -60,6 +60,13 @@
         if (document.getElementById('levelIntermediate').checked) levels.push('Intermediate');
         if (document.getElementById('levelAdvanced').checked) levels.push('Advanced');
 
+        const styles = [];
+        if (document.getElementById('styleText').checked) styles.push('text');
+        if (document.getElementById('styleMcq').checked) styles.push('mcq');
+        if (document.getElementById('styleGap').checked) styles.push('gap');
+        if (document.getElementById('styleImage').checked) styles.push('image');
+        if (document.getElementById('styleAudio').checked) styles.push('audio');
+
         cardListContainer.innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading cards...</div>';
 
         const response = await fetch(`admin_cards.php?action=get_cards&set_id=${setId}&t=${Date.now()}`, {
@@ -68,7 +75,7 @@
         const data = await response.json();
         if (data.success) {
             currentCards = data.cards;
-            renderCardList(levels);
+            renderCardList(levels, styles);
         } else {
             cardListContainer.innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
         }
@@ -79,7 +86,15 @@
         return input ? input.value.trim().toLowerCase() : '';
     }
 
-    function renderCardList(levelFilter = []) {
+    function getStyleClass(patternType) {
+        if (patternType === 'multiple_choice') return 'mcq';
+        if (patternType === 'gap_fill') return 'gap';
+        if (patternType === 'image_description') return 'image';
+        if (patternType === 'audio_listening') return 'audio';
+        return 'text';
+    }
+
+    function renderCardList(levelFilter = [], styleFilter = []) {
         let filteredCards = currentCards;
 
         const searchTerm = getSearchTerm();
@@ -93,6 +108,10 @@
             filteredCards = filteredCards.filter(card => levelFilter.includes(card.level));
         }
 
+        if (styleFilter.length > 0) {
+            filteredCards = filteredCards.filter(card => styleFilter.includes(getStyleClass(card.pattern_type)));
+        }
+
         if (!filteredCards.length) {
             cardListContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No cards matching filter in this set</div>';
             return;
@@ -101,24 +120,9 @@
         let html = '';
         filteredCards.forEach(card => {
             const isSelected = (selectedCardId === card.id);
-            let typeLabel = '';
-            let typeClass = '';
-            if (card.pattern_type === 'multiple_choice') {
-                typeLabel = 'MCQ';
-                typeClass = 'mcq';
-            } else if (card.pattern_type === 'gap_fill') {
-                typeLabel = 'Gap';
-                typeClass = 'gap';
-            } else if (card.pattern_type === 'image_description') {
-                typeLabel = 'Image';
-                typeClass = 'image';
-            } else if (card.pattern_type === 'audio_listening') {
-                typeLabel = 'Audio';
-                typeClass = 'audio';
-            } else {
-                typeLabel = 'Text';
-                typeClass = 'text';
-            }
+            const typeClass = getStyleClass(card.pattern_type);
+            const typeLabels = { mcq: 'MCQ', gap: 'Gap', image: 'Image', audio: 'Audio', text: 'Text' };
+            const typeLabel = typeLabels[typeClass] || 'Text';
             html += `
                 <div class="card-item ${isSelected ? 'selected' : ''}" data-id="${card.id}">
                     <div class="flex justify-between items-center">

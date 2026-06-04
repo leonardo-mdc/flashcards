@@ -300,6 +300,14 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <label class="filter-checkbox"><input type="checkbox" id="levelBeginner"> Beginner</label>
                     <label class="filter-checkbox"><input type="checkbox" id="levelIntermediate"> Intermediate</label>
                     <label class="filter-checkbox"><input type="checkbox" id="levelAdvanced"> Advanced</label>
+                </div>
+                <div class="toolbar-group">
+                    <span class="text-xs font-bold text-gray-500">Style:</span>
+                    <label class="filter-checkbox"><input type="checkbox" id="styleText"> Text</label>
+                    <label class="filter-checkbox"><input type="checkbox" id="styleMcq"> MCQ</label>
+                    <label class="filter-checkbox"><input type="checkbox" id="styleGap"> Gap</label>
+                    <label class="filter-checkbox"><input type="checkbox" id="styleImage"> Image</label>
+                    <label class="filter-checkbox"><input type="checkbox" id="styleAudio"> Audio</label>
                     <button id="filterCardsBtn" class="btn btn-secondary btn-xs">Filter</button>
                 </div>
                 <span class="text-xs text-gray-400 ml-auto line-break-hint">💡 \br · \b<b>b</b>·\b · \i<i>i</i>·\i · \u<u>u</u>·\u · \em · \strong</span>
