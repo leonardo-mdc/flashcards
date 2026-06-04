@@ -125,7 +125,7 @@ body {
 .flip-btn:active { transform: scale(0.96); }
 .flip-btn.hidden-btn { display: none; }
 .progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 10px; position: relative; overflow: visible; }
-.progress-bar-container .pct-label { position: absolute; left: 6px; top: -5px; font-size: 11px; font-weight: 700; color: #2563eb; white-space: nowrap; z-index: 1; text-shadow: 0 0 4px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.7); }
+.progress-bar-container .pct-label { position: absolute; left: 6px; top: -5px; font-size: 11px; font-weight: 700; color: #dc2626; white-space: nowrap; z-index: 1; text-shadow: 0 0 4px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.7); }
 .progress-bar-fill { background: linear-gradient(90deg, #3b82f6, #2563eb, #7c3aed); height: 100%; border-radius: 20px; transition: width 0.4s ease; position: relative; }
 .level-chip { background: #e0e7ff; color: #1e3a8a; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.65rem, 1.8vw, 0.75rem); }
 .student-badge { background: #dbeafe; color: #1e40af; border-radius: 40px; padding: 4px 12px; display: inline-block; font-size: clamp(0.7rem, 2vw, 0.8rem); }
