@@ -739,7 +739,13 @@
                 if (document.getElementById('levelBeginner').checked) levels.push('Beginner');
                 if (document.getElementById('levelIntermediate').checked) levels.push('Intermediate');
                 if (document.getElementById('levelAdvanced').checked) levels.push('Advanced');
-                renderCardList(levels);
+                const styles = [];
+                if (document.getElementById('styleText').checked) styles.push('text');
+                if (document.getElementById('styleMcq').checked) styles.push('mcq');
+                if (document.getElementById('styleGap').checked) styles.push('gap');
+                if (document.getElementById('styleImage').checked) styles.push('image');
+                if (document.getElementById('styleAudio').checked) styles.push('audio');
+                renderCardList(levels, styles);
             }, 200);
         });
     }
