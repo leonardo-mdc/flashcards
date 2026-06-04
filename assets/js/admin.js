@@ -1111,7 +1111,14 @@
 
         // Content fields
         const def = row.definition || row.question_text || row.sentence || '';
-        const extra = row.example1 || row.usage1 || row.tip || row.correct_answer || '';
+        let extra;
+        if (row.type === 'gap_fill') {
+            extra = row.correct_answer || row.example1 || '';
+        } else if (row.type === 'multiple_choice') {
+            extra = row.explanation || row.example1 || '';
+        } else {
+            extra = row.example1 || row.usage1 || row.tip || '';
+        }
 
         importEditDefinition.value = def;
         importEditExtra.value = extra;
@@ -1175,8 +1182,15 @@
         const style = row.type || 'usage_cases';
         const title = row.title || 'Flashcard';
         const definition = row.definition || row.question_text || row.sentence || '';
+        let extra;
+        if (style === 'gap_fill') {
+            extra = row.correct_answer || '';
+        } else if (style === 'multiple_choice') {
+            extra = row.correct_answer || row.tip || '';
+        } else {
+            extra = row.example1 || row.usage1 || row.tip || '';
+        }
         const example = row.example1 || row.usage1 || row.tip || '';
-        const extra = row.correct_answer || row.tip || '';
 
         let frontHtml = '';
         let backHtml = '';
