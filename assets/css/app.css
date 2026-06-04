@@ -25,7 +25,7 @@ body {
     h1 { font-size: clamp(1.4rem, 6vw, 1.8rem) !important; }
     h2 { font-size: clamp(1.2rem, 5vw, 1.5rem) !important; }
     h3 { font-size: clamp(1rem, 4.5vw, 1.3rem) !important; }
-    .level-picker { font-size: clamp(0.7rem, 3vw, 0.85rem) !important; padding: 4px 12px !important; }
+    .level-picker { font-size: clamp(0.7rem, 3vw, 0.85rem); padding: 4px 12px; }
     #launchStudyBtn { font-size: clamp(1rem, 5vw, 1.3rem) !important; padding: 10px !important; }
     .student-badge, .level-chip { font-size: clamp(0.6rem, 2.5vw, 0.75rem) !important; }
     .back-content p, .back-content li, .back-content div, .back-content span { font-size: clamp(0.75rem, 3vw, 0.9rem) !important; }
@@ -179,6 +179,8 @@ body {
     transition: background 0.2s;
 }
 .admin-link:hover { background: #374151; }
+
+.text-2xs { font-size: 0.6rem; line-height: 0.9rem; }
 
 .card-back p, .card-back li, .card-back div, .card-back span {
     font-size: clamp(0.8rem, 2vw, 12pt);

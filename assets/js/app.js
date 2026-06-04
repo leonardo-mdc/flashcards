@@ -28,6 +28,24 @@
         return String(str).replace(/[&<>"']/g, m => map[m]);
     }
 
+    function getIntervalPreview(card, quality) {
+        const p = card?.progress;
+        if (!p) {
+            if (quality === 0) return '1d';
+            if (quality === 2) return '6d';
+            if (quality === 3) return '15d';
+            return '';
+        }
+        const ef = parseFloat(p.ease_factor) || 2.5;
+        const rep = parseInt(p.repetitions) || 0;
+        const prev = parseInt(p.interval_days) || 0;
+        if (quality === 0) return '1d';
+        const newEF = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+        if (rep === 0) return '1d';
+        if (rep === 1) return '6d';
+        return Math.round(prev * newEF) + 'd';
+    }
+
     function formatBreaks(text) {
         if (!text) return '';
         return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
@@ -349,22 +367,22 @@
                     ${stats ? `
                     <div class="marker-border p-4 md:p-5 bg-white/80">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 mb-3 title-font">📈 Study Stats</label>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-                            <div class="bg-blue-50 p-3 rounded-xl">
-                                <div class="text-2xl font-bold text-blue-700">${stats.total_reviews}</div>
-                                <div class="text-xs text-gray-600">Total Reviews</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                            <div class="bg-blue-50 p-2 md:p-3 rounded-xl flex md:block items-center gap-2 md:gap-0">
+                                <div class="text-xl md:text-2xl font-bold text-blue-700">${stats.total_reviews}</div>
+                                <div class="text-2xs md:text-xs text-gray-600 whitespace-nowrap">Total Reviews</div>
                             </div>
-                            <div class="bg-green-50 p-3 rounded-xl">
-                                <div class="text-2xl font-bold text-green-700">${stats.correct_count}</div>
-                                <div class="text-xs text-gray-600">Correct</div>
+                            <div class="bg-green-50 p-2 md:p-3 rounded-xl flex md:block items-center gap-2 md:gap-0">
+                                <div class="text-xl md:text-2xl font-bold text-green-700">${stats.correct_count}</div>
+                                <div class="text-2xs md:text-xs text-gray-600 whitespace-nowrap">Correct</div>
                             </div>
-                            <div class="bg-red-50 p-3 rounded-xl">
-                                <div class="text-2xl font-bold text-red-700">${stats.incorrect_count}</div>
-                                <div class="text-xs text-gray-600">Incorrect</div>
+                            <div class="bg-red-50 p-2 md:p-3 rounded-xl flex md:block items-center gap-2 md:gap-0">
+                                <div class="text-xl md:text-2xl font-bold text-red-700">${stats.incorrect_count}</div>
+                                <div class="text-2xs md:text-xs text-gray-600 whitespace-nowrap">Incorrect</div>
                             </div>
-                            <div class="bg-purple-50 p-3 rounded-xl">
-                                <div class="text-2xl font-bold text-purple-700">${stats.learned_count}</div>
-                                <div class="text-xs text-gray-600">Cards Learned</div>
+                            <div class="bg-purple-50 p-2 md:p-3 rounded-xl flex md:block items-center gap-2 md:gap-0">
+                                <div class="text-xl md:text-2xl font-bold text-purple-700">${stats.learned_count}</div>
+                                <div class="text-2xs md:text-xs text-gray-600 whitespace-nowrap">Cards Learned</div>
                             </div>
                         </div>
                         <div class="mt-3">
@@ -386,12 +404,12 @@
                         <select id="setSelect" class="w-full p-2 md:p-3 text-base md:text-lg border-2 rounded-xl bg-white">${setsHtml}</select>
                         <button id="refreshSetsBtn" class="mt-2 text-xs text-blue-600 underline">⟳ Refresh (show non-empty sets)</button>
                     </div>
-                    <div class="marker-border p-4 md:p-5 bg-white/80">
+                    <div class="whiteboard-card p-4 md:p-5">
                         <label class="text-xl md:text-2xl font-bold text-gray-800 mb-3 title-font">🎯 Difficulty Levels</label>
                         <p class="text-xs text-gray-500 mb-2">Leave unselected to auto-pick your level (${escapeHtml(currentStudent?.english_level || 'Beginner')})</p>
-                        <div class="flex flex-wrap gap-2 md:gap-4">
+                        <div class="flex flex-nowrap gap-1 md:gap-4 justify-center">
                             ${['Beginner', 'Intermediate', 'Advanced'].map(lvl => `
-                                <button data-level="${lvl}" class="level-picker px-4 md:px-6 py-1 md:py-2 text-sm md:text-xl rounded-full border-2 transition-all ${selectedLevels.includes(lvl) ? 'bg-blue-600 text-white border-blue-800' : 'bg-white border-gray-400 hover:bg-gray-100'}">${lvl}</button>
+                                <button data-level="${lvl}" class="level-picker px-2 md:px-6 py-1 md:py-2 text-2xs md:text-xl rounded-full border-2 transition-all flex-1 md:flex-none ${selectedLevels.includes(lvl) ? 'bg-blue-600 text-white border-blue-800' : 'bg-white border-gray-400 hover:bg-gray-100'}">${lvl}</button>
                             `).join('')}
                         </div>
                         <p class="text-xs text-gray-500 mt-2">💡 Select levels, then click START to filter cards</p>
@@ -617,7 +635,7 @@
         } else {
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
-                    <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
+                    <h1 class="text-xl md:text-2xl md:text-3xl text-center font-bold marker-underline max-w-full truncate block whitespace-nowrap overflow-hidden" title="${escapeHtml(title)}">${escapeHtml(title)}</h1>
                     <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
@@ -827,8 +845,8 @@
                     <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
                     <span class="pct-label">${currentIndex + 1}/${currentCards.length}</span>
                 </div>
-                <div class="text-center mb-1">
-                    <span class="text-lg text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')} · ${escapeHtml(card.title || '')}</span>
+                <div class="text-center mb-1 max-w-full overflow-hidden">
+                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate block whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')} · ${escapeHtml(card.title || '')}</span>
                     ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 ml-1" title="Edit this card">✏️</a>` : ''}
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
@@ -842,9 +860,9 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap justify-center gap-1 md:gap-2 mt-2">
-                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">1</span> Again</button>
-                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">2</span> Good</button>
-                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">3</span> Easy</button>
+                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">1</span> Again${!isMobile ? ` <span class="text-xs opacity-80">(${getIntervalPreview(card, 0)})</span>` : ''}</button>
+                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">2</span> Good${!isMobile ? ` <span class="text-xs opacity-80">(${getIntervalPreview(card, 2)})</span>` : ''}</button>
+                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">3</span> Easy${!isMobile ? ` <span class="text-xs opacity-80">(${getIntervalPreview(card, 3)})</span>` : ''}</button>
                 </div>
                 <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or press <span class="kb-hint">Space</span> to flip · <span class="kb-hint">1</span><span class="kb-hint">2</span><span class="kb-hint">3</span> to rate</p>
             </div>

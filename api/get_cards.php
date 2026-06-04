@@ -109,6 +109,18 @@ try {
         $cards = array_values(array_filter($cards, fn($c) => in_array((int)$c['id'], $dueIds)));
     }
 
+    // Attach progress data for interval previews on rating buttons
+    if ($studentId > 0 && !empty($cards)) {
+        $ids = array_column($cards, 'id');
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $ps = $pdo->prepare("SELECT card_id, ease_factor, interval_days, repetitions FROM user_card_progress WHERE user_id = ? AND card_id IN ($ph)");
+        $ps->execute(array_merge([$studentId], $ids));
+        $pmap = [];
+        foreach ($ps->fetchAll() as $r) { $pmap[$r['card_id']] = $r; }
+        foreach ($cards as &$c) { $c['progress'] = $pmap[$c['id']] ?? null; }
+        unset($c);
+    }
+
     $allDueReviewed = $totalAvailable > 0 && empty($cards);
 
     $setName = null;
