@@ -576,6 +576,31 @@
                     <p class="text-sm text-gray-400 mt-1">👆 Type answer, then flip to check</p>
                 </div>
             `;
+        } else if (pattern === 'image_description') {
+            const imageUrl = data.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
+            return `
+                <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
+                    <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</h1>
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-64 rounded-xl shadow-md mb-2 object-contain" onerror="this.style.display='none'">` : `<div class="text-6xl mb-2">🖼️</div>`}
+                    <p class="text-sm text-gray-400 mt-2">👆 Tap card to flip</p>
+                </div>
+            `;
+        } else if (pattern === 'audio_listening') {
+            const audioUrl = data.audio_url || '';
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'));
+            const prompt = data.prompt || '';
+            const isInteractive = !!(prompt || data.correct_answers);
+            const isTranscription = !!data.transcript && !data.correct_answers;
+            return `
+                <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
+                    <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</h1>
+                    ${hasAudio ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : `<div class="text-6xl mb-2">🎧</div>`}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${isInteractive ? `<input type="text" id="gapFillInput" placeholder="${isTranscription ? 'Type what you hear...' : 'Type your answer...'}" class="w-full p-2 text-sm border-2 rounded-xl mb-2" autocomplete="off">` : ''}
+                    <p class="text-sm text-gray-400 mt-1">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
+                </div>
+            `;
         } else {
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
@@ -639,6 +664,44 @@
                     </div>
                 </div>
             `;
+        } else if (pattern === 'image_description') {
+            const description = formatBreaks(escapeHtml(data.description || 'No description'));
+            return `
+                <div class="back-content">
+                    <div class="text-center">
+                        <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
+                        <div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
+                            ${description}
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
+                    </div>
+                </div>
+            `;
+        } else if (pattern === 'audio_listening') {
+            const transcript = formatBreaks(escapeHtml(data.transcript || data.notes || ''));
+            const correctAnswers = data.correct_answers || [];
+            const userAnswer = quizState?.userAnswer || '';
+            const isInteractive = !!(data.prompt || correctAnswers.length);
+            let isMatch = false;
+            if (userAnswer && correctAnswers.length) {
+                isMatch = correctAnswers.some(ans => ans.toLowerCase() === userAnswer.toLowerCase());
+            } else if (userAnswer && data.transcript) {
+                isMatch = data.transcript.toLowerCase().trim() === userAnswer.toLowerCase().trim();
+            }
+            return `
+                <div class="back-content">
+                    <div class="text-center">
+                        <h3 class="text-lg text-green-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
+                        ${transcript ? `<div class="card-definition bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">${transcript}</div>` : ''}
+                        ${isInteractive && userAnswer ? `
+                        <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            <p class="text-sm">${isMatch ? '✅ Correct!' : `❌ Your answer: "${escapeHtml(userAnswer)}"`}</p>
+                        </div>
+                        ` : isInteractive && !userAnswer ? `<p class="text-sm text-gray-500 mb-2">Type what you heard above, then flip.</p>` : ''}
+                        <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
+                    </div>
+                </div>
+            `;
         } else {
             const definition = formatBreaks(escapeHtml(data.definition || data.usage1 || 'No definition available'));
             const example = formatBreaks(escapeHtml(data.example1a || data.example || ''));
@@ -676,7 +739,7 @@
                 quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
                 quizState.answered = true;
             }
-        } else if (pattern === 'gap_fill') {
+        } else if (pattern === 'gap_fill' || pattern === 'audio_listening') {
             const input = document.getElementById('gapFillInput');
             if (input) {
                 quizState.userAnswer = input.value.trim();
@@ -690,7 +753,7 @@
         const backDiv = document.getElementById('cardBack');
         if (backDiv && quizState.answered) {
             backDiv.innerHTML = renderCardBack(card, quizState);
-        } else if (backDiv && !quizState.answered && pattern !== 'usage_cases' && pattern !== 'deep_dive' && pattern !== 'formula_table') {
+        } else if (backDiv && !quizState.answered && pattern !== 'usage_cases' && pattern !== 'deep_dive' && pattern !== 'formula_table' && pattern !== 'image_description' && pattern !== 'audio_listening') {
             backDiv.innerHTML = renderCardBack(card, quizState);
         }
 
@@ -829,6 +892,17 @@
             } else if (pattern === 'gap_fill') {
                 const correctAnswers = card.content_data?.correct_answers || ['answer'];
                 wasCorrect = correctAnswers.some(ans => ans.toLowerCase() === currentQuizState.userAnswer.toLowerCase());
+            } else if (pattern === 'audio_listening') {
+                const correctAnswers = card.content_data?.correct_answers || [];
+                const transcript = card.content_data?.transcript || '';
+                const userAnswer = currentQuizState?.userAnswer || '';
+                if (correctAnswers.length) {
+                    wasCorrect = correctAnswers.some(ans => ans.toLowerCase() === userAnswer.toLowerCase());
+                } else if (transcript) {
+                    wasCorrect = transcript.toLowerCase().trim() === userAnswer.toLowerCase().trim();
+                } else {
+                    wasCorrect = true;
+                }
             } else {
                 wasCorrect = true;
             }

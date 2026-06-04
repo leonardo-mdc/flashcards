@@ -178,21 +178,23 @@ if ($isAjax && isset($_GET['action'])) {
         } elseif ($action === 'create_set') {
             $data = json_decode(file_get_contents('php://input'), true);
             $name = trim($data['name'] ?? '');
+            $description = trim($data['description'] ?? '');
             if ($name === '') {
                 echo json_encode(['success' => false, 'error' => 'Name is required']);
                 exit;
             }
-            $id = CardSet::create($name);
-            echo json_encode(['success' => true, 'id' => $id, 'name' => $name]);
+            $id = CardSet::create($name, $description);
+            echo json_encode(['success' => true, 'id' => $id, 'name' => $name, 'description' => $description]);
         } elseif ($action === 'update_set') {
             $data = json_decode(file_get_contents('php://input'), true);
             $id = (int) ($data['id'] ?? 0);
             $name = trim($data['name'] ?? '');
+            $description = trim($data['description'] ?? '');
             if ($id <= 0 || $name === '') {
                 echo json_encode(['success' => false, 'error' => 'Invalid data']);
                 exit;
             }
-            CardSet::update($id, $name);
+            CardSet::update($id, $name, $description);
             echo json_encode(['success' => true]);
         } elseif ($action === 'delete_set') {
             $id = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 0;
@@ -281,6 +283,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <a href="api/export_csv.php" class="btn btn-secondary btn-sm">📤 Export</a>
                 </div>
                 <div class="toolbar-group">
+                    <button id="testCardBtn" class="btn btn-secondary">🎯 Test</button>
                     <button id="saveCardBtn" class="btn btn-success">💾 Save</button>
                     <button id="newCardBtn" class="btn btn-primary">✨ New</button>
                     <button id="deleteCardBtn" class="btn btn-danger">🗑</button>
@@ -328,6 +331,8 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                 <option value="formula_table">📐 Pure Text - Formula Table</option>
                                 <option value="multiple_choice">❓ Multiple Choice</option>
                                 <option value="gap_fill">✏️ Gap Fill</option>
+                                <option value="image_description">🖼️ Image Description</option>
+                                <option value="audio_listening">🎧 Audio Listening</option>
                             </select>
                         </div>
                         <div>
@@ -417,9 +422,12 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 <h3 class="text-lg marker-underline">⚙️ Manage Card Sets</h3>
                 <button id="closeSetsModalBtn" class="text-gray-500 text-xl font-bold">&times;</button>
             </div>
-            <div class="mb-3 flex gap-2">
-                <input type="text" id="newSetNameInput" class="form-input flex-1" placeholder="New set name...">
-                <button id="addSetBtn" class="btn btn-success whitespace-nowrap">➕ Add</button>
+            <div class="mb-3">
+                <div class="flex gap-2">
+                    <input type="text" id="newSetNameInput" class="form-input flex-1" placeholder="New set name...">
+                    <button id="addSetBtn" class="btn btn-success whitespace-nowrap">➕ Add</button>
+                </div>
+                <textarea id="newSetDescriptionInput" class="form-textarea mt-2" rows="2" placeholder="Set description (optional)"></textarea>
             </div>
             <div id="setListContainer">
                 <div class="text-center text-gray-500 py-4">Loading...</div>
@@ -476,6 +484,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         </label>
                         <div class="flex gap-1 items-center">
                             <input type="text" id="importNewSetName" class="form-input form-input-sm" style="width:160px;margin:0;" placeholder="Or create new set...">
+                            <input type="text" id="importNewSetDesc" class="form-input form-input-sm" style="width:160px;margin:0;" placeholder="Description (optional)">
                             <button id="importCreateSetBtn" class="btn btn-primary btn-xs">➕</button>
                         </div>
                     </div>
@@ -532,6 +541,8 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                         <option value="formula_table">📐 Formula Table</option>
                                         <option value="multiple_choice">❓ Multiple Choice</option>
                                         <option value="gap_fill">✏️ Gap Fill</option>
+                                        <option value="image_description">🖼️ Image Description</option>
+                                        <option value="audio_listening">🎧 Audio Listening</option>
                                     </select>
                                 </div>
                                 <div>
@@ -582,6 +593,35 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </div>
                 </div>
                 <p class="text-xs text-gray-400 mt-2 text-center">💡 Use <code class="text-gray-500 bg-gray-100 px-1 rounded">\br</code> line break · <code class="text-gray-500 bg-gray-100 px-1 rounded">\b...\b</code> <b>bold</b> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\i...\i</code> <i>italic</i> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\u...\u</code> <u>underline</u> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\em...\em</code> <em>emphasis</em> · <code class="text-gray-500 bg-gray-100 px-1 rounded">\strong...\strong</code> <strong>strong</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Card Modal -->
+    <div id="testCardModal" class="modal-overlay hidden">
+        <div class="test-card-content">
+            <div class="test-card-header">
+                <h3 class="text-lg font-bold marker-underline">🎯 Test Card</h3>
+                <button id="closeTestCardBtn" class="text-gray-500 text-xl font-bold">&times;</button>
+            </div>
+            <div class="test-card-body">
+                <div class="test-card-flip-card" id="testCardPreview">
+                    <div class="test-card-front" id="testCardFront">
+                        <div class="text-gray-400 text-sm text-center p-4">Loading card preview...</div>
+                    </div>
+                    <div class="test-card-back hidden" id="testCardBack">
+                        <div class="text-gray-400 text-sm text-center p-4">Flip to see the answer</div>
+                    </div>
+                </div>
+                <div class="test-card-controls" id="testCardControls">
+                    <button id="testFlipBtn" class="btn btn-secondary">🔄 Flip</button>
+                    <button id="testMissBtn" class="btn btn-danger hidden">❌ Miss</button>
+                    <button id="testHitBtn" class="btn btn-success hidden">✅ Hit</button>
+                </div>
+                <div class="test-card-feedback hidden" id="testCardFeedback">
+                    <div id="testCardFeedbackMsg" class="text-center font-bold text-lg"></div>
+                    <div id="testCardFeedbackDetail" class="text-sm text-gray-600 mt-1"></div>
+                </div>
             </div>
         </div>
     </div>

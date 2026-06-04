@@ -109,6 +109,12 @@
             } else if (card.pattern_type === 'gap_fill') {
                 typeLabel = 'Gap';
                 typeClass = 'gap';
+            } else if (card.pattern_type === 'image_description') {
+                typeLabel = 'Image';
+                typeClass = 'image';
+            } else if (card.pattern_type === 'audio_listening') {
+                typeLabel = 'Audio';
+                typeClass = 'audio';
             } else {
                 typeLabel = 'Text';
                 typeClass = 'text';
@@ -199,6 +205,40 @@
                     <textarea id="editExample" class="form-textarea" rows="2" placeholder="Example showing correct usage\brUse \br for line breaks">${escapeHtml(contentData.example || '')}</textarea>
                 </div>
             `;
+        } else if (patternType === 'image_description') {
+            html = `
+                <div class="mt-2">
+                    <label class="block font-bold mb-1">Image URL:</label>
+                    <input type="url" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                    <div class="help-text">Paste a direct link to an image (JPEG, PNG, GIF, WebP)</div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Description (shown on back):</label>
+                    <textarea id="editDescription" class="form-textarea" rows="5" placeholder="Describe the image, what it shows, or what the student should learn from it...\brUse \br for line breaks">${escapeHtml(contentData.description || '')}</textarea>
+                </div>
+            `;
+        } else if (patternType === 'audio_listening') {
+            html = `
+                <div class="mt-2">
+                    <label class="block font-bold mb-1">Audio URL:</label>
+                    <input type="url" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
+                    <div class="help-text">Paste a direct link to an audio file (MP3, WAV, OGG, etc.)</div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Prompt / Question (optional):</label>
+                    <textarea id="editPrompt" class="form-textarea" rows="2" placeholder="Fill in the blank: I ______ to school every day.">${escapeHtml(contentData.prompt || '')}</textarea>
+                    <div class="help-text">If empty, this works as a listening exercise. If filled, user types an answer.</div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Correct Answer(s) (comma separated, optional):</label>
+                    <input type="text" id="editCorrectAnswers" class="form-input" value="${escapeHtml((contentData.correct_answers || []).join(', '))}" placeholder="go, goes">
+                    <div class="help-text">Leave empty for transcription mode (matches full transcript)</div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Transcript / Notes (shown on back):</label>
+                    <textarea id="editTranscript" class="form-textarea" rows="4" placeholder="Full transcript or notes about the audio...\brUse \br for line breaks">${escapeHtml(contentData.transcript || contentData.notes || '')}</textarea>
+                </div>
+            `;
         } else {
             html = `
                 <div class="mt-2">
@@ -232,6 +272,16 @@
             contentData.sentence = document.getElementById('editSentence')?.value || '';
             contentData.correct_answers = answersInput ? answersInput.value.split(',').map(s => s.trim()) : ['answer'];
             contentData.example = document.getElementById('editExample')?.value || '';
+        } else if (patternType === 'image_description') {
+            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
+            contentData.description = document.getElementById('editDescription')?.value || '';
+        } else if (patternType === 'audio_listening') {
+            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
+            contentData.prompt = document.getElementById('editPrompt')?.value || '';
+            contentData.transcript = document.getElementById('editTranscript')?.value || '';
+            const answersInput = document.getElementById('editCorrectAnswers');
+            const answers = answersInput ? answersInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+            if (answers.length) contentData.correct_answers = answers;
         } else {
             contentData.definition = document.getElementById('editDefinition')?.value || '';
             contentData.example = document.getElementById('editExample')?.value || '';
@@ -266,6 +316,29 @@
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
+        } else if (patternType === 'image_description') {
+            const imgUrl = contentData.image_url || '';
+            const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://'));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-4xl mb-2">🖼️</div>
+                    <div class="text-center font-bold text-xl mb-2">${escapeHtml(title)}</div>
+                    ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="" class="max-h-32 rounded-lg shadow mb-2" onerror="this.style.display='none'">` : `<div class="text-gray-400 text-sm mb-2">(no image URL)</div>`}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
+                </div>
+            `;
+        } else if (patternType === 'audio_listening') {
+            const audUrl = contentData.audio_url || '';
+            const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://'));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-4xl mb-2">🎧</div>
+                    <div class="text-center font-bold text-xl mb-2">${escapeHtml(title)}</div>
+                    ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}"></audio>` : `<div class="text-gray-400 text-sm mb-2">(no audio URL)</div>`}
+                    ${contentData.prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl">${escapeHtml(contentData.prompt)}</p>` : ''}
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
+                </div>
+            `;
         } else {
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
@@ -297,6 +370,23 @@
                         <p class="text-xl font-bold">${escapeHtml(answers.join(' / '))}</p>
                     </div>
                     ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
+                </div>
+            `;
+        } else if (patternType === 'image_description') {
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.description || 'Description'))}</p>
+                    </div>
+                </div>
+            `;
+        } else if (patternType === 'audio_listening') {
+            const transcript = contentData.transcript || contentData.notes || '';
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : `<p class="text-gray-400">Transcript not provided</p>`}
                 </div>
             `;
         } else {
@@ -678,14 +768,22 @@
         }
         let html = '';
         data.sets.forEach(set => {
+            const createdAt = set.created_at ? new Date(set.created_at + 'Z').toLocaleDateString() : '';
             html += `
                 <div class="set-item" data-id="${set.id}">
-                    <span class="set-name-display font-bold">${escapeHtml(set.name)}</span>
-                    <input type="text" class="set-name-input hidden" value="${escapeHtml(set.name)}">
-                    <button class="edit-set-btn btn btn-primary btn-xs">✏️</button>
-                    <button class="save-set-btn btn btn-success btn-xs hidden">💾</button>
-                    <button class="cancel-set-btn btn btn-secondary btn-xs hidden">✕</button>
-                    <button class="delete-set-btn btn btn-danger btn-xs">🗑</button>
+                    <div class="set-item-main">
+                        <span class="set-name-display font-bold">${escapeHtml(set.name)}</span>
+                        <input type="text" class="set-name-input hidden" value="${escapeHtml(set.name)}">
+                        <div class="set-desc-display text-xs text-gray-500">${escapeHtml(set.description) || '<span class="text-gray-300">No description</span>'}</div>
+                        <textarea class="set-desc-input hidden" rows="2">${escapeHtml(set.description || '')}</textarea>
+                        <div class="set-meta text-xs text-gray-400">${createdAt ? 'Created: ' + createdAt : ''}</div>
+                    </div>
+                    <div class="set-item-actions">
+                        <button class="edit-set-btn btn btn-primary btn-xs">✏️</button>
+                        <button class="save-set-btn btn btn-success btn-xs hidden">💾</button>
+                        <button class="cancel-set-btn btn btn-secondary btn-xs hidden">✕</button>
+                        <button class="delete-set-btn btn btn-danger btn-xs">🗑</button>
+                    </div>
                 </div>`;
         });
         setListContainer.innerHTML = html;
@@ -695,6 +793,8 @@
                 const item = btn.closest('.set-item');
                 item.querySelector('.set-name-display').classList.add('hidden');
                 item.querySelector('.set-name-input').classList.remove('hidden');
+                item.querySelector('.set-desc-display').classList.add('hidden');
+                item.querySelector('.set-desc-input').classList.remove('hidden');
                 btn.classList.add('hidden');
                 item.querySelector('.save-set-btn').classList.remove('hidden');
                 item.querySelector('.cancel-set-btn').classList.remove('hidden');
@@ -708,12 +808,15 @@
                 const item = btn.closest('.set-item');
                 item.querySelector('.set-name-display').classList.remove('hidden');
                 item.querySelector('.set-name-input').classList.add('hidden');
+                item.querySelector('.set-desc-display').classList.remove('hidden');
+                item.querySelector('.set-desc-input').classList.add('hidden');
                 item.querySelector('.edit-set-btn').classList.remove('hidden');
                 btn.classList.add('hidden');
                 item.querySelector('.save-set-btn').classList.add('hidden');
                 item.querySelector('.cancel-set-btn').classList.add('hidden');
                 item.querySelector('.delete-set-btn').classList.remove('hidden');
                 item.querySelector('.set-name-input').value = item.querySelector('.set-name-display').textContent.trim();
+                item.querySelector('.set-desc-input').value = item.querySelector('.set-desc-display').textContent.trim();
             });
         });
 
@@ -722,11 +825,12 @@
                 const item = btn.closest('.set-item');
                 const id = parseInt(item.dataset.id);
                 const name = item.querySelector('.set-name-input').value.trim();
+                const description = item.querySelector('.set-desc-input').value.trim();
                 if (!name) { alert('Name cannot be empty'); return; }
                 const response = await fetch('admin_cards.php?action=update_set', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    body: JSON.stringify({ id, name })
+                    body: JSON.stringify({ id, name, description })
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -807,16 +911,18 @@
 
     document.getElementById('addSetBtn')?.addEventListener('click', async () => {
         const input = document.getElementById('newSetNameInput');
+        const descInput = document.getElementById('newSetDescriptionInput');
         const name = input.value.trim();
         if (!name) { alert('Enter a name for the new set'); return; }
         const response = await fetch('admin_cards.php?action=create_set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, description: descInput ? descInput.value.trim() : '' })
         });
         const result = await response.json();
         if (result.success) {
             input.value = '';
+            if (descInput) descInput.value = '';
             await refreshSets();
             loadSetsList();
         } else {
@@ -985,7 +1091,7 @@
                 let level = (row.level || 'Beginner').trim();
                 level = levelMap[level.toLowerCase()] || level;
                 let type = (row.type || 'usage_cases').trim().toLowerCase();
-                const validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill'];
+                const validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill', 'image_description', 'audio_listening'];
                 if (!validTypes.includes(type)) type = 'usage_cases';
                 return {
                     ...row,
@@ -1013,6 +1119,8 @@
             formula_table: '📐 Formula Table',
             multiple_choice: '❓ MCQ',
             gap_fill: '✏️ Gap Fill',
+            image_description: '🖼️ Image Description',
+            audio_listening: '🎧 Audio Listening',
         };
 
         let selectedCount = 0;
@@ -1025,7 +1133,7 @@
             const setName = row._setName || '';
             const preview = row.definition || row.question_text || row.sentence || '';
             const previewTrim = preview.length > 60 ? preview.substring(0, 60) + '...' : preview;
-            const styleClass = style === 'multiple_choice' ? 'mcq' : (style === 'gap_fill' ? 'gap' : 'text');
+            const styleClass = style === 'multiple_choice' ? 'mcq' : (style === 'gap_fill' ? 'gap' : (style === 'image_description' ? 'image' : (style === 'audio_listening' ? 'audio' : 'text')));
             const checked = row._selected !== false;
             if (checked) selectedCount++;
 
@@ -1170,6 +1278,13 @@
             row.opt3 = importEditOpt3 ? importEditOpt3.value : '';
             row.opt4 = importEditOpt4 ? importEditOpt4.value : '';
             row.correct_answer = importEditCorrectIdx ? importEditCorrectIdx.value : '0';
+        } else if (row.type === 'image_description') {
+            row.image_url = importEditDefinition.value;
+            row.description = extra;
+        } else if (row.type === 'audio_listening') {
+            row.audio_url = importEditDefinition.value;
+            row.transcript = extra;
+            row.correct_answer = extra;
         } else {
             row.example1 = extra;
             row.tip = extra;
@@ -1234,6 +1349,42 @@
                     ${example ? `<p class="text-xs text-gray-600 mt-1">📝 ${formatBreaks(escapeHtml(example))}</p>` : ''}
                 </div>
             `;
+        } else if (style === 'image_description') {
+            const imageUrl = row.image_url || '';
+            const description = row.description || definition || 'Description';
+            frontHtml = `
+                <div class="text-center">
+                    <div class="text-3xl mb-1">🖼️</div>
+                    <p class="text-sm font-bold">${escapeHtml(title)}</p>
+                    ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="mx-auto mt-2 max-h-32 rounded-lg border" onerror="this.alt='Image not found'" />` : `<div class="mx-auto mt-2 w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">No image</div>`}
+                </div>
+            `;
+            backHtml = `
+                <div class="text-center">
+                    <div class="text-base text-blue-700 marker-underline mb-1">${escapeHtml(title)}</div>
+                    <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
+                        <p class="text-sm">${formatBreaks(escapeHtml(description))}</p>
+                    </div>
+                </div>
+            `;
+        } else if (style === 'audio_listening') {
+            const transcript = row.transcript || row.correct_answer || '';
+            const prompt = row.question_text || definition || 'Listen and answer:';
+            frontHtml = `
+                <div class="text-center">
+                    <div class="text-3xl mb-1">🎧</div>
+                    <p class="text-sm font-bold">${escapeHtml(title)}</p>
+                    <p class="text-xs text-gray-500 mt-1">${formatBreaks(escapeHtml(prompt))}</p>
+                </div>
+            `;
+            backHtml = `
+                <div class="text-center">
+                    <div class="text-base text-green-700 marker-underline mb-1">✓ Transcript</div>
+                    <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300">
+                        <p class="text-sm">${formatBreaks(escapeHtml(transcript || 'Transcript not provided'))}</p>
+                    </div>
+                </div>
+            `;
         } else {
             frontHtml = `
                 <div class="flex flex-col items-center justify-center">
@@ -1277,10 +1428,11 @@
     document.getElementById('importCreateSetBtn')?.addEventListener('click', async () => {
         const name = importNewSetName.value.trim();
         if (!name) { alert('Enter a set name'); return; }
+        const descInput = document.getElementById('importNewSetDesc');
         const response = await fetch('admin_cards.php?action=create_set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, description: descInput ? descInput.value.trim() : '' })
         });
         const result = await response.json();
         if (result.success) {
@@ -1303,6 +1455,7 @@
                 importSetSelector.value = String(result.id);
             }
             importNewSetName.value = '';
+            if (descInput) descInput.value = '';
         } else {
             alert(result.error || 'Error creating set');
         }
@@ -1342,7 +1495,7 @@
                 correctAnswer = importEditCorrectIdx ? importEditCorrectIdx.value : '0';
                 example = '';
             }
-            renderImportCardPreview({
+            const base = {
                 title: importEditTitle.value,
                 type: style,
                 level: importEditLevel.value,
@@ -1353,7 +1506,16 @@
                 usage1: example,
                 tip: example,
                 correct_answer: correctAnswer,
-            });
+            };
+            if (style === 'image_description') {
+                base.image_url = importEditDefinition.value;
+                base.description = extra;
+            } else if (style === 'audio_listening') {
+                base.audio_url = importEditDefinition.value;
+                base.transcript = extra;
+                base.correct_answer = extra;
+            }
+            renderImportCardPreview(base);
         }
     }
     function updateImportEditorFields() {
@@ -1370,6 +1532,18 @@
             importEditDefinition.placeholder = 'Sentence with blank (_______)';
             importEditExtraGroup.querySelector('.field-label').textContent = 'Correct Answers';
             importEditExtra.placeholder = 'Comma-separated correct answers...';
+        } else if (style === 'image_description') {
+            importEditMcqFields.classList.add('hidden');
+            importEditDefGroup.querySelector('.field-label').textContent = 'Image URL';
+            importEditDefinition.placeholder = 'https://example.com/image.jpg';
+            importEditExtraGroup.querySelector('.field-label').textContent = 'Description';
+            importEditExtra.placeholder = 'Description shown on back...';
+        } else if (style === 'audio_listening') {
+            importEditMcqFields.classList.add('hidden');
+            importEditDefGroup.querySelector('.field-label').textContent = 'Audio URL';
+            importEditDefinition.placeholder = 'https://example.com/audio.mp3';
+            importEditExtraGroup.querySelector('.field-label').textContent = 'Transcript / Answer';
+            importEditExtra.placeholder = 'Transcript or comma-separated answers...';
         } else {
             importEditMcqFields.classList.add('hidden');
             importEditDefGroup.querySelector('.field-label').textContent = 'Definition';
@@ -1460,6 +1634,292 @@
             alert('❌ Network error during import');
         }
     });
+
+    // === Test Card Popup ===
+    const testCardModal = document.getElementById('testCardModal');
+    const closeTestCardBtn = document.getElementById('closeTestCardBtn');
+    const testCardFront = document.getElementById('testCardFront');
+    const testCardBack = document.getElementById('testCardBack');
+    const testFlipBtn = document.getElementById('testFlipBtn');
+    const testMissBtn = document.getElementById('testMissBtn');
+    const testHitBtn = document.getElementById('testHitBtn');
+    const testCardFeedback = document.getElementById('testCardFeedback');
+    const testCardFeedbackMsg = document.getElementById('testCardFeedbackMsg');
+    const testCardFeedbackDetail = document.getElementById('testCardFeedbackDetail');
+    let testQuizState = {};
+    let testFlipped = false;
+    let testAnswered = false;
+
+    function renderTestCardFront(card) {
+        const pattern = card.pattern_type;
+        const data = card.content_data || {};
+        const title = card.title || 'Flashcard';
+
+        if (pattern === 'multiple_choice') {
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const gridClass = options.length > 3 ? 'grid gap-2' : 'space-y-2';
+            return `
+                <div class="text-center w-full">
+                    <p class="text-base mb-2 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
+                    <div class="${gridClass}" id="testMcqOptions">
+                        ${options.map((opt, idx) => `<div class="quiz-option text-sm" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap your answer, then flip</p>
+                </div>
+            `;
+        } else if (pattern === 'gap_fill') {
+            const sentence = data.sentence || 'Complete the sentence: ______';
+            return `
+                <div class="text-center w-full">
+                    <p class="text-base mb-1 font-bold">✏️ Complete the sentence:</p>
+                    <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${escapeHtml(sentence)}</p>
+                    <input type="text" id="testGapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl" autocomplete="off">
+                    <p class="text-xs text-gray-400 mt-2">👆 Type answer, then flip</p>
+                </div>
+            `;
+        } else if (pattern === 'image_description') {
+            const imageUrl = data.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
+            return `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <h1 class="text-lg text-center font-bold marker-underline mb-2">🖼️ ${escapeHtml(title)}</h1>
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-32 rounded-lg shadow mb-1 object-contain" onerror="this.style.display='none'">` : `<div class="text-4xl mb-1">🖼️</div>`}
+                    <p class="text-xs text-gray-400 mt-1">👆 Tap card to flip</p>
+                </div>
+            `;
+        } else if (pattern === 'audio_listening') {
+            const audioUrl = data.audio_url || '';
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'));
+            const prompt = data.prompt || '';
+            const isInteractive = !!(prompt || (data.correct_answers && data.correct_answers.length));
+            return `
+                <div class="flex flex-col items-center justify-center min-h-[200px] w-full">
+                    <h1 class="text-lg text-center font-bold marker-underline mb-2">🎧 ${escapeHtml(title)}</h1>
+                    ${hasAudio ? `<audio controls class="w-full max-w-xs mb-1" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : `<div class="text-4xl mb-1">🎧</div>`}
+                    ${prompt ? `<p class="text-xs bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${isInteractive ? `<input type="text" id="testGapFillInput" placeholder="${data.transcript && !data.correct_answers ? 'Type what you hear...' : 'Type your answer...'}" class="w-full p-2 text-sm border-2 rounded-xl" autocomplete="off">` : ''}
+                    <p class="text-xs text-gray-400 mt-1">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <h1 class="text-xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
+                </div>
+            `;
+        }
+    }
+
+    function renderTestCardBack(card) {
+        const data = card.content_data || {};
+        const pattern = card.pattern_type;
+        const title = card.title || 'Flashcard';
+
+        if (pattern === 'multiple_choice') {
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const correctIdx = data.correct_index !== undefined ? data.correct_index : 1;
+            const correctAnswer = options[correctIdx];
+            const selectedIdx = testQuizState.selectedIdx;
+            const isCorrect = (selectedIdx === correctIdx);
+            const explanation = formatBreaks(escapeHtml(data.explanation || ''));
+            return `
+                <div class="text-center w-full">
+                    <h3 class="text-base text-green-700 marker-underline mb-2">✓ Answer</h3>
+                    <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300 mb-2">
+                        <p class="text-sm font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(correctAnswer)}</p>
+                    </div>
+                    ${selectedIdx !== undefined && selectedIdx !== null ? `
+                    <div class="p-2 rounded-lg mb-2 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        <p class="text-sm">${isCorrect ? '✅ Correct!' : '❌ Incorrect'}</p>
+                    </div>
+                    ` : '<p class="text-xs text-gray-500 mb-2">You did not select an answer.</p>'}
+                    ${explanation ? `<div class="text-xs text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 ${explanation}</div>` : ''}
+                </div>
+            `;
+        } else if (pattern === 'gap_fill') {
+            const correctAnswers = data.correct_answers || ['answer'];
+            const userAnswer = testQuizState.userAnswer || '';
+            const isMatch = correctAnswers.some(ans => ans.toLowerCase() === userAnswer.toLowerCase());
+            const example = formatBreaks(escapeHtml(data.example || ''));
+            return `
+                <div class="text-center w-full">
+                    <h3 class="text-base text-green-700 marker-underline mb-2">✓ Correct Answer</h3>
+                    <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300 mb-2">
+                        <p class="text-sm font-bold">${escapeHtml(correctAnswers.join(' / '))}</p>
+                    </div>
+                    ${userAnswer ? `
+                    <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        <p class="text-sm">${isMatch ? '✅ Correct!' : '❌ Incorrect'}</p>
+                    </div>
+                    ` : '<p class="text-xs text-gray-500 mb-2">You did not type an answer.</p>'}
+                    ${example ? `<div class="text-xs text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 Example: ${example}</div>` : ''}
+                </div>
+            `;
+        } else if (pattern === 'image_description') {
+            const description = formatBreaks(escapeHtml(data.description || 'No description'));
+            return `
+                <div class="text-center w-full">
+                    <h3 class="text-base text-blue-700 marker-underline mb-2">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
+                        <p class="text-sm">${description}</p>
+                    </div>
+                </div>
+            `;
+        } else if (pattern === 'audio_listening') {
+            const transcript = formatBreaks(escapeHtml(data.transcript || data.notes || ''));
+            const correctAnswers = data.correct_answers || [];
+            const userAnswer = testQuizState.userAnswer || '';
+            let isMatch = false;
+            if (userAnswer && correctAnswers.length) {
+                isMatch = correctAnswers.some(ans => ans.toLowerCase() === userAnswer.toLowerCase());
+            } else if (userAnswer && data.transcript) {
+                isMatch = data.transcript.toLowerCase().trim() === userAnswer.toLowerCase().trim();
+            }
+            return `
+                <div class="text-center w-full">
+                    <h3 class="text-base text-green-700 marker-underline mb-2">${escapeHtml(title)}</h3>
+                    ${transcript ? `<div class="bg-green-50 p-2 rounded-xl border-2 border-green-300 mb-2"><p class="text-sm">${transcript}</p></div>` : ''}
+                    ${userAnswer ? `
+                    <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        <p class="text-sm">${isMatch ? '✅ Correct!' : '❌ Incorrect'}</p>
+                    </div>
+                    ` : '<p class="text-xs text-gray-500 mb-2">Passive listening — tap Hit if you understood.</p>'}
+                </div>
+            `;
+        } else {
+            const definition = formatBreaks(escapeHtml(data.definition || data.usage1 || 'No definition available'));
+            const example = formatBreaks(escapeHtml(data.example1a || data.example || ''));
+            return `
+                <div class="text-center w-full">
+                    <h3 class="text-base text-blue-700 marker-underline mb-2">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
+                        <p class="text-sm">${definition}</p>
+                    </div>
+                    ${example ? `<div class="mt-1 p-2 bg-gray-100 rounded-lg"><p class="text-xs"><strong>Example:</strong> ${example}</p></div>` : ''}
+                </div>
+            `;
+        }
+    }
+
+    function openTestCardModal() {
+        const title = editTitle.value.trim() || 'Flashcard';
+        const patternType = editPatternType.value;
+        const contentData = getCurrentContentData();
+        const card = {
+            title,
+            pattern_type: patternType,
+            question_text: patternType === 'multiple_choice' ? contentData.question_text : '',
+            content_data: contentData
+        };
+        testQuizState = {};
+        testFlipped = false;
+        testAnswered = false;
+
+        testCardFront.innerHTML = renderTestCardFront(card);
+        testCardBack.classList.add('hidden');
+        testCardBack.innerHTML = renderTestCardBack(card);
+        testFlipBtn.classList.remove('hidden');
+        testMissBtn.classList.add('hidden');
+        testHitBtn.classList.add('hidden');
+        testCardFeedback.classList.add('hidden');
+        testCardFeedback.classList.remove('hit', 'miss');
+        testCardModal.classList.remove('hidden');
+
+        // Bind MCQ options
+        if (patternType === 'multiple_choice') {
+            setTimeout(() => {
+                document.querySelectorAll('#testMcqOptions .quiz-option').forEach(el => {
+                    el.addEventListener('click', function () {
+                        document.querySelectorAll('#testMcqOptions .quiz-option').forEach(o => o.classList.remove('selected'));
+                        this.classList.add('selected');
+                        testQuizState.selectedIdx = parseInt(this.getAttribute('data-idx'));
+                        testAnswered = true;
+                    });
+                });
+            }, 50);
+        }
+    }
+
+    function closeTestCardModal() {
+        testCardModal.classList.add('hidden');
+        testQuizState = {};
+        testFlipped = false;
+        testAnswered = false;
+    }
+
+    testFlipBtn?.addEventListener('click', () => {
+        if (testFlipped) return;
+        const pattern = editPatternType.value;
+        // Capture answer before flipping
+        if (pattern === 'multiple_choice') {
+            const selected = document.querySelector('#testMcqOptions .quiz-option.selected');
+            if (selected) {
+                testQuizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
+                testAnswered = true;
+            }
+        } else if (pattern === 'gap_fill' || pattern === 'audio_listening') {
+            const input = document.getElementById('testGapFillInput');
+            if (input) {
+                testQuizState.userAnswer = input.value.trim();
+                testAnswered = true;
+            }
+        } else {
+            testAnswered = true;
+        }
+
+        testCardFront.classList.add('hidden');
+        testCardBack.classList.remove('hidden');
+        testFlipBtn.classList.add('hidden');
+        testMissBtn.classList.remove('hidden');
+        testHitBtn.classList.remove('hidden');
+        testFlipped = true;
+    });
+
+    function evaluateTestCard() {
+        const pattern = editPatternType.value;
+        const data = getCurrentContentData();
+        let isCorrect = false;
+
+        if (pattern === 'multiple_choice') {
+            const correctIdx = data.correct_index !== undefined ? data.correct_index : 1;
+            isCorrect = (testQuizState.selectedIdx === correctIdx);
+        } else if (pattern === 'gap_fill') {
+            const correctAnswers = data.correct_answers || ['answer'];
+            isCorrect = correctAnswers.some(ans => ans.toLowerCase() === (testQuizState.userAnswer || '').toLowerCase());
+        } else if (pattern === 'audio_listening') {
+            const correctAnswers = data.correct_answers || [];
+            const userAnswer = testQuizState.userAnswer || '';
+            if (correctAnswers.length) {
+                isCorrect = correctAnswers.some(ans => ans.toLowerCase() === userAnswer.toLowerCase());
+            } else if (data.transcript) {
+                isCorrect = data.transcript.toLowerCase().trim() === userAnswer.toLowerCase().trim();
+            } else {
+                isCorrect = true;
+            }
+        } else {
+            isCorrect = true;
+        }
+
+        testHitBtn.classList.add('hidden');
+        testMissBtn.classList.add('hidden');
+        testCardFeedback.classList.remove('hidden', 'hit', 'miss');
+        testCardFeedback.classList.add(isCorrect ? 'hit' : 'miss');
+        testCardFeedbackMsg.textContent = isCorrect ? '✅ Hit! You got it right.' : '❌ Miss. Review this card.';
+        testCardFeedbackDetail.textContent = isCorrect
+            ? 'Great job! This card would count as a hit in real study.'
+            : 'You would need to review this card again. Keep studying!';
+    }
+
+    testMissBtn?.addEventListener('click', evaluateTestCard);
+    testHitBtn?.addEventListener('click', evaluateTestCard);
+
+    closeTestCardBtn?.addEventListener('click', closeTestCardModal);
+    testCardModal?.addEventListener('click', (e) => {
+        if (e.target === testCardModal) closeTestCardModal();
+    });
+
+    document.getElementById('testCardBtn')?.addEventListener('click', openTestCardModal);
 
     loadCardSets();
 })();

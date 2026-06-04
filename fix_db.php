@@ -13,19 +13,27 @@ try {
     if ($action === 'migrate') {
         echo "<hr><h3>Running schema migration...</h3><pre>";
 
-        // 1. Fix cards.pattern_type ENUM (preserves data)
-        $pdo->exec("ALTER TABLE cards MODIFY pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill') DEFAULT 'usage_cases'");
+        // 1. Add created_at to card_sets if missing
+        try {
+            $pdo->exec("ALTER TABLE card_sets ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+            echo "✓ card_sets.created_at added\n";
+        } catch (Exception $e) {
+            echo "ℹ card_sets.created_at already exists\n";
+        }
+
+        // 3. Fix cards.pattern_type ENUM (preserves data)
+        $pdo->exec("ALTER TABLE cards MODIFY pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening') DEFAULT 'usage_cases'");
         echo "✓ cards.pattern_type ENUM updated\n";
 
-        // 2. Fix cards where pattern_type was corrupted by previous ENUM change (vocabulary/text → '')
+        // 4. Fix cards where pattern_type was corrupted by previous ENUM change (vocabulary/text → '')
         $pdo->exec("UPDATE cards SET pattern_type = 'usage_cases' WHERE pattern_type = '' OR pattern_type IS NULL");
         echo "✓ Cards with empty pattern_type set to 'usage_cases'\n";
 
-        // 3. Drop old student_progress, new one gets auto-created by Review::ensureTable()
+        // 5. Drop old student_progress, new one gets auto-created by Review::ensureTable()
         $pdo->exec("DROP TABLE IF EXISTS student_progress");
         echo "✓ Dropped old student_progress table (will be recreated as user_card_progress)\n";
 
-        // 4. Fix users table — since we clear users, drop and recreate
+        // 6. Fix users table — since we clear users, drop and recreate
         $pdo->exec("DROP TABLE IF EXISTS review_history");
         $pdo->exec("DROP TABLE IF EXISTS student_set_access");
         $pdo->exec("DROP TABLE IF EXISTS user_card_progress");
@@ -172,7 +180,7 @@ try {
 function getExpectedColumns(string $table): ?array {
     $schemas = [
         'users' => ['id', 'username', 'full_name', 'password_hash', 'is_admin', 'progress', 'english_level', 'created_at'],
-        'card_sets' => ['id', 'name', 'description'],
+        'card_sets' => ['id', 'name', 'description', 'created_at'],
         'cards' => ['id', 'set_id', 'title', 'pattern_type', 'level', 'question_text', 'content_data'],
         'user_card_progress' => ['id', 'user_id', 'card_id', 'ease_factor', 'interval_days', 'repetitions', 'next_review', 'last_review', 'correct_streak', 'was_correct', 'total_reviews'],
         'review_history' => ['id', 'user_id', 'card_id', 'quality', 'was_correct', 'reviewed_at'],

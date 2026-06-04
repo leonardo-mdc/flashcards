@@ -26,14 +26,15 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS card_sets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(150) NOT NULL,
-        description TEXT
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS cards (
         id INT AUTO_INCREMENT PRIMARY KEY,
         set_id INT NOT NULL,
         title VARCHAR(200),
-        pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill') DEFAULT 'usage_cases',
+        pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening') DEFAULT 'usage_cases',
         level ENUM('Beginner','Intermediate','Advanced') DEFAULT 'Beginner',
         question_text TEXT,
         content_data JSON,

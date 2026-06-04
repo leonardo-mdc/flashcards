@@ -71,7 +71,7 @@ try {
 
         if (empty($title) || empty($type)) continue;
 
-        $validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill'];
+        $validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill', 'image_description', 'audio_listening'];
         if (!in_array($type, $validTypes)) {
             $errors[] = "Row $rowNum: Invalid type '$type'";
             continue;
@@ -91,10 +91,11 @@ try {
         }
         if (!empty($setName)) {
             $existing = CardSet::getIdByName($setName);
+            $setDescription = trim($data['set_description'] ?? '');
             if ($existing !== null) {
                 $setId = $existing;
             } elseif ($setId === 0) {
-                $setId = CardSet::create($setName);
+                $setId = CardSet::create($setName, $setDescription);
             }
         }
         if ($setId === 0) {
@@ -145,7 +146,28 @@ try {
                 'correct_answers' => $answers,
                 'example' => $examples[0] ?? '',
             ];
+        } elseif ($type === 'image_description') {
+            $imageUrl = trim($data['image_url'] ?? '');
+            $description = trim($data['description'] ?? '');
+            $contentData = [
+                'image_url' => $imageUrl ?: '',
+                'description' => $description ?: 'No description',
+            ];
+        } elseif ($type === 'audio_listening') {
+            $audioUrl = trim($data['audio_url'] ?? '');
+            $prompt = trim($data['prompt'] ?? '');
+            $transcript = trim($data['transcript'] ?? '');
+            $correctAnswerRaw = trim($data['correct_answer'] ?? '');
+            $contentData = [
+                'audio_url' => $audioUrl ?: '',
+                'prompt' => $prompt ?: '',
+                'transcript' => $transcript ?: '',
+            ];
+            if (!empty($correctAnswerRaw)) {
+                $contentData['correct_answers'] = array_map('trim', explode(',', $correctAnswerRaw));
+            }
         } else {
+            // ** Pure text types: usage_cases, deep_dive, formula_table **
             $contentData = [
                 'definition' => $definition ?: 'No definition',
             ];

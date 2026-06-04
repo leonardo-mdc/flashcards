@@ -121,6 +121,8 @@ body {
 }
 .card-type.mcq { background: #fef3c7; color: #92400e; }
 .card-type.gap { background: #dcfce7; color: #166534; }
+.card-type.image { background: #f3e8ff; color: #6b21a8; }
+.card-type.audio { background: #fce7f3; color: #9d174d; }
 .card-type.text { background: #dbeafe; color: #1e40af; }
 .editor-main {
     display: flex;
@@ -346,11 +348,15 @@ body {
     padding: 8px 0;
     border-bottom: 1px solid #f3f4f6;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
 }
-.set-item .set-name-display { flex: 1; font-weight: 600; }
-.set-item .set-name-input { flex: 1; }
+.set-item-main { flex: 1; min-width: 0; }
+.set-item-actions { display: flex; gap: 4px; flex-shrink: 0; padding-top: 2px; }
+.set-item .set-name-display { font-weight: 600; }
+.set-item .set-name-input { width: 100%; }
+.set-item .set-desc-input { width: 100%; margin-top: 4px; font-size: 0.8rem; }
+.set-item .set-meta { margin-top: 2px; }
 .whiteboard-card {
     background: #ffffff;
     border: 8px solid #374151;
@@ -525,6 +531,65 @@ body {
 .import-table tr.dimmed td {
     opacity: 0.45;
     transition: opacity 0.15s;
+}
+
+/* === Test Card Modal === */
+.test-card-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.test-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.test-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.test-card-flip-card {
+    position: relative;
+    perspective: 1000px;
+    min-height: 260px;
+}
+.test-card-front, .test-card-back {
+    background: linear-gradient(135deg, #f0f9ff, #ffffff);
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s;
+}
+.test-card-back {
+    background: linear-gradient(135deg, #fef9e8, #ffffff);
+    border-color: #fde68a;
+}
+.test-card-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+.test-card-feedback {
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+}
+.test-card-feedback.hit {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+}
+.test-card-feedback.miss {
+    background: #fef2f2;
+    border: 2px solid #fca5a5;
 }
 
 @media (max-width: 1024px) {

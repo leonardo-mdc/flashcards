@@ -5,7 +5,7 @@ class CardSet
     public static function getAll(): array
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT id, name FROM card_sets ORDER BY name ASC");
+        $stmt = $pdo->query("SELECT id, name, description, created_at FROM card_sets ORDER BY name ASC");
         return $stmt->fetchAll();
     }
 
@@ -31,11 +31,11 @@ class CardSet
         return $row ? $row['name'] : null;
     }
 
-    public static function create(string $name): int
+    public static function create(string $name, string $description = ''): int
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("INSERT INTO card_sets (name) VALUES (?)");
-        $stmt->execute([$name]);
+        $stmt = $pdo->prepare("INSERT INTO card_sets (name, description) VALUES (?, ?)");
+        $stmt->execute([$name, $description]);
         return (int) $pdo->lastInsertId();
     }
 
@@ -48,11 +48,11 @@ class CardSet
         return $row ? (int) $row['id'] : null;
     }
 
-    public static function update(int $id, string $name): void
+    public static function update(int $id, string $name, string $description = ''): void
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("UPDATE card_sets SET name = ? WHERE id = ?");
-        $stmt->execute([$name, $id]);
+        $stmt = $pdo->prepare("UPDATE card_sets SET name = ?, description = ? WHERE id = ?");
+        $stmt->execute([$name, $description, $id]);
     }
 
     public static function delete(int $id): void

@@ -71,6 +71,16 @@ foreach ($cards as $card) {
         $row['sentence'] = $cd['sentence'] ?? '';
         $row['correct_answer'] = implode(',', $cd['correct_answers'] ?? ['answer']);
         $row['example1'] = $cd['example'] ?? '';
+    } elseif ($type === 'image_description') {
+        $row['definition'] = $cd['description'] ?? '';
+        $row['correct_answer'] = $cd['image_url'] ?? '';
+        $row['example1'] = '';
+    } elseif ($type === 'audio_listening') {
+        $row['definition'] = $cd['transcript'] ?? $cd['notes'] ?? '';
+        $row['correct_answer'] = isset($cd['correct_answers']) ? implode(',', $cd['correct_answers']) : '';
+        $row['question_text'] = $cd['prompt'] ?? '';
+        $row['sentence'] = $cd['audio_url'] ?? '';
+        $row['example1'] = '';
     } else {
         $row['definition'] = $cd['definition'] ?? '';
         $row['example1'] = $cd['example1a'] ?? $cd['example'] ?? '';
