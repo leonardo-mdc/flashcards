@@ -1954,5 +1954,26 @@
 
     document.getElementById('testCardBtn')?.addEventListener('click', openTestCardModal);
 
+    // Auto-load card from URL param ?focus_card=X
+    const urlParams = new URLSearchParams(window.location.search);
+    const focusCardId = urlParams.get('focus_card');
+    if (focusCardId) {
+        (async function focusCard() {
+            const res = await fetch(`admin_cards.php?action=get_card&card_id=${focusCardId}&t=` + Date.now(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (data.success && data.card && data.card.set_id) {
+                setSelector.value = data.card.set_id;
+                await loadCards(data.card.set_id);
+                const el = document.querySelector(`.card-item[data-id="${data.card.id}"]`);
+                if (el) {
+                    el.click();
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        })();
+    }
+
     loadCardSets();
 })();

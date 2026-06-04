@@ -816,6 +816,7 @@
                 </div>
                 <div class="text-center mb-1">
                     <span class="text-lg text-gray-600 title-font font-bold">📚 ${escapeHtml(card.set_name || '')} · ${escapeHtml(card.title || '')}</span>
+                    ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 ml-1" title="Edit this card">✏️</a>` : ''}
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">

@@ -283,6 +283,9 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <a href="api/export_csv.php" class="btn btn-secondary btn-sm">📤 Export</a>
                 </div>
                 <div class="toolbar-group">
+                    <?php if (isset($_GET['return_url'])): ?>
+                        <a href="<?= escapeHtml($_GET['return_url']) ?>" class="btn btn-secondary btn-sm">↩ Return</a>
+                    <?php endif; ?>
                     <button id="testCardBtn" class="btn btn-secondary">🎯 Test</button>
                     <button id="saveCardBtn" class="btn btn-success">💾 Save</button>
                     <button id="newCardBtn" class="btn btn-primary">✨ New</button>
