@@ -301,7 +301,7 @@
             frontHtml = `
                 <div class="text-center">
                     <div class="text-4xl mb-3">❓</div>
-                    <p class="text-lg mb-4 font-bold">${escapeHtml(contentData.question_text || 'Select the correct answer:')}</p>
+                    <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(contentData.question_text || 'Select the correct answer:'))}</p>
                     ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
@@ -311,7 +311,7 @@
                 <div class="text-center">
                     <div class="text-4xl mb-3">✏️</div>
                     <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(contentData.sentence || 'Complete: ______')}</p>
+                    <p class="text-base bg-gray-100 p-3 rounded-xl">${formatBreaks(escapeHtml(contentData.sentence || 'Complete: ______'))}</p>
                     <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
@@ -335,7 +335,7 @@
                     <div class="text-4xl mb-2">🎧</div>
                     <div class="text-center font-bold text-xl mb-2">${escapeHtml(title)}</div>
                     ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}"></audio>` : `<div class="text-gray-400 text-sm mb-2">(no audio URL)</div>`}
-                    ${contentData.prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl">${escapeHtml(contentData.prompt)}</p>` : ''}
+                    ${contentData.prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl">${formatBreaks(escapeHtml(contentData.prompt))}</p>` : ''}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
@@ -1660,7 +1660,7 @@
             const gridClass = options.length > 3 ? 'grid gap-2' : 'space-y-2';
             return `
                 <div class="text-center w-full">
-                    <p class="text-base mb-2 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
+                    <p class="text-base mb-2 font-bold">❓ ${formatBreaks(escapeHtml(card.question_text || 'Select the correct answer:'))}</p>
                     <div class="${gridClass}" id="testMcqOptions">
                         ${options.map((opt, idx) => `<div class="quiz-option text-sm" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                     </div>
@@ -1672,7 +1672,7 @@
             return `
                 <div class="text-center w-full">
                     <p class="text-base mb-1 font-bold">✏️ Complete the sentence:</p>
-                    <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${escapeHtml(sentence)}</p>
+                    <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${formatBreaks(escapeHtml(sentence))}</p>
                     <input type="text" id="testGapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl" autocomplete="off">
                     <p class="text-xs text-gray-400 mt-2">👆 Type answer, then flip</p>
                 </div>
@@ -1696,7 +1696,7 @@
                 <div class="flex flex-col items-center justify-center min-h-[200px] w-full">
                     <h1 class="text-lg text-center font-bold marker-underline mb-2">🎧 ${escapeHtml(title)}</h1>
                     ${hasAudio ? `<audio controls class="w-full max-w-xs mb-1" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : `<div class="text-4xl mb-1">🎧</div>`}
-                    ${prompt ? `<p class="text-xs bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${prompt ? `<p class="text-xs bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" id="testGapFillInput" placeholder="${data.transcript && !data.correct_answers ? 'Type what you hear...' : 'Type your answer...'}" class="w-full p-2 text-sm border-2 rounded-xl" autocomplete="off">` : ''}
                     <p class="text-xs text-gray-400 mt-1">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
                 </div>
