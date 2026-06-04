@@ -635,7 +635,7 @@
         } else {
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
-                    <h1 class="text-xl md:text-2xl md:text-3xl text-center font-bold marker-underline max-w-full truncate block whitespace-nowrap overflow-hidden" title="${escapeHtml(title)}">${escapeHtml(title)}</h1>
+                    <h1 class="text-xl md:text-2xl md:text-3xl text-center font-bold marker-underline max-w-full break-words px-2">${escapeHtml(title)}</h1>
                     <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
@@ -846,7 +846,7 @@
                     <span class="pct-label">${currentIndex + 1}/${currentCards.length}</span>
                 </div>
                 <div class="text-center mb-1 max-w-full overflow-hidden">
-                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate block whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')} · ${escapeHtml(card.title || '')}</span>
+                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate block whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')}</span>
                     ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 ml-1" title="Edit this card">✏️</a>` : ''}
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
@@ -860,9 +860,9 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap justify-center gap-1 md:gap-2 mt-2">
-                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">1</span> Again${!isMobile ? ` <span class="text-xs opacity-80">(${getIntervalPreview(card, 0)})</span>` : ''}</button>
-                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">2</span> Good${!isMobile ? ` <span class="text-xs opacity-80">(${getIntervalPreview(card, 2)})</span>` : ''}</button>
-                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk"><span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">3</span> Easy${!isMobile ? ` <span class="text-xs opacity-80">(${getIntervalPreview(card, 3)})</span>` : ''}</button>
+                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">${!isMobile ? '<span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">1</span> ' : ''}Again <span class="text-2xs md:text-xs opacity-80">(${getIntervalPreview(card, 0)})</span></button>
+                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">${!isMobile ? '<span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">2</span> ' : ''}Good <span class="text-2xs md:text-xs opacity-80">(${getIntervalPreview(card, 2)})</span></button>
+                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">${!isMobile ? '<span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">3</span> ' : ''}Easy <span class="text-2xs md:text-xs opacity-80">(${getIntervalPreview(card, 3)})</span></button>
                 </div>
                 <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or press <span class="kb-hint">Space</span> to flip · <span class="kb-hint">1</span><span class="kb-hint">2</span><span class="kb-hint">3</span> to rate</p>
             </div>
