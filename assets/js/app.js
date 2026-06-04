@@ -32,8 +32,8 @@
         const p = card?.progress;
         if (!p) {
             if (quality === 0) return '1d';
-            if (quality === 2) return '6d';
-            if (quality === 3) return '15d';
+            if (quality === 2) return '3d';
+            if (quality === 3) return '7d';
             return '';
         }
         const ef = parseFloat(p.ease_factor) || 2.5;
@@ -41,9 +41,10 @@
         const prev = parseInt(p.interval_days) || 0;
         if (quality === 0) return '1d';
         const newEF = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-        if (rep === 0) return '1d';
-        if (rep === 1) return '6d';
-        return Math.round(prev * newEF) + 'd';
+        if (rep === 0) { return quality === 3 ? '7d' : '3d'; }
+        if (rep === 1) { return quality === 3 ? '7d' : '3d'; }
+        const base = Math.round(prev * newEF);
+        return Math.round(base * (quality === 3 ? 1.3 : 1)) + 'd';
     }
 
     function formatBreaks(text) {
@@ -514,7 +515,7 @@
         });
 
         // dueReviewBtn is rendered dynamically, use event delegation
-        document.getElementById('app')?.addEventListener('click', (e) => {
+        document.getElementById('appRoot')?.addEventListener('click', (e) => {
             if (e.target.id === 'dueReviewBtn') {
                 dueOnlyMode = true;
                 const setSelect = document.getElementById('setSelect');
