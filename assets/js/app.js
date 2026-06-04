@@ -396,7 +396,7 @@
                                 <span class="pct-label">${stats.progress || 0}%</span>
                             </div>
                         </div>
-                        ${stats.due_today > 0 ? `<button id="dueReviewBtn" class="text-xs text-orange-600 mt-2 font-bold cursor-pointer hover:text-orange-800 underline" style="background:none;border:none;padding:0;font:inherit;">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</button>` : ''}
+                        ${stats.due_today > 0 ? `<button id="dueReviewBtn" class="text-2xs md:text-xs text-orange-600 mt-2 font-bold cursor-pointer hover:text-orange-800 underline" style="background:none;border:none;padding:0;font:inherit;">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</button>` : ''}
                     </div>
                     ` : ''}
                     </div>
@@ -846,9 +846,9 @@
                     <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
                     <span class="pct-label">${currentIndex + 1}/${currentCards.length}</span>
                 </div>
-                <div class="text-center mb-1 max-w-full overflow-hidden">
-                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate block whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')}</span>
-                    ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 ml-1" title="Edit this card">✏️</a>` : ''}
+                <div class="text-center mb-1 max-w-full overflow-hidden flex items-center justify-center gap-1 flex-nowrap">
+                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')}</span>
+                    ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 flex-shrink-0" title="Edit this card">✏️</a>` : ''}
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">
