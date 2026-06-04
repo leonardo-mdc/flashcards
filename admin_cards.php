@@ -100,13 +100,12 @@ if ($isAjax && isset($_GET['action'])) {
                 $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
             }
             $rows = [];
-            $maxRows = 100;
-            while (($row = fgetcsv($handle)) !== false && count($rows) < $maxRows) {
+            while (($row = fgetcsv($handle)) !== false) {
                 $row = array_slice(array_map('trim', $row), 0, count($header));
                 $rows[] = array_combine($header, array_pad($row, count($header), ''));
             }
             fclose($handle);
-            echo json_encode(['success' => true, 'header' => $header, 'rows' => $rows, 'total' => count($rows) >= $maxRows ? $maxRows . '+' : count($rows)]);
+            echo json_encode(['success' => true, 'header' => $header, 'rows' => $rows, 'total' => count($rows)]);
             exit;
         } elseif ($action === 'get_cards') {
             $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
