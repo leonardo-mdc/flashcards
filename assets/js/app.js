@@ -11,6 +11,7 @@
     let availableCardSets = [];
     let isRandomMode = false;
     let allDueReviewed = false;
+    let dueOnlyMode = false;
     let currentQuizState = null;
     let isFlipped = false;
     let streakDays = 0;
@@ -134,7 +135,8 @@
                 student_id: studentId,
                 levels: levels,
                 random_mode: randomMode ? 'true' : 'false',
-                student_level: studentLevel
+                student_level: studentLevel,
+                due_only: dueOnlyMode ? 'true' : 'false'
             };
             if (randomMode && phpCardSets && phpCardSets.length > 0) {
                 const filtered = phpCardSets.filter(s => s.id);
@@ -146,9 +148,10 @@
             const res = await apiCall('api/get_cards.php', 'POST', body);
             if (res && res.success) {
                 if (res.all_due_reviewed) allDueReviewed = true;
-                if (res.cards && res.cards.length > 0) return res.cards;
+                if (res.cards && res.cards.length > 0) { dueOnlyMode = false; return res.cards; }
             }
         } catch (e) {}
+        dueOnlyMode = false;
         return [];
     }
 
@@ -374,7 +377,7 @@
                                 <span class="pct-label">${stats.progress || 0}%</span>
                             </div>
                         </div>
-                        ${stats.due_today > 0 ? `<p class="text-xs text-orange-600 mt-2 font-bold">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</p>` : ''}
+                        ${stats.due_today > 0 ? `<button id="dueReviewBtn" class="text-xs text-orange-600 mt-2 font-bold cursor-pointer hover:text-orange-800 underline" style="background:none;border:none;padding:0;font:inherit;">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</button>` : ''}
                     </div>
                     ` : ''}
                     </div>
@@ -490,6 +493,16 @@
             currentIndex = 0;
             currentView = 'study';
             render();
+        });
+
+        // dueReviewBtn is rendered dynamically, use event delegation
+        document.getElementById('app')?.addEventListener('click', (e) => {
+            if (e.target.id === 'dueReviewBtn') {
+                dueOnlyMode = true;
+                const setSelect = document.getElementById('setSelect');
+                if (setSelect) setSelect.value = '';
+                document.getElementById('launchStudyBtn')?.click();
+            }
         });
 
         document.getElementById('switchStudentBtn')?.addEventListener('click', () => clearStudent());

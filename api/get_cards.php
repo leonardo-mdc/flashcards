@@ -25,9 +25,11 @@ try {
         $randomMode = isset($input['random_mode']) && ($input['random_mode'] === true || $input['random_mode'] === 'true');
         $studentLevel = isset($input['student_level']) ? $input['student_level'] : null;
         $setIds = isset($input['set_ids']) ? (array) $input['set_ids'] : [];
+        $dueOnly = !empty($input['due_only']);
     }
 
     if (!$input) {
+        $dueOnly = false;
         $setId = isset($_POST['set_id']) ? (int) $_POST['set_id'] : (isset($_GET['set_id']) ? (int) $_GET['set_id'] : null);
         $studentId = isset($_POST['student_id']) ? (int) $_POST['student_id'] : (isset($_GET['student_id']) ? (int) $_GET['student_id'] : 0);
         $randomMode = isset($_POST['random_mode']) ? ($_POST['random_mode'] === 'true') : (isset($_GET['random_mode']) ? ($_GET['random_mode'] === 'true') : false);
@@ -54,6 +56,7 @@ try {
         } elseif (isset($_GET['set_ids'])) {
             $setIds = explode(',', $_GET['set_ids']);
         }
+        $dueOnly = !empty($_POST['due_only']) || !empty($_GET['due_only']);
     }
 
     if (empty($selectedLevels)) {
@@ -97,6 +100,14 @@ try {
     $totalAvailable = (int) $stmt->fetchColumn();
 
     $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $studentId, !empty($setIds) ? $setIds : null);
+
+    if ($dueOnly && $studentId > 0) {
+        $dueStmt = $pdo->prepare("SELECT card_id FROM user_card_progress WHERE user_id = ? AND next_review <= CURDATE()");
+        $dueStmt->execute([$studentId]);
+        $dueIds = $dueStmt->fetchAll(PDO::FETCH_COLUMN);
+        $dueIds = array_map('intval', $dueIds);
+        $cards = array_values(array_filter($cards, fn($c) => in_array((int)$c['id'], $dueIds)));
+    }
 
     $allDueReviewed = $totalAvailable > 0 && empty($cards);
 
