@@ -327,6 +327,8 @@
             btn.disabled = false;
             fileInput.value = '';
         });
+        urlInput.addEventListener('blur', () => updatePreviews());
+        urlInput.addEventListener('change', () => updatePreviews());
     }
 
     function getCurrentContentData() {
