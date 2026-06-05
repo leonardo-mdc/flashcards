@@ -846,6 +846,7 @@
                     <div class="flex gap-2 items-center">
                         <span class="kb-hint">space</span>
                         <button id="flipCardBtn" class="flip-btn px-3 py-1 md:px-4 md:py-1 rounded-xl text-xs md:text-xs font-bold">🔄 FLIP</button>
+                        ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs p-1 text-blue-600 hover:text-blue-800 font-bold" title="Edit this card">✏️</a>` : ''}
                         <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs">Exit</button>
                     </div>
                 </div>
@@ -855,7 +856,6 @@
                 </div>
                 <div class="text-center mb-1 max-w-full overflow-hidden flex items-center justify-center gap-1 flex-nowrap">
                     <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')}</span>
-                    ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 flex-shrink-0" title="Edit this card">✏️</a>` : ''}
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">
