@@ -49,7 +49,14 @@
 
     function formatBreaks(text) {
         if (!text) return '';
-        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
+        let s = String(text);
+        s = s.replace(/\\br ?/g, '<br>');
+        s = s.replace(/\\b(.*?)\\b/g, '<b>$1</b>');
+        s = s.replace(/\\i(.*?)\\i/g, '<i>$1</i>');
+        s = s.replace(/\\u(.*?)\\u/g, '<u>$1</u>');
+        s = s.replace(/\\em(.*?)\\em/g, '<em>$1</em>');
+        s = s.replace(/\\strong(.*?)\\strong/g, '<strong>$1</strong>');
+        return s;
     }
 
     const SoundFX = {
