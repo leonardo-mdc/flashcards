@@ -60,6 +60,11 @@
         return s;
     }
 
+    function stripFormatTags(text) {
+        if (!text) return '';
+        return String(text).replace(/\\\\.*$/s, '').trim();
+    }
+
     const SoundFX = {
         _ctx: null,
         _getCtx() {
@@ -856,7 +861,7 @@
                     <span class="pct-label">${currentIndex + 1}/${currentCards.length}</span>
                 </div>
                 <div class="text-center mb-1 max-w-full overflow-hidden flex items-center justify-center gap-1 flex-nowrap">
-                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '').replace(/\\br ?/g, '')}</span>
+                    <span class="text-sm md:text-lg text-gray-600 title-font font-bold truncate whitespace-nowrap overflow-hidden">📚 ${escapeHtml(card.set_name || '')}${card.title ? ` — ${escapeHtml(stripFormatTags(card.title))}` : ''}</span>
                 </div>
                 <div class="flashcard-container relative w-full" style="min-height: ${isMobile ? '340px' : '400px'};">
                     <div class="flashcard relative w-full" id="flashcardEl" style="min-height: ${isMobile ? '340px' : '400px'};">
