@@ -9,6 +9,18 @@ require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/Card.php';
 require_once __DIR__ . '/src/Review.php';
 
+$apiAction = $_GET['api'] ?? '';
+if ($apiAction) {
+    header('Content-Type: application/json');
+    $apiFile = __DIR__ . '/api/' . basename($apiAction) . '.php';
+    if (file_exists($apiFile)) {
+        include $apiFile;
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Unknown API action']);
+    }
+    exit;
+}
+
 $currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
 $isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
 
@@ -668,6 +680,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         </div>
     </div>
 
-<script src="<?= assetVersion('assets/js/admin.js') ?>"></script>
+<script><?php readfile(__DIR__ . '/assets/js/admin.js'); ?></script>
 </body>
 </html>
