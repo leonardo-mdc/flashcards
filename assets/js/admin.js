@@ -399,7 +399,7 @@
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-4xl mb-2">🖼️</div>
-                    <div class="text-center font-bold text-xl mb-2">${escapeHtml(title)}</div>
+                    <div class="text-center font-bold text-xl mb-2">${formatBreaks(escapeHtml(title))}</div>
                     ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="" class="max-h-32 rounded-lg shadow mb-2" onerror="this.style.display='none'">` : `<div class="text-gray-400 text-sm mb-2">(no image URL)</div>`}
                     <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
                 </div>
@@ -410,7 +410,7 @@
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-4xl mb-2">🎧</div>
-                    <div class="text-center font-bold text-xl mb-2">${escapeHtml(title)}</div>
+                    <div class="text-center font-bold text-xl mb-2">${formatBreaks(escapeHtml(title))}</div>
                     ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}"></audio>` : `<div class="text-gray-400 text-sm mb-2">(no audio URL)</div>`}
                     ${contentData.prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl">${formatBreaks(escapeHtml(contentData.prompt))}</p>` : ''}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
@@ -419,7 +419,7 @@
         } else {
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
+                    <div class="text-4xl text-center font-bold">${formatBreaks(escapeHtml(title))}</div>
                     <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
                 </div>
             `;
@@ -452,7 +452,7 @@
         } else if (patternType === 'image_description') {
             backHtml = `
                 <div class="text-center">
-                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${formatBreaks(escapeHtml(title))}</h3>
                     <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
                         <p class="text-lg">${formatBreaks(escapeHtml(contentData.description || 'Description'))}</p>
                     </div>
@@ -462,14 +462,14 @@
             const transcript = contentData.transcript || contentData.notes || '';
             backHtml = `
                 <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">${formatBreaks(escapeHtml(title))}</h3>
                     ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : `<p class="text-gray-400">Transcript not provided</p>`}
                 </div>
             `;
         } else {
             backHtml = `
                 <div class="text-center">
-                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${formatBreaks(escapeHtml(title))}</h3>
                     <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
                         <p class="text-lg">${formatBreaks(escapeHtml(contentData.definition || 'Definition would appear here.'))}</p>
                     </div>
@@ -1793,7 +1793,7 @@
             const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
             return `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <h1 class="text-lg text-center font-bold marker-underline mb-2">🖼️ ${escapeHtml(title)}</h1>
+                    <h1 class="text-lg text-center font-bold marker-underline mb-2">🖼️ ${formatBreaks(escapeHtml(title))}</h1>
                     ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-32 rounded-lg shadow mb-1 object-contain" onerror="this.style.display='none'">` : `<div class="text-4xl mb-1">🖼️</div>`}
                     <p class="text-xs text-gray-400 mt-1">👆 Tap card to flip</p>
                 </div>
@@ -1805,7 +1805,7 @@
             const isInteractive = !!(prompt || (data.correct_answers && data.correct_answers.length));
             return `
                 <div class="flex flex-col items-center justify-center min-h-[200px] w-full">
-                    <h1 class="text-lg text-center font-bold marker-underline mb-2">🎧 ${escapeHtml(title)}</h1>
+                    <h1 class="text-lg text-center font-bold marker-underline mb-2">🎧 ${formatBreaks(escapeHtml(title))}</h1>
                     ${hasAudio ? `<audio controls class="w-full max-w-xs mb-1" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : `<div class="text-4xl mb-1">🎧</div>`}
                     ${prompt ? `<p class="text-xs bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" id="testGapFillInput" placeholder="${data.transcript && !data.correct_answers ? 'Type what you hear...' : 'Type your answer...'}" class="w-full p-2 text-sm border-2 rounded-xl" autocomplete="off">` : ''}
@@ -1815,7 +1815,7 @@
         } else {
             return `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <h1 class="text-xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
+                    <h1 class="text-xl text-center font-bold marker-underline">${formatBreaks(escapeHtml(title))}</h1>
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
@@ -1871,7 +1871,7 @@
             const description = formatBreaks(escapeHtml(data.description || 'No description'));
             return `
                 <div class="text-center w-full">
-                    <h3 class="text-base text-blue-700 marker-underline mb-2">${escapeHtml(title)}</h3>
+                    <h3 class="text-base text-blue-700 marker-underline mb-2">${formatBreaks(escapeHtml(title))}</h3>
                     <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
                         <p class="text-sm">${description}</p>
                     </div>
@@ -1889,7 +1889,7 @@
             }
             return `
                 <div class="text-center w-full">
-                    <h3 class="text-base text-green-700 marker-underline mb-2">${escapeHtml(title)}</h3>
+                    <h3 class="text-base text-green-700 marker-underline mb-2">${formatBreaks(escapeHtml(title))}</h3>
                     ${transcript ? `<div class="bg-green-50 p-2 rounded-xl border-2 border-green-300 mb-2"><p class="text-sm">${transcript}</p></div>` : ''}
                     ${userAnswer ? `
                     <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
@@ -1903,7 +1903,7 @@
             const example = formatBreaks(escapeHtml(data.example1a || data.example || ''));
             return `
                 <div class="text-center w-full">
-                    <h3 class="text-base text-blue-700 marker-underline mb-2">${escapeHtml(title)}</h3>
+                    <h3 class="text-base text-blue-700 marker-underline mb-2">${formatBreaks(escapeHtml(title))}</h3>
                     <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
                         <p class="text-sm">${definition}</p>
                     </div>
