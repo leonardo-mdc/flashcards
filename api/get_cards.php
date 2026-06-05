@@ -25,7 +25,7 @@ try {
         $randomMode = isset($input['random_mode']) && ($input['random_mode'] === true || $input['random_mode'] === 'true');
         $studentLevel = isset($input['student_level']) ? $input['student_level'] : null;
         $setIds = isset($input['set_ids']) ? (array) $input['set_ids'] : [];
-        $dueOnly = !empty($input['due_only']);
+        $dueOnly = !empty($input['due_only']) && $input['due_only'] !== 'false';
     }
 
     if (!$input) {

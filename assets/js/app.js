@@ -155,7 +155,7 @@
                 levels: levels,
                 random_mode: randomMode ? 'true' : 'false',
                 student_level: studentLevel,
-                due_only: dueOnlyMode ? 'true' : 'false'
+                due_only: dueOnlyMode
             };
             if (randomMode && phpCardSets && phpCardSets.length > 0) {
                 const filtered = phpCardSets.filter(s => s.id);
