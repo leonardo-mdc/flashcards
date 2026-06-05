@@ -138,40 +138,43 @@
                     <button class="card-delete-btn" title="Delete card">&times;</button>
                 </div>
             `;
-        });
-        cardListContainer.innerHTML = html;
+        } else if (pattern === 'image_mcq') {
+            const imageUrl = data.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            return `
+                <div class="flex flex-col md:flex-row gap-2 w-full min-h-[200px]">
+                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
+                        ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-32 md:max-h-full w-full object-contain rounded-lg" onerror="this.style.display='none'">` : `<div class="text-4xl text-gray-300">🖼️</div>`}
+                    </div>
+                    <div class="flex flex-col justify-center md:w-1/2 gap-1" id="testMcqOptions">
+                        ${options.map((opt, idx) => `<div class="quiz-option text-xs py-1.5 px-2" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
+                        <p class="text-xs text-gray-400 mt-1">👆 Tap your answer, then flip</p>
+                    </div>
+                </div>
+            `;
+        } else if (pattern === 'image_description') {
+            contentData.image_url = row.image_url || '';
+            contentData.description = row.description || row.definition || 'No description';
+        } else if (pattern === 'audio_listening') {
+            contentData.audio_url = row.audio_url || '';
+            contentData.prompt = row.prompt || row.question_text || '';
+            contentData.transcript = row.transcript || row.correct_answer || '';
+            if (row.correct_answer && !row.transcript) {
+                contentData.correct_answers = row.correct_answer.split(',').map(s => s.trim());
+            }
+        } else {
+            contentData.definition = row.definition || row.question_text || 'No definition';
+            contentData.usage1 = row.usage1 || '';
+            contentData.example1a = row.example1 || '';
+            contentData.tip = row.tip || '';
+        }
 
-        document.querySelectorAll('.card-item').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (e.target.classList.contains('card-delete-btn')) return;
-                const id = parseInt(el.dataset.id);
-                const card = currentCards.find(c => c.id === id);
-                if (card) loadCardIntoEditor(card);
-                document.querySelectorAll('.card-item').forEach(i => i.classList.remove('selected'));
-                el.classList.add('selected');
-                selectedCardId = id;
-            });
-        });
-
-        document.querySelectorAll('.card-delete-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const el = btn.closest('.card-item');
-                const id = parseInt(el.dataset.id);
-                const card = currentCards.find(c => c.id === id);
-                const title = card ? card.title : 'this card';
-                if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-                const response = await fetch(`admin_cards.php?action=delete_card&card_id=${id}`, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    if (selectedCardId === id) newCard();
-                    if (setSelector.value) loadCards(setSelector.value);
-                } else {
-                    alert('Error deleting card');
-                }
-            });
+        openTestCardModal({
+            title: row.title || 'Flashcard',
+            pattern_type: pattern,
+            question_text: pattern === 'multiple_choice' ? (contentData.question_text || '') : '',
+            content_data: contentData,
         });
     }
 

@@ -668,6 +668,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         </div>
     </div>
 
-<script><?php readfile(__DIR__ . '/assets/js/admin.js'); ?></script>
+<script src="<?= assetVersion('assets/js/admin.js') ?>"></script>
 </body>
 </html>

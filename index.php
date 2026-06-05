@@ -42,7 +42,7 @@ if (!$loggedInStudent) {
                 loggedInStudent: null
             };
         </script>
-        <script><?php readfile(__DIR__ . '/assets/js/app.js'); ?></script>
+        <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
     </body>
     </html>
     <?php
@@ -76,6 +76,6 @@ if (!$loggedInStudent) {
             ?>
         };
     </script>
-        <script><?php readfile(__DIR__ . '/assets/js/app.js'); ?></script>
+    <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
 </body>
 </html>
