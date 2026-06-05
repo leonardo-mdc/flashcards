@@ -17,7 +17,7 @@ require_once __DIR__ . '/../src/Card.php';
 $pdo = Database::getConnection();
 
 $setIds = isset($_GET['set_ids']) ? array_map('intval', explode(',', $_GET['set_ids'])) : [];
-$setIds = array_filter($setIds, fn($id) => $id > 0);
+$setIds = array_values(array_filter($setIds, fn($id) => $id > 0));
 
 if (!empty($setIds)) {
     $placeholders = implode(',', array_fill(0, count($setIds), '?'));
@@ -94,6 +94,15 @@ foreach ($cards as $card) {
         $row['sentence'] = $cd['sentence'] ?? '';
         $row['correct_answer'] = implode(',', $cd['correct_answers'] ?? ['answer']);
         $row['example1'] = $cd['example'] ?? '';
+    } elseif ($type === 'image_mcq') {
+        $options = $cd['options'] ?? [];
+        $row['image_url'] = $cd['image_url'] ?? '';
+        for ($i = 0; $i < min(4, count($options)); $i++) {
+            $row['opt' . ($i + 1)] = $options[$i];
+        }
+        $row['correct_answer'] = $cd['correct_index'] ?? 0;
+        $row['explanation'] = $cd['explanation'] ?? '';
+        $row['example1'] = '';
     } elseif ($type === 'image_description') {
         $row['definition'] = $cd['description'] ?? '';
         $row['correct_answer'] = $cd['image_url'] ?? '';

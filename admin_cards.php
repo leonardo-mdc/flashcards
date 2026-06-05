@@ -319,7 +319,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         <div class="editor-layout">
             <div class="card-list-panel">
                 <h2 class="panel-title">📋 Cards</h2>
-                <div id="cardListContainer" class="card-list">
+                <div id="cardListContainer" class="card-list" tabindex="-1">
                     <div class="text-center text-gray-500 py-8">Select a card set to load cards</div>
                 </div>
             </div>
@@ -340,6 +340,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                 <option value="deep_dive">🧠 Pure Text - Deep Dive</option>
                                 <option value="formula_table">📐 Pure Text - Formula Table</option>
                                 <option value="multiple_choice">❓ Multiple Choice</option>
+                                <option value="image_mcq">🖼️ Image MCQ</option>
                                 <option value="gap_fill">✏️ Gap Fill</option>
                                 <option value="image_description">🖼️ Image Description</option>
                                 <option value="audio_listening">🎧 Audio Listening</option>
@@ -502,7 +503,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
 
                 <div class="import-body">
                     <div class="import-left">
-                        <div class="import-records-container">
+                        <div class="import-records-container" id="importRecordsContainer" tabindex="-1">
                             <table class="import-table" id="importPreviewTable">
                                 <thead>
                                     <tr>
@@ -550,6 +551,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                         <option value="deep_dive">🧠 Deep Dive</option>
                                         <option value="formula_table">📐 Formula Table</option>
                                         <option value="multiple_choice">❓ Multiple Choice</option>
+                                        <option value="image_mcq">🖼️ Image MCQ</option>
                                         <option value="gap_fill">✏️ Gap Fill</option>
                                         <option value="image_description">🖼️ Image Description</option>
                                         <option value="audio_listening">🎧 Audio Listening</option>
@@ -590,7 +592,10 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
 
                     <div class="import-right">
                         <div class="import-preview-panel">
-                            <h3 class="panel-title" style="margin-bottom:8px;">📖 Card Preview</h3>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="panel-title" style="margin-bottom:0;">📖 Card Preview</h3>
+                                <button id="importTestCardBtn" class="btn btn-secondary btn-xs">🎯 Test</button>
+                            </div>
                             <div class="import-flip-card" id="importCardPreview">
                                 <div class="import-flip-front">
                                     <div class="text-gray-400 text-sm text-center p-4">Select a row to preview</div>

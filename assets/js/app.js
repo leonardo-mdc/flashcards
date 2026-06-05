@@ -172,7 +172,6 @@
                 due_only: dueOnlyMode
             };
             if (randomMode && phpCardSets && phpCardSets.length > 0) {
-                const filtered = phpCardSets.filter(s => s.id);
                 const restrictedSets = currentStudent?.accessible_set_ids;
                 if (restrictedSets && restrictedSets.length > 0) {
                     body.set_ids = restrictedSets;
@@ -622,6 +621,25 @@
                     <p class="text-sm text-gray-400 mt-1">👆 Type answer, then flip to check</p>
                 </div>
             `;
+        } else if (pattern === 'image_mcq') {
+            const imageUrl = data.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            return `
+                <div class="flex flex-col md:flex-row gap-3 md:gap-4 h-full min-h-[200px]">
+                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
+                        ${hasImage
+                            ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg" onerror="this.style.display='none'">`
+                            : `<div class="text-6xl text-gray-300">🖼️</div>`
+                        }
+                    </div>
+                    <div class="flex flex-col justify-center md:w-1/2 gap-2" id="mcqOptionsContainer">
+                        <p class="text-sm font-bold text-center md:text-left mb-1">Select the correct answer:</p>
+                        ${options.map((opt, idx) => `<div class="quiz-option text-sm md:text-base py-2 px-3" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
+                        <p class="text-xs text-gray-400 mt-1 text-center">👆 Tap your answer, then flip</p>
+                    </div>
+                </div>
+            `;
         } else if (pattern === 'image_description') {
             const imageUrl = data.image_url || '';
             const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
@@ -710,6 +728,31 @@
                     </div>
                 </div>
             `;
+        } else if (pattern === 'image_mcq') {
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const correctIdx = data.correct_index !== undefined ? data.correct_index : 1;
+            const correctAnswer = options[correctIdx];
+            const selectedIdx = quizState?.selectedIdx;
+            const isCorrect = (selectedIdx === correctIdx);
+            const explanation = formatBreaks(escapeHtml(data.explanation || ''));
+
+            return `
+                <div class="back-content">
+                    <div class="text-center">
+                        <h3 class="text-lg text-green-700 title-font marker-underline mb-2">✓ Answer</h3>
+                        <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">
+                            <p class="text-base font-bold">${String.fromCharCode(65+correctIdx)}. ${formatBreaks(escapeHtml(correctAnswer))}</p>
+                        </div>
+                        ${selectedIdx !== null ? `
+                        <div class="p-2 rounded-lg mb-2 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            <p class="text-sm">${isCorrect ? '✅ Correct!' : `❌ Incorrect. The correct answer is ${String.fromCharCode(65+correctIdx)}.`}</p>
+                        </div>
+                        ` : ''}
+                        ${explanation ? `<div class="text-sm text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 ${explanation}</div>` : ''}
+                        <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
+                    </div>
+                </div>
+            `;
         } else if (pattern === 'image_description') {
             const description = formatBreaks(escapeHtml(data.description || 'No description'));
             return `
@@ -779,7 +822,7 @@
         }
 
         const pattern = card.pattern_type;
-        if (pattern === 'multiple_choice') {
+        if (pattern === 'multiple_choice' || pattern === 'image_mcq') {
             const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
             if (selected) {
                 quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
@@ -899,7 +942,7 @@
             flipHandler();
         });
 
-        if (pattern === 'multiple_choice') {
+        if (pattern === 'multiple_choice' || pattern === 'image_mcq') {
             const options = document.querySelectorAll('#mcqOptionsContainer .quiz-option');
             options.forEach(opt => {
                 opt.addEventListener('click', (e) => {
@@ -933,7 +976,7 @@
         const handleReview = async (quality) => {
             SoundFX.click();
             let wasCorrect = false;
-            if (pattern === 'multiple_choice') {
+            if (pattern === 'multiple_choice' || pattern === 'image_mcq') {
                 const correctIdx = card.content_data?.correct_index ?? 1;
                 wasCorrect = (currentQuizState.selectedIdx === correctIdx);
             } else if (pattern === 'gap_fill') {

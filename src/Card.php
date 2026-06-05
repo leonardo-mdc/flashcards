@@ -104,7 +104,7 @@ class Card
         $contentData = json_encode($data['content_data'] ?? []);
 
         // Auto-fix ENUM if it doesn't include the pattern type yet
-        static::ensurePatternTypeEnum($patternType);
+        self::ensurePatternTypeEnum($patternType);
 
         if ($id > 0) {
             $stmt = $pdo->prepare("UPDATE cards SET set_id=?, title=?, pattern_type=?, level=?, question_text=?, content_data=? WHERE id=?");
@@ -130,7 +130,7 @@ class Card
 
     private static function ensurePatternTypeEnum(string $type): void
     {
-        $known = ['usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening'];
+        $known = ['usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening','image_mcq'];
         if (!in_array($type, $known)) return;
 
         $pdo = Database::getConnection();

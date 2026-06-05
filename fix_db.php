@@ -137,8 +137,6 @@ try {
         echo "<tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th></tr>";
         $cols = $pdo->query("SHOW FULL COLUMNS FROM `$table`")->fetchAll();
         foreach ($cols as $col) {
-            $isMissing = $expected && !in_array($col['Field'], $expected);
-            $isExtra = $expected && !in_array($col['Field'], $expected) ? true : ($expected === null ? false : false);
             $style = '';
             if ($expected !== null) {
                 if (!in_array($col['Field'], $expected)) {
