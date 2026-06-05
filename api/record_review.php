@@ -28,14 +28,12 @@ try {
     Review::record($cardId, $userId, $quality, $wasCorrect);
 
     $stats = Review::getStats($userId);
-    $progressPercent = $stats['progress'];
     $user = User::getById($userId);
     if (!$user) {
         echo json_encode(['success' => false, 'error' => 'User not found']);
         exit;
     }
-    $newLevel = User::calculateLevel($progressPercent);
-    User::updateProgress($userId, $progressPercent, $newLevel);
+    User::updateProgress($userId, $stats['progress'], $user['english_level']);
 
     echo json_encode([
         'success' => true,

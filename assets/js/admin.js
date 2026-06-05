@@ -661,7 +661,14 @@
         modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
         modal.innerHTML = `
             <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
-                <h3 class="text-lg marker-underline mb-3">✏️ Edit User</h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg marker-underline">✏️ Edit User</h3>
+                    <div class="flex gap-2">
+                        <button id="saveEditUserBtn" class="btn btn-success">💾 Save</button>
+                        <button id="cancelEditUserBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </div>
+                <p id="editUserError" class="text-red-600 text-center mt-2 hidden" style="display:none"></p>
                 <input type="hidden" id="editUserId" value="${data.id}">
                 <label class="block font-bold mb-1">Username:</label>
                 <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30">
@@ -684,11 +691,6 @@
                         <div class="text-sm text-gray-400">Loading sets...</div>
                     </div>
                 </div>
-                <div class="flex gap-2 mt-3">
-                    <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
-                    <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
-                </div>
-                <p id="editUserError" class="text-red-600 text-center mt-2 hidden"></p>
             </div>
         `;
         document.body.appendChild(modal);
