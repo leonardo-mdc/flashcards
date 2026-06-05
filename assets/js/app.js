@@ -30,21 +30,13 @@
 
     function getIntervalPreview(card, quality) {
         const p = card?.progress;
-        if (!p) {
-            if (quality === 0) return '1d';
-            if (quality === 2) return '3d';
-            if (quality === 3) return '7d';
-            return '';
-        }
-        const ef = parseFloat(p.ease_factor) || 2.5;
-        const rep = parseInt(p.repetitions) || 0;
-        const prev = parseInt(p.interval_days) || 0;
+        const rep = p ? (parseInt(p.repetitions) || 0) : -1;
+        const ef = p ? (parseFloat(p.ease_factor) || 2.5) : 2.5;
+        const prev = p ? (parseInt(p.interval_days) || 0) : 0;
         if (quality === 0) return '1d';
-        const newEF = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-        if (rep === 0) { return quality === 3 ? '7d' : '3d'; }
-        if (rep === 1) { return quality === 3 ? '7d' : '3d'; }
-        const base = Math.round(prev * newEF);
-        return Math.round(base * (quality === 3 ? 1.3 : 1)) + 'd';
+        if (rep === -1 || rep === 0) return '1d';
+        if (rep === 1) return '6d';
+        return Math.round(prev * ef) + 'd';
     }
 
     function formatBreaks(text) {
@@ -62,7 +54,16 @@
 
     function stripFormatTags(text) {
         if (!text) return '';
-        return String(text).replace(/\\.*$/s, '').trim();
+        let s = String(text);
+        s = s.replace(/\\\\/g, '\\');
+        s = s.replace(/\\b(.*?)\\b/g, '$1');
+        s = s.replace(/\\i(.*?)\\i/g, '$1');
+        s = s.replace(/\\u(.*?)\\u/g, '$1');
+        s = s.replace(/\\em(.*?)\\em/g, '$1');
+        s = s.replace(/\\strong(.*?)\\strong/g, '$1');
+        s = s.replace(/\\br/g, ' ');
+        s = s.replace(/\\/g, '');
+        return s.trim();
     }
 
     const SoundFX = {

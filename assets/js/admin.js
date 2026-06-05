@@ -1681,7 +1681,7 @@
         if (!confirm(`Import ${selectedRows.length} card${selectedRows.length > 1 ? 's' : ''}?`)) return;
 
         // Build CSV from selected rows
-        const csvCols = ['id', 'set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation', 'opt1', 'opt2', 'opt3', 'opt4'];
+        const csvCols = ['id', 'set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation', 'opt1', 'opt2', 'opt3', 'opt4', 'image_url', 'description', 'audio_url', 'prompt', 'transcript'];
         const csvRows = [csvCols.join(',')];
 
         selectedRows.forEach(row => {
@@ -1705,6 +1705,16 @@
                     val = row.usage1 || row.tip || '';
                 } else if (col === 'example1' || col === 'example2') {
                     val = row.example1 || row.example2 || '';
+                } else if (col === 'image_url') {
+                    val = row.image_url || '';
+                } else if (col === 'description') {
+                    val = row.description || '';
+                } else if (col === 'audio_url') {
+                    val = row.audio_url || '';
+                } else if (col === 'prompt') {
+                    val = row.prompt || '';
+                } else if (col === 'transcript') {
+                    val = row.transcript || '';
                 } else if (col === 'correct_answer') {
                     val = row.correct_answer || '';
                 } else if (col === 'opt1' || col === 'opt2' || col === 'opt3' || col === 'opt4') {

@@ -253,7 +253,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="<?= assetVersion('assets/css/admin.css') ?>">
 </head>
 <body>
 <div class="admin-container">
@@ -663,6 +663,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         </div>
     </div>
 
-<script src="assets/js/admin.js"></script>
+<script src="<?= assetVersion('assets/js/admin.js') ?>"></script>
 </body>
 </html>

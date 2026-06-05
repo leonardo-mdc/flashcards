@@ -51,6 +51,8 @@ fputcsv($out, [
     'correct_answer', 'explanation',
     'example1', 'example2', 'example3', 'example4',
     'usage1', 'tip',
+    'image_url', 'description',
+    'audio_url', 'prompt', 'transcript',
 ]);
 
 foreach ($cards as $card) {
@@ -73,6 +75,11 @@ foreach ($cards as $card) {
         'example1'       => '', 'example2' => '', 'example3' => '', 'example4' => '',
         'usage1'         => '',
         'tip'            => '',
+        'image_url'      => '',
+        'description'    => '',
+        'audio_url'      => '',
+        'prompt'         => '',
+        'transcript'     => '',
     ];
 
     if ($type === 'multiple_choice') {
@@ -90,12 +97,17 @@ foreach ($cards as $card) {
     } elseif ($type === 'image_description') {
         $row['definition'] = $cd['description'] ?? '';
         $row['correct_answer'] = $cd['image_url'] ?? '';
+        $row['image_url'] = $cd['image_url'] ?? '';
+        $row['description'] = $cd['description'] ?? '';
         $row['example1'] = '';
     } elseif ($type === 'audio_listening') {
         $row['definition'] = $cd['transcript'] ?? $cd['notes'] ?? '';
         $row['correct_answer'] = isset($cd['correct_answers']) ? implode(',', $cd['correct_answers']) : '';
         $row['question_text'] = $cd['prompt'] ?? '';
         $row['sentence'] = $cd['audio_url'] ?? '';
+        $row['audio_url'] = $cd['audio_url'] ?? '';
+        $row['prompt'] = $cd['prompt'] ?? '';
+        $row['transcript'] = $cd['transcript'] ?? $cd['notes'] ?? '';
         $row['example1'] = '';
     } else {
         $row['definition'] = $cd['definition'] ?? '';

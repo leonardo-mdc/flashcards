@@ -29,7 +29,7 @@ if (!$loggedInStudent) {
         <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
         <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="assets/css/app.css?v=2">
+        <link rel="stylesheet" href="<?= assetVersion('assets/css/app.css') ?>">
     </head>
     <body class="flex items-center justify-center">
         <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
@@ -42,7 +42,7 @@ if (!$loggedInStudent) {
                 loggedInStudent: null
             };
         </script>
-        <script src="assets/js/app.js"></script>
+        <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
     </body>
     </html>
     <?php
@@ -57,7 +57,7 @@ if (!$loggedInStudent) {
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/app.css?v=2">
+    <link rel="stylesheet" href="<?= assetVersion('assets/css/app.css') ?>">
 </head>
 <body class="flex items-center justify-center">
     <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
@@ -76,6 +76,6 @@ if (!$loggedInStudent) {
             ?>
         };
     </script>
-    <script src="assets/js/app.js"></script>
+    <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
 </body>
 </html>
