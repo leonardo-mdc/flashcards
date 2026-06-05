@@ -1426,7 +1426,7 @@
             frontHtml = `
                 <div class="text-center">
                     <div class="text-3xl mb-1">❓</div>
-                    <p class="text-lg font-bold">${escapeHtml(title)}</p>
+                    <p class="text-lg font-bold">${formatBreaks(escapeHtml(title))}</p>
                     <p class="text-sm text-gray-600 mt-1">${formatBreaks(escapeHtml(definition || 'Select the correct answer:'))}</p>
                     <div class="mt-2 text-left text-xs space-y-1">
                         ${opts.map((o, i) => `<div class="bg-gray-100 p-1.5 rounded ${i === correctIdx ? 'ring-2 ring-green-400' : ''}">${formatBreaks(escapeHtml(o))}</div>`).join('')}
@@ -1464,13 +1464,13 @@
             frontHtml = `
                 <div class="text-center">
                     <div class="text-3xl mb-1">🖼️</div>
-                    <p class="text-sm font-bold">${escapeHtml(title)}</p>
+                    <p class="text-sm font-bold">${formatBreaks(escapeHtml(title))}</p>
                     ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="mx-auto mt-2 max-h-32 rounded-lg border" onerror="this.alt='Image not found'" />` : `<div class="mx-auto mt-2 w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">No image</div>`}
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
-                    <div class="text-base text-blue-700 marker-underline mb-1">${escapeHtml(title)}</div>
+                    <div class="text-base text-blue-700 marker-underline mb-1">${formatBreaks(escapeHtml(title))}</div>
                     <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
                         <p class="text-sm">${formatBreaks(escapeHtml(description))}</p>
                     </div>
@@ -1482,7 +1482,7 @@
             frontHtml = `
                 <div class="text-center">
                     <div class="text-3xl mb-1">🎧</div>
-                    <p class="text-sm font-bold">${escapeHtml(title)}</p>
+                    <p class="text-sm font-bold">${formatBreaks(escapeHtml(title))}</p>
                     <p class="text-xs text-gray-500 mt-1">${formatBreaks(escapeHtml(prompt))}</p>
                 </div>
             `;
@@ -1497,12 +1497,12 @@
         } else {
             frontHtml = `
                 <div class="flex flex-col items-center justify-center">
-                    <div class="text-2xl text-center font-bold">${escapeHtml(title)}</div>
+                    <div class="text-2xl text-center font-bold">${formatBreaks(escapeHtml(title))}</div>
                 </div>
             `;
             backHtml = `
                 <div class="text-center">
-                    <div class="text-base text-blue-700 marker-underline mb-1">${escapeHtml(title)}</div>
+                    <div class="text-base text-blue-700 marker-underline mb-1">${formatBreaks(escapeHtml(title))}</div>
                     <div class="bg-blue-50 p-2 rounded-xl border-2 border-blue-300">
                         <p class="text-sm">${formatBreaks(escapeHtml(definition || 'Definition'))}</p>
                     </div>
