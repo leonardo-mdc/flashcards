@@ -24,6 +24,7 @@
     function formatBreaks(text) {
         if (!text) return '';
         let s = String(text);
+        s = s.replace(/\\\\/g, '\\');
         s = s.replace(/\\br ?/g, '<br>');
         s = s.replace(/\\b(.*?)\\b/g, '<b>$1</b>');
         s = s.replace(/\\i(.*?)\\i/g, '<i>$1</i>');
