@@ -62,7 +62,7 @@
 
     function stripFormatTags(text) {
         if (!text) return '';
-        return String(text).replace(/\\\\.*$/s, '').trim();
+        return String(text).replace(/\\.*$/s, '').trim();
     }
 
     const SoundFX = {
