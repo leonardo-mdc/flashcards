@@ -378,7 +378,7 @@
                 <div class="text-center">
                     <div class="text-4xl mb-3">❓</div>
                     <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(contentData.question_text || 'Select the correct answer:'))}</p>
-                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
@@ -432,7 +432,7 @@
                 <div class="text-center">
                     <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
                     <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
+                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${formatBreaks(escapeHtml(options[correctIdx] || 'Correct Answer'))}</p>
                     </div>
                     <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
                 </div>
@@ -443,7 +443,7 @@
                 <div class="text-center">
                     <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3>
                     <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300">
-                        <p class="text-xl font-bold">${escapeHtml(answers.join(' / '))}</p>
+                        <p class="text-xl font-bold">${formatBreaks(escapeHtml(answers.join(' / ')))}</p>
                     </div>
                     ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
                 </div>
@@ -1428,7 +1428,7 @@
                     <p class="text-lg font-bold">${escapeHtml(title)}</p>
                     <p class="text-sm text-gray-600 mt-1">${formatBreaks(escapeHtml(definition || 'Select the correct answer:'))}</p>
                     <div class="mt-2 text-left text-xs space-y-1">
-                        ${opts.map((o, i) => `<div class="bg-gray-100 p-1.5 rounded ${i === correctIdx ? 'ring-2 ring-green-400' : ''}">${escapeHtml(o)}</div>`).join('')}
+                        ${opts.map((o, i) => `<div class="bg-gray-100 p-1.5 rounded ${i === correctIdx ? 'ring-2 ring-green-400' : ''}">${formatBreaks(escapeHtml(o))}</div>`).join('')}
                     </div>
                 </div>
             `;
@@ -1772,7 +1772,7 @@
                 <div class="text-center w-full">
                     <p class="text-base mb-2 font-bold">❓ ${formatBreaks(escapeHtml(card.question_text || 'Select the correct answer:'))}</p>
                     <div class="${gridClass}" id="testMcqOptions">
-                        ${options.map((opt, idx) => `<div class="quiz-option text-sm" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                        ${options.map((opt, idx) => `<div class="quiz-option text-sm" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     </div>
                     <p class="text-xs text-gray-400 mt-2">👆 Tap your answer, then flip</p>
                 </div>
@@ -1837,7 +1837,7 @@
                 <div class="text-center w-full">
                     <h3 class="text-base text-green-700 marker-underline mb-2">✓ Answer</h3>
                     <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300 mb-2">
-                        <p class="text-sm font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(correctAnswer)}</p>
+                        <p class="text-sm font-bold">${String.fromCharCode(65+correctIdx)}. ${formatBreaks(escapeHtml(correctAnswer))}</p>
                     </div>
                     ${selectedIdx !== undefined && selectedIdx !== null ? `
                     <div class="p-2 rounded-lg mb-2 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
@@ -1856,7 +1856,7 @@
                 <div class="text-center w-full">
                     <h3 class="text-base text-green-700 marker-underline mb-2">✓ Correct Answer</h3>
                     <div class="bg-green-50 p-2 rounded-xl border-2 border-green-300 mb-2">
-                        <p class="text-sm font-bold">${escapeHtml(correctAnswers.join(' / '))}</p>
+                        <p class="text-sm font-bold">${formatBreaks(escapeHtml(correctAnswers.join(' / ')))}</p>
                     </div>
                     ${userAnswer ? `
                     <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
