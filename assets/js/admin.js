@@ -586,7 +586,7 @@
         formData.append('csv', blob, (importFileHandle ? importFileHandle.name : 'import.csv'));
 
         try {
-            const response = await fetch('admin_cards.php?api=import_csv', { method: 'POST', body: formData });
+            const response = await fetch('api/import_csv.php', { method: 'POST', body: formData });
             const result = await response.json();
             if (result.success) {
                 let msg = `✅ Imported ${result.imported} cards.`;
