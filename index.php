@@ -7,23 +7,6 @@ require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/Review.php';
-require_once __DIR__ . '/src/Card.php';
-
-$apiAction = $_GET['api'] ?? '';
-if ($apiAction) {
-    header('Content-Type: application/json');
-    try {
-        $apiFile = __DIR__ . '/api/' . basename($apiAction) . '.php';
-        if (file_exists($apiFile)) {
-            include $apiFile;
-        } else {
-            echo json_encode(['success' => false, 'error' => 'Unknown API action']);
-        }
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
-    }
-    exit;
-}
 
 $dbConnected = Database::testConnection();
 $cardSets = $dbConnected ? CardSet::getWithCards() : [];
@@ -59,7 +42,7 @@ if (!$loggedInStudent) {
                 loggedInStudent: null
             };
         </script>
-        <script><?php readfile(__DIR__ . '/assets/js/app.js'); ?></script>
+        <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
     </body>
     </html>
     <?php
@@ -93,6 +76,6 @@ if (!$loggedInStudent) {
             ?>
         };
     </script>
-        <script><?php readfile(__DIR__ . '/assets/js/app.js'); ?></script>
+    <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
 </body>
 </html>

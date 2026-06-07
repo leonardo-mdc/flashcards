@@ -132,8 +132,7 @@
 
     async function apiCall(endpoint, method = 'GET', data = null) {
         try {
-            let m = endpoint.match(/^api\/(\w+)\.php(?:\?(.*))?$/);
-            let url = m ? 'index.php?api=' + m[1] + (m[2] ? '&' + m[2] : '') : endpoint;
+            let url = endpoint;
             let options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
             if (data && method === 'POST') {
                 options.body = JSON.stringify(data);
