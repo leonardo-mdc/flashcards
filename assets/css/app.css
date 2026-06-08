@@ -187,3 +187,15 @@ body {
     .card-word { font-size: clamp(1.3rem, 6vw, 1.6rem) !important; }
     #launchStudyBtn { font-size: clamp(0.85rem, 4.5vw, 1rem) !important; }
 }
+
+.text-2xs { font-size: 0.6rem; line-height: 0.9rem; }
+
+.kb-hint {
+    display: inline-block;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 0 5px;
+    font-size: 11px;
+    color: #475569;
+}

@@ -193,6 +193,25 @@
         return String(str).replace(/[&<>"']/g, m => map[m]);
     }
 
+    function getIntervalPreview(card, quality) {
+        const p = card?.progress;
+        if (!p) {
+            if (quality === 0) return '1d';
+            if (quality === 2) return '3d';
+            if (quality === 3) return '7d';
+            return '';
+        }
+        const ef = parseFloat(p.ease_factor) || 2.5;
+        const rep = parseInt(p.repetitions) || 0;
+        const prev = parseInt(p.interval_days) || 0;
+        if (quality === 0) return '1d';
+        const newEF = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+        if (rep === 0) { return quality === 3 ? '7d' : '3d'; }
+        if (rep === 1) { return quality === 3 ? '7d' : '3d'; }
+        const base = Math.round(prev * newEF);
+        return Math.round(base * (quality === 3 ? 1.3 : 1)) + 'd';
+    }
+
     function formatBreaks(text) {
         if (!text) return '';
         return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
@@ -714,6 +733,8 @@
                         <span class="text-xs text-gray-500">${currentIndex + 1}/${currentCards.length}</span>
                     </div>
                     <div class="flex gap-2">
+                        ${currentStudent?.is_admin ? `<a href="admin_cards.php?focus_card=${card.id}&return_url=${encodeURIComponent(window.location.href)}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 font-bold flex items-center" title="Edit this card">✏️</a>` : ''}
+                        <span class="kb-hint hidden md:inline-block">space</span>
                         <button id="flipCardBtn" class="flip-btn px-3 py-1 md:px-4 md:py-1 rounded-xl text-xs md:text-xs font-bold">🔄 FLIP</button>
                         <button id="exitStudyBtn" class="text-red-600 font-bold bg-red-50 px-3 py-1 rounded-full text-xs">Exit</button>
                     </div>
@@ -733,11 +754,11 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap justify-center gap-1 md:gap-2 mt-2">
-                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">🔁 Again (1d)</button>
-                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">👍 Good (3d)</button>
-                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">⭐ Easy (7d)</button>
+                    <button id="againBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">${!isMobile ? '<span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">1</span> ' : ''}Again <span class="text-2xs md:text-xs opacity-80">(${getIntervalPreview(card, 0)})</span></button>
+                    <button id="goodBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">${!isMobile ? '<span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">2</span> ' : ''}Good <span class="text-2xs md:text-xs opacity-80">(${getIntervalPreview(card, 2)})</span></button>
+                    <button id="easyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1 rounded-xl text-xs md:text-sm font-bold btn-chalk">${!isMobile ? '<span class="kb-hint" style="background:rgba(255,255,255,0.2);border-color:transparent;">3</span> ' : ''}Easy <span class="text-2xs md:text-xs opacity-80">(${getIntervalPreview(card, 3)})</span></button>
                 </div>
-                <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or FLIP to flip</p>
+                <p class="text-center text-xs text-gray-400 mt-2">💡 Tap card or press <span class="kb-hint">Space</span> to flip · <span class="kb-hint">1</span><span class="kb-hint">2</span><span class="kb-hint">3</span> to rate</p>
             </div>
         `;
         appEl.innerHTML = html;
@@ -826,6 +847,36 @@
         document.getElementById('goodBtn')?.addEventListener('click', () => handleReview(2));
         document.getElementById('easyBtn')?.addEventListener('click', () => handleReview(3));
     }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        if (currentView === 'study') {
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    document.getElementById('flipCardBtn')?.click();
+                    break;
+                case '1':
+                    document.getElementById('againBtn')?.click();
+                    break;
+                case '2':
+                    document.getElementById('goodBtn')?.click();
+                    break;
+                case '3':
+                    document.getElementById('easyBtn')?.click();
+                    break;
+                case 'Escape':
+                    document.getElementById('exitStudyBtn')?.click();
+                    break;
+            }
+        } else if (currentView === 'welcome') {
+            if (e.key === 'Enter') {
+                document.getElementById('launchStudyBtn')?.click();
+            }
+        }
+    });
 
     loadSavedData();
     render();
