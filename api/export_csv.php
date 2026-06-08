@@ -35,6 +35,7 @@ fputcsv($out, [
     'correct_answer', 'explanation',
     'example1', 'example2', 'example3', 'example4',
     'usage1', 'tip',
+    'image_url', 'description', 'audio_url', 'prompt', 'transcript',
 ]);
 
 foreach ($cards as $card) {
@@ -57,6 +58,11 @@ foreach ($cards as $card) {
         'example1'       => '', 'example2' => '', 'example3' => '', 'example4' => '',
         'usage1'         => '',
         'tip'            => '',
+        'image_url'      => '',
+        'description'    => '',
+        'audio_url'      => '',
+        'prompt'         => '',
+        'transcript'     => '',
     ];
 
     if ($type === 'multiple_choice') {
@@ -83,6 +89,12 @@ foreach ($cards as $card) {
             $row['tip'] = $cd['tip'] ?? '';
         }
     }
+
+    $row['image_url'] = $cd['image_url'] ?? '';
+    $row['description'] = $cd['description'] ?? '';
+    $row['audio_url'] = $cd['audio_url'] ?? '';
+    $row['prompt'] = $cd['prompt'] ?? '';
+    $row['transcript'] = $cd['transcript'] ?? '';
 
     fputcsv($out, $row);
 }

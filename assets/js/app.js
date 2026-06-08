@@ -10,6 +10,7 @@
     let currentCardObj = null;
     let availableCardSets = [];
     let isRandomMode = false;
+    let dueOnlyMode = false;
 
     const SESSION_STATE_KEY = 'flashcard_session';
 
@@ -80,7 +81,8 @@
                 student_id: studentId,
                 levels: levels,
                 random_mode: randomMode ? 'true' : 'false',
-                student_level: studentLevel
+                student_level: studentLevel,
+                due_only: dueOnlyMode
             };
             if (randomMode && phpCardSets && phpCardSets.length > 0) {
                 const filtered = phpCardSets.filter(s => s.id);
@@ -92,9 +94,10 @@
             const res = await apiCall('api/get_cards.php', 'POST', body);
             if (res && res.success) {
                 if (res.all_due_reviewed) allDueReviewed = true;
-                if (res.cards && res.cards.length > 0) return res.cards;
+                if (res.cards && res.cards.length > 0) { dueOnlyMode = false; return res.cards; }
             }
         } catch (e) {}
+        dueOnlyMode = false;
         return [];
     }
 
@@ -187,7 +190,8 @@
 
     function escapeHtml(str) {
         if (!str) return '';
-        return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(str).replace(/[&<>"']/g, m => map[m]);
     }
 
     function formatBreaks(text) {
@@ -283,6 +287,7 @@
                             <div class="text-xs text-gray-500 mb-1">📊 Progress:</div>
                             <div class="progress-bar-container" style="max-width:100%;" data-pct="${Math.round(currentStudent?.progress || 0)}%"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%"></div></div>
                         </div>
+                        ${stats.due_today > 0 ? `<button id="dueReviewBtn" class="text-xs text-orange-600 mt-2 font-bold cursor-pointer hover:text-orange-800 underline" style="background:none;border:none;padding:0;font:inherit;">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</button>` : ''}
                     </div>
                     ` : ''}
                     </div>
@@ -390,6 +395,15 @@
             currentIndex = 0;
             currentView = 'study';
             render();
+        });
+
+        document.getElementById('appRoot')?.addEventListener('click', (e) => {
+            if (e.target.id === 'dueReviewBtn') {
+                dueOnlyMode = true;
+                const setSelect = document.getElementById('setSelect');
+                if (setSelect) setSelect.value = '';
+                document.getElementById('launchStudyBtn')?.click();
+            }
         });
 
         document.getElementById('switchStudentBtn')?.addEventListener('click', () => clearStudent());
@@ -614,53 +628,40 @@
 
         const flashcard = document.getElementById('flashcardEl');
 
-        document.getElementById('flipCardBtn')?.addEventListener('click', () => {
-            if (!flashcard.classList.contains('flipped')) {
-                if (pattern === 'multiple_choice') {
-                    const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
-                    if (selected) {
-                        quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                } else if (pattern === 'gap_fill') {
-                    const input = document.getElementById('gapFillInput');
-                    if (input) {
-                        quizState.userAnswer = input.value.trim();
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
+        function flipHandler() {
+            if (flashcard.classList.contains('flipped')) {
+                flashcard.classList.remove('flipped');
+                return;
+            }
+
+            if (pattern === 'multiple_choice') {
+                const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
+                if (selected) {
+                    quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
+                    quizState.answered = true;
+                    const backDiv = document.getElementById('cardBack');
+                    if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
+                }
+            } else if (pattern === 'gap_fill') {
+                const input = document.getElementById('gapFillInput');
+                if (input) {
+                    quizState.userAnswer = input.value.trim();
+                    quizState.answered = true;
+                    const backDiv = document.getElementById('cardBack');
+                    if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
                 }
             }
-            flashcard.classList.toggle('flipped');
-        });
+
+            flashcard.classList.add('flipped');
+        }
+
+        document.getElementById('flipCardBtn')?.addEventListener('click', flipHandler);
 
         flashcard?.addEventListener('click', (e) => {
             if (e.target.closest('.quiz-option') || e.target.closest('#gapFillInput') || e.target.closest('.btn-chalk')) {
                 return;
             }
-            if (!flashcard.classList.contains('flipped')) {
-                if (pattern === 'multiple_choice') {
-                    const selected = document.querySelector('#mcqOptionsContainer .quiz-option.selected');
-                    if (selected) {
-                        quizState.selectedIdx = parseInt(selected.getAttribute('data-idx'));
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                } else if (pattern === 'gap_fill') {
-                    const input = document.getElementById('gapFillInput');
-                    if (input) {
-                        quizState.userAnswer = input.value.trim();
-                        quizState.answered = true;
-                        const backDiv = document.getElementById('cardBack');
-                        if (backDiv) backDiv.innerHTML = renderCardBack(card, quizState);
-                    }
-                }
-            }
-            flashcard.classList.toggle('flipped');
+            flipHandler();
         });
 
         if (pattern === 'multiple_choice') {

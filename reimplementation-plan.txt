@@ -1,0 +1,101 @@
+REIMPLEMENTATION PLAN
+=====================
+Date: 2026-06-07
+From: fork point (586013d, backup-before-makeover)
+Goal: incrementally port features & fixes from defective-main branch
+
+BRANCHES
+  defective-main  -> complete fork state (9247dcf, backup)
+  main            -> clean at fork point (586013d, ready for incremental work)
+
+PHASE 1 — Security & Data Integrity
+------------------------------------
+  Priority: CRITICAL — must be ported first
+  Commits:
+    [45a1e13] XSS (escapeHtml quotes), race condition in edit-user modal,
+              admin_cards.php crash, null pointer guards, session fixation,
+              CORS on login, export CSV header, User::ensureTable on writes
+    [689c185] CSV import/export data loss, preview interval mismatch,
+              stripFormatTags destroying content, cache busting
+    [9407623] Toggle card flip back to front on click
+    [3704958] due_only string 'false' always truthy in PHP
+
+PHASE 2 — Core UX Fixes
+------------------------
+  Priority: HIGH — content rendering & form behaviour
+    [84a9368]  Missing bold/italic/underline tags in formatBreaks
+    [33fdaa7]  Missing formatBreaks in question_text, sentence, prompt, etc.
+    [b241741]  Normalize double backslash before format tag parsing
+    [69a09be]  Missing formatBreaks on card titles; strip \br from set-name
+    [9b25569]  Missing formatBreaks in import card preview titles
+    [b77a828]  Add card title to set-name line; strip formatting tags
+    [fc0a99e]  Fix stripFormatTags regex (double backslash)
+    [d3069a7]  Stop auto-overwriting english_level on review
+    [20397ae]  Move save/cancel buttons to top of edit profile modal
+    [779a738]  Stop overwriting english_level on review (was lost)
+    [dbbea63]  Update image/audio preview on blur/change of URL
+    [eb83ea7]  Auto-sync pattern_type ENUM; VARCHAR to prevent truncation
+
+PHASE 3 — Admin Tools
+---------------------
+  Priority: HIGH
+    [570b04d]  File upload for images/audio via admin editor
+    [92c1143]  Rich CSV import modal with live preview, set mapping, editing
+    [c4e8dbe]  Per-row checkboxes + select-all + flip-card preview in import
+    [fbd2a3b]  Stacked front/back layout in import preview
+    [b9d8f02]  Widen import modal to 1400px; \br in all preview fields
+    [bdac5eb]  Safe formatting tags \b \i \u \em \strong
+    [daf07d7]  Side-by-side card preview in import editor
+    [5555ffc]  Export cards filtered by set
+    [7fe91e0]  Preserve card id column when re-serializing CSV
+    [2da26d6]  Remove 100-row limit from CSV preview
+    [0d7ca30]  Duplicate detection on import
+    [7c5cd25]  Description+timestamp on sets; test card popup in editor
+    [47cba9a]  Style/pattern-type filter checkboxes in card editor
+    [4faaea5]  Per-card delete button in card list
+    [7c31781]  Admin jump from study to edit card and back
+
+PHASE 4 — Core Features
+-----------------------
+  Priority: MEDIUM
+    [58da15d]  SM-2 algorithm, keyboard shortcuts, auto-flip, sound FX,
+               gamification, confetti, search, interactive previews
+    [7e42785]  Image MCQ card type
+    [e332993]  Interval preview on rating buttons, compact mobile stats,
+               whiteboard-card levels, one-line titles
+    [532067c]  Due-for-review clickable to start filtered session
+    [cd609e8]  Card title alongside set name on study screen
+    [f0d4fcc]  Pencil edit icon to top bar
+
+PHASE 5 — InfinityFree Compatibility
+-------------------------------------
+  Priority: LOW but needed for deployment
+    [7cc11ca]  Inline JS into PHP
+    [cd16bfa]  Route API through index.php
+    [1b62133]  Combined inline JS + API routing
+    [9247dcf]  Inline admin.js+app.js via readfile
+
+PHASE 6 — Styling & Polish
+---------------------------
+  Priority: LOW
+    [b67f694]  Text shadow on progress bar percentage
+    [7ea6141]  Progress bar percentage text to red
+    [b41a73e]  Move percentage left; fix kb-hint font; redesign admin
+    [38ab98e]  Restore PHP handler; fix MCQ correct_index
+    [ce79436]  Change incorrect sound to smooth tone
+    [fac5556]  Smaller due button on mobile
+    [1cdca4c]  Due button targets #appRoot; interval preview for new cards
+    [93f9786]  Title breaks naturally; mobile buttons hide hotkeys
+    [dba35a9]  Style filters respected by search-as-you-type
+    [3e1e1c0]  Apply formatBreaks to all content previews
+    [9d6dad3]  Gap_fill import preview shows correct_answer
+    [73f8150]  Update cards-learned threshold; auto-calc level from progress
+
+INFRASTRUCTURE
+--------------
+    [731fee5]  .opencode plugin config
+    [f5e18d3]  DB schema checker + reset script
+    [5c55e7e]  Schema migration
+    [18f5a8b]  Non-destructive fix_pattern_type action
+    [8ca28c1]  Fix Pattern Types button in fix_db.php
+    [45a1e13]  User::ensureTable on write methods (part of commit)
