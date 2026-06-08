@@ -8,6 +8,8 @@
 header('Content-Type: text/html; charset=utf-8');
 
 require_once __DIR__ . '/../src/Database.php';
+require_once __DIR__ . '/../src/Card.php';
+require_once __DIR__ . '/../src/CardSet.php';
 
 $setsFile = __DIR__ . '/card_sets.csv';
 $cardsFile = __DIR__ . '/cards.csv';
@@ -141,13 +143,20 @@ if (!file_exists($cardsFile)) {
             }
 
             try {
-                $stmt = $pdo->prepare("INSERT INTO cards (set_id, title, pattern_type, level, question_text, content_data) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$set_id, $title, $pattern_type, $level, $question_text, $content_data]);
+                $decoded = json_decode($content_data, true) ?: [];
+                Card::save([
+                    'set_id' => (int) $set_id,
+                    'title' => $title,
+                    'pattern_type' => $pattern_type,
+                    'level' => $level,
+                    'question_text' => $question_text,
+                    'content_data' => $decoded,
+                ]);
                 $inserted++;
                 if ($inserted % 100 == 0) {
                     display("📈 Progress: $inserted cards inserted...", 'info');
                 }
-            } catch (PDOException $e) {
+            } catch (Exception $e) {
                 display("❌ Error on line $lineNum: " . $e->getMessage(), 'error');
                 $errors++;
             }
