@@ -5,6 +5,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/User.php';
+require_once __DIR__ . '/../src/Review.php';
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -62,6 +63,7 @@ try {
         if (!empty($user['is_admin'])) {
             $_SESSION['admin_user'] = $user;
         }
+        $user['accessible_set_ids'] = Review::getAccessibleSets((int) $user['id'], $user['username'] ?? '');
         echo json_encode(['success' => true, 'student' => $user, 'new' => true]);
     } else {
         $user = User::authenticate($name, $password);
@@ -74,6 +76,7 @@ try {
         if (!empty($user['is_admin'])) {
             $_SESSION['admin_user'] = $user;
         }
+        $user['accessible_set_ids'] = Review::getAccessibleSets((int) $user['id'], $user['username'] ?? '');
         echo json_encode(['success' => true, 'student' => $user, 'new' => false]);
     }
 } catch (PDOException $e) {

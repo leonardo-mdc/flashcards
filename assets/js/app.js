@@ -84,8 +84,7 @@
                 student_level: studentLevel,
                 due_only: dueOnlyMode
             };
-            if (randomMode && phpCardSets && phpCardSets.length > 0) {
-                const filtered = phpCardSets.filter(s => s.id);
+            if (randomMode) {
                 const restrictedSets = currentStudent?.accessible_set_ids;
                 if (restrictedSets && restrictedSets.length > 0) {
                     body.set_ids = restrictedSets;
