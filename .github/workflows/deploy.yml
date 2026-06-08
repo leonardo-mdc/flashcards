@@ -13,11 +13,33 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
+      - name: Backup config.php from server
+        run: |
+          curl -sS -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+            "ftp://ftpupload.net/flashcards.my-board.org/htdocs/config.php" \
+            -o /tmp/config.php.backup 2>/dev/null || \
+            echo "No existing config.php to back up"
+
       - name: Sync files to InfinityFree via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0  # <--- Corrigido com o 'v' e atualizado
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ftpupload.net
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./
-          server-dir: /flashcards.my-board.org/htdocs/ # Use /yourdomain.com/htdocs/ if hosting multiple domains
+          server-dir: /flashcards.my-board.org/htdocs/
+          exclude: |
+            config.php
+            .git*
+          dangerous-clean-slate: false
+
+      - name: Restore config.php to server
+        run: |
+          if [ -f /tmp/config.php.backup ] && [ -s /tmp/config.php.backup ]; then
+            curl -sS -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+              -T /tmp/config.php.backup \
+              "ftp://ftpupload.net/flashcards.my-board.org/htdocs/config.php"
+            echo "config.php restored"
+          else
+            echo "No backup to restore — upload config.php manually via InfinityFree file manager"
+          fi
