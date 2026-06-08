@@ -3,7 +3,7 @@ name: Deploy to InfinityFree
 on:
   push:
     branches:
-      - main # Change this if your production branch uses a different name
+      - main
 
 jobs:
   deploy:
@@ -13,14 +13,15 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      - name: Backup config.php from server
+      # ── Main site ──────────────────────────────────────────────
+      - name: Backup config.php (main)
         run: |
           curl -sS -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
             "ftp://ftpupload.net/flashcards.my-board.org/htdocs/config.php" \
-            -o /tmp/config.php.backup 2>/dev/null || \
-            echo "No existing config.php to back up"
+            -o /tmp/config-main.php.backup 2>/dev/null || \
+            echo "No existing config.php (main)"
 
-      - name: Sync files to InfinityFree via FTP
+      - name: Sync files to main site
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ftpupload.net
@@ -33,13 +34,45 @@ jobs:
             .git*
           dangerous-clean-slate: false
 
-      - name: Restore config.php to server
+      - name: Restore config.php (main)
         run: |
-          if [ -f /tmp/config.php.backup ] && [ -s /tmp/config.php.backup ]; then
+          if [ -f /tmp/config-main.php.backup ] && [ -s /tmp/config-main.php.backup ]; then
             curl -sS -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
-              -T /tmp/config.php.backup \
+              -T /tmp/config-main.php.backup \
               "ftp://ftpupload.net/flashcards.my-board.org/htdocs/config.php"
-            echo "config.php restored"
+            echo "config.php restored (main)"
           else
-            echo "No backup to restore — upload config.php manually via InfinityFree file manager"
+            echo "Upload config.php manually via InfinityFree file manager for main site"
+          fi
+
+      # ── Mirror site ─────────────────────────────────────────────
+      - name: Backup config.php (mirror)
+        run: |
+          curl -sS -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+            "ftp://ftpupload.net/flashcards.free.nf/htdocs/config.php" \
+            -o /tmp/config-mirror.php.backup 2>/dev/null || \
+            echo "No existing config.php (mirror)"
+
+      - name: Sync files to mirror site
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ftpupload.net
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: /flashcards.free.nf/htdocs/
+          exclude: |
+            config.php
+            .git*
+          dangerous-clean-slate: false
+
+      - name: Restore config.php (mirror)
+        run: |
+          if [ -f /tmp/config-mirror.php.backup ] && [ -s /tmp/config-mirror.php.backup ]; then
+            curl -sS -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+              -T /tmp/config-mirror.php.backup \
+              "ftp://ftpupload.net/flashcards.free.nf/htdocs/config.php"
+            echo "config.php restored (mirror)"
+          else
+            echo "Upload config.php manually via InfinityFree file manager for mirror site"
           fi
