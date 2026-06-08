@@ -83,12 +83,15 @@
             const isSelected = (selectedCardId === card.id);
             let typeLabel = '';
             let typeClass = '';
-            if (card.pattern_type === 'multiple_choice') {
-                typeLabel = 'MCQ';
+            if (card.pattern_type === 'multiple_choice' || card.pattern_type === 'image_mcq') {
+                typeLabel = card.pattern_type === 'image_mcq' ? 'ImgMCQ' : 'MCQ';
                 typeClass = 'mcq';
-            } else if (card.pattern_type === 'gap_fill') {
-                typeLabel = 'Gap';
+            } else if (card.pattern_type === 'gap_fill' || card.pattern_type === 'audio_listening') {
+                typeLabel = card.pattern_type === 'audio_listening' ? 'Audio' : 'Gap';
                 typeClass = 'gap';
+            } else if (card.pattern_type === 'image_description') {
+                typeLabel = 'Image';
+                typeClass = 'image';
             } else {
                 typeLabel = 'Text';
                 typeClass = 'text';
@@ -143,6 +146,14 @@
             const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : 1;
             html = `
                 <div class="mt-2">
+                    <label class="block font-bold mb-1">Image URL (optional):</label>
+                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Audio URL (optional):</label>
+                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
+                </div>
+                <div>
                     <label class="block font-bold mb-1">Question Text:</label>
                     <input type="text" id="editQuestionText" class="form-input" value="${escapeHtml(contentData.question_text || '')}" placeholder="What is the question?">
                 </div>
@@ -166,6 +177,14 @@
             const correctAnswers = (contentData.correct_answers || ['answer']).join(', ');
             html = `
                 <div class="mt-2">
+                    <label class="block font-bold mb-1">Image URL (optional):</label>
+                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Audio URL (optional):</label>
+                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
+                </div>
+                <div>
                     <label class="block font-bold mb-1">Sentence with ______ (blank):</label>
                     <textarea id="editSentence" class="form-textarea" rows="3" placeholder="They ______ to school every day.\brI ______ (study) more for the test.">${escapeHtml(contentData.sentence || '')}</textarea>
                     <div class="help-text">Use ______ to indicate the blank space</div>
@@ -180,9 +199,75 @@
                     <textarea id="editExample" class="form-textarea" rows="2" placeholder="Example showing correct usage\brUse \br for line breaks">${escapeHtml(contentData.example || '')}</textarea>
                 </div>
             `;
+        } else if (patternType === 'image_description') {
+            html = `
+                <div class="mt-2">
+                    <label class="block font-bold mb-1">Image URL:</label>
+                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Description:</label>
+                    <textarea id="editDescription" class="form-textarea" rows="5" placeholder="Enter the image description...\brUse \br for line breaks">${escapeHtml(contentData.description || '')}</textarea>
+                </div>
+            `;
+        } else if (patternType === 'image_mcq') {
+            const options = (contentData.options || ['Option A', 'Option B', 'Option C']).join(', ');
+            const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : 1;
+            html = `
+                <div class="mt-2">
+                    <label class="block font-bold mb-1">Image URL:</label>
+                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Question Text:</label>
+                    <input type="text" id="editQuestionText" class="form-input" value="${escapeHtml(contentData.question_text || '')}" placeholder="What is the question?">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Options (comma separated):</label>
+                    <input type="text" id="editOptions" class="form-input" value="${escapeHtml(options)}" placeholder="Option A, Option B, Option C">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold mb-1">Correct Index (0,1,2...):</label>
+                        <input type="number" id="editCorrectIndex" class="form-input" value="${correctIdx}" min="0">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Explanation (optional):</label>
+                    <textarea id="editExplanation" class="form-textarea" rows="3" placeholder="Explain why this is correct...\brUse \br for line breaks">${escapeHtml(contentData.explanation || '')}</textarea>
+                </div>
+            `;
+        } else if (patternType === 'audio_listening') {
+            html = `
+                <div class="mt-2">
+                    <label class="block font-bold mb-1">Audio URL:</label>
+                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Prompt (what to listen for):</label>
+                    <textarea id="editPrompt" class="form-textarea" rows="2" placeholder="Listen to the audio and type what you hear...">${escapeHtml(contentData.prompt || '')}</textarea>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Transcript / Correct Answer(s) (comma separated):</label>
+                    <input type="text" id="editCorrectAnswers" class="form-input" value="${escapeHtml((contentData.correct_answers || contentData.transcript || contentData.notes || '').split(',').map(s => s.trim()).join(', '))}" placeholder="answer1, answer2">
+                    <div class="help-text">For Q&A: comma-separated accepted answers. Leave empty for descriptive-only.</div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Notes / Full Transcript:</label>
+                    <textarea id="editNotes" class="form-textarea" rows="3" placeholder="Full transcript or notes for the audio...\brUse \br for line breaks">${escapeHtml(contentData.notes || contentData.transcript || '')}</textarea>
+                </div>
+            `;
         } else {
             html = `
                 <div class="mt-2">
+                    <label class="block font-bold mb-1">Image URL (optional):</label>
+                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Audio URL (optional):</label>
+                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
+                </div>
+                <div>
                     <label class="block font-bold mb-1">Definition / Description:</label>
                     <textarea id="editDefinition" class="form-textarea" rows="5" placeholder="Enter the definition or description...\brUse \br to create line breaks">${escapeHtml(contentData.definition || contentData.usage1 || '')}</textarea>
                 </div>
@@ -204,6 +289,8 @@
             const optionsInput = document.getElementById('editOptions');
             const options = optionsInput ? optionsInput.value.split(',').map(s => s.trim()) : ['Option A', 'Option B', 'Option C'];
             const correctIdx = document.getElementById('editCorrectIndex');
+            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
+            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
             contentData.options = options;
             contentData.correct_index = correctIdx ? parseInt(correctIdx.value) : 1;
             contentData.question_text = document.getElementById('editQuestionText')?.value || '';
@@ -213,7 +300,30 @@
             contentData.sentence = document.getElementById('editSentence')?.value || '';
             contentData.correct_answers = answersInput ? answersInput.value.split(',').map(s => s.trim()) : ['answer'];
             contentData.example = document.getElementById('editExample')?.value || '';
+            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
+            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
+        } else if (patternType === 'image_description') {
+            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
+            contentData.description = document.getElementById('editDescription')?.value || '';
+        } else if (patternType === 'image_mcq') {
+            const optionsInput = document.getElementById('editOptions');
+            const options = optionsInput ? optionsInput.value.split(',').map(s => s.trim()) : ['Option A', 'Option B', 'Option C'];
+            const correctIdx = document.getElementById('editCorrectIndex');
+            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
+            contentData.options = options;
+            contentData.correct_index = correctIdx ? parseInt(correctIdx.value) : 1;
+            contentData.question_text = document.getElementById('editQuestionText')?.value || '';
+            contentData.explanation = document.getElementById('editExplanation')?.value || '';
+        } else if (patternType === 'audio_listening') {
+            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
+            contentData.prompt = document.getElementById('editPrompt')?.value || '';
+            const answersInput = document.getElementById('editCorrectAnswers');
+            contentData.correct_answers = answersInput ? answersInput.value.split(',').map(s => s.trim()).filter(s => s) : [];
+            contentData.notes = document.getElementById('editNotes')?.value || '';
+            contentData.transcript = contentData.notes;
         } else {
+            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
+            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
             contentData.definition = document.getElementById('editDefinition')?.value || '';
             contentData.example = document.getElementById('editExample')?.value || '';
         }
@@ -227,10 +337,55 @@
         const contentData = getCurrentContentData();
 
         let frontHtml = '';
-        if (patternType === 'multiple_choice') {
+        if (patternType === 'image_mcq') {
+            const imageUrl = contentData.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
             const options = contentData.options || ['Option A', 'Option B', 'Option C'];
             frontHtml = `
+                <div class="flex flex-col md:flex-row gap-3 h-full min-h-[200px]">
+                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
+                        ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-32 object-contain">` : `<div class="text-5xl text-gray-300">🖼️</div>`}
+                    </div>
+                    <div class="flex flex-col justify-center md:w-1/2 gap-2">
+                        <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
+                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        } else if (patternType === 'image_description') {
+            const imageUrl = contentData.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-xl font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</div>
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-5xl mb-2">🖼️</div>`}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
+                </div>
+            `;
+        } else if (patternType === 'audio_listening') {
+            const audioUrl = contentData.audio_url || '';
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
+            const prompt = contentData.prompt || '';
+            const isInteractive = !!(prompt || (contentData.correct_answers && contentData.correct_answers.length));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
+                    ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
+                </div>
+            `;
+        } else if (patternType === 'multiple_choice') {
+            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
+            const mcImageUrl = contentData.image_url || '';
+            const mcAudioUrl = contentData.audio_url || '';
+            const mcHasImage = mcImageUrl && (mcImageUrl.startsWith('http://') || mcImageUrl.startsWith('https://') || mcImageUrl.startsWith('uploads/'));
+            const mcHasAudio = mcAudioUrl && (mcAudioUrl.startsWith('http://') || mcAudioUrl.startsWith('https://') || mcAudioUrl.startsWith('uploads/'));
+            frontHtml = `
                 <div class="text-center">
+                    ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
+                    ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-4xl mb-3">❓</div>
                     <p class="text-lg mb-4 font-bold">${escapeHtml(contentData.question_text || 'Select the correct answer:')}</p>
                     ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
@@ -238,8 +393,19 @@
                 </div>
             `;
         } else if (patternType === 'gap_fill') {
+            const gapImageUrl = contentData.image_url || '';
+            const gapAudioUrl = contentData.audio_url || '';
+            const gapHasImage = gapImageUrl && (gapImageUrl.startsWith('http://') || gapImageUrl.startsWith('https://') || gapImageUrl.startsWith('uploads/'));
+            const gapHasAudio = gapAudioUrl && (gapAudioUrl.startsWith('http://') || gapAudioUrl.startsWith('https://') || gapAudioUrl.startsWith('uploads/'));
+            const gapMediaHtml = (gapHasImage || gapHasAudio) ? `
+                <div class="w-full flex justify-center mb-2">
+                    ${gapHasImage ? `<img src="${escapeHtml(gapImageUrl)}" class="max-h-32 object-contain rounded-lg">` : ''}
+                    ${gapHasAudio ? `<div class="text-sm">🔊 Audio file provided</div>` : ''}
+                </div>
+            ` : '';
             frontHtml = `
                 <div class="text-center">
+                    ${gapMediaHtml}
                     <div class="text-4xl mb-3">✏️</div>
                     <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
                     <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(contentData.sentence || 'Complete: ______')}</p>
@@ -248,8 +414,14 @@
                 </div>
             `;
         } else {
+            const genImageUrl = contentData.image_url || '';
+            const genAudioUrl = contentData.audio_url || '';
+            const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
+            const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
+                    ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
                     <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
                 </div>
@@ -257,7 +429,36 @@
         }
 
         let backHtml = '';
-        if (patternType === 'multiple_choice') {
+        if (patternType === 'image_mcq') {
+            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
+            const correctIdx = contentData.correct_index || 1;
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
+                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
+                    </div>
+                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
+                </div>
+            `;
+        } else if (patternType === 'image_description') {
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.description || 'Description would appear here.'))}</p>
+                    </div>
+                </div>
+            `;
+        } else if (patternType === 'audio_listening') {
+            const transcript = contentData.transcript || contentData.notes || '';
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}
+                </div>
+            `;
+        } else if (patternType === 'multiple_choice') {
             const options = contentData.options || ['Option A', 'Option B', 'Option C'];
             const correctIdx = contentData.correct_index || 1;
             backHtml = `
@@ -306,7 +507,7 @@
             title: editTitle.value,
             pattern_type: patternType,
             level: editLevel.value,
-            question_text: patternType === 'multiple_choice' ? contentData.question_text : '',
+            question_text: (patternType === 'multiple_choice' || patternType === 'image_mcq') ? contentData.question_text : '',
             content_data: contentData
         };
 

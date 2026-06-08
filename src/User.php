@@ -42,6 +42,7 @@ class User
             unset($user['password_hash']);
             $user['is_admin'] = (bool) $user['is_admin'];
             $user['full_name'] = $user['full_name'] ?? '';
+            $user['english_level'] = $user['english_level'] ?? 'Beginner';
             return $user;
         }
 
@@ -100,6 +101,7 @@ class User
         $row = $stmt->fetch();
         if ($row) {
             $row['is_admin'] = (bool) $row['is_admin'];
+            $row['english_level'] = $row['english_level'] ?? 'Beginner';
         }
         return $row ?: null;
     }

@@ -88,6 +88,8 @@ class Card
         $questionText = $data['question_text'] ?? '';
         $contentData = json_encode($data['content_data'] ?? []);
 
+        self::ensurePatternTypeEnum($patternType);
+
         if ($id > 0) {
             $stmt = $pdo->prepare("UPDATE cards SET set_id=?, title=?, pattern_type=?, level=?, question_text=?, content_data=? WHERE id=?");
             $stmt->execute([$setId, $title, $patternType, $level, $questionText, $contentData, $id]);
@@ -104,5 +106,61 @@ class Card
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("DELETE FROM cards WHERE id = ?");
         $stmt->execute([$id]);
+    }
+
+    private static function ensurePatternTypeEnum(string $type): void
+    {
+        $known = ['usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_description','audio_listening','image_mcq'];
+        if (!in_array($type, $known)) return;
+
+        $pdo = Database::getConnection();
+        $col = $pdo->query("SHOW COLUMNS FROM cards WHERE Field = 'pattern_type'")->fetch();
+        if (!$col) return;
+
+        $enum = $col['Type'];
+        if (strpos($enum, $type) !== false) return;
+
+        $escaped = array_map(fn($v) => "'" . str_replace("'", "''", $v) . "'", $known);
+        $pdo->exec("ALTER TABLE cards MODIFY pattern_type ENUM(" . implode(',', $escaped) . ") DEFAULT 'usage_cases'");
+    }
+
+    public static function fixTruncatedPatternTypes(): array
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT id, pattern_type, title, content_data FROM cards WHERE pattern_type IS NULL OR pattern_type = ''");
+        $broken = $stmt->fetchAll();
+        $fixed = [];
+
+        foreach ($broken as $card) {
+            $data = json_decode($card['content_data'], true) ?: [];
+            $guessed = self::guessPatternType($data, $card['title'] ?? '');
+            if ($guessed) {
+                $pdo->prepare("UPDATE cards SET pattern_type = ? WHERE id = ?")
+                    ->execute([$guessed, (int) $card['id']]);
+                self::ensurePatternTypeEnum($guessed);
+                $fixed[] = ['id' => (int) $card['id'], 'title' => $card['title'], 'set_type' => $guessed];
+            }
+        }
+        return $fixed;
+    }
+
+    private static function guessPatternType(array $data, string $title): ?string
+    {
+        $hasImage = !empty($data['image_url']);
+        $hasAudio = !empty($data['audio_url']);
+        $hasOptions = isset($data['options']) && is_array($data['options']);
+        $hasCorrectIndex = isset($data['correct_index']);
+        $hasSentence = !empty($data['sentence']);
+        $hasDescription = !empty($data['description']);
+        $hasPrompt = !empty($data['prompt']);
+        $hasCorrectAnswers = !empty($data['correct_answers']);
+
+        if ($hasImage && $hasOptions) return 'image_mcq';
+        if ($hasImage && $hasDescription) return 'image_description';
+        if ($hasAudio && ($hasPrompt || $hasCorrectAnswers)) return 'audio_listening';
+        if ($hasOptions && $hasCorrectIndex) return 'multiple_choice';
+        if ($hasSentence && $hasCorrectAnswers) return 'gap_fill';
+
+        return null;
     }
 }

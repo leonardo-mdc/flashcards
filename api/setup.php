@@ -33,7 +33,7 @@ try {
         id INT AUTO_INCREMENT PRIMARY KEY,
         set_id INT NOT NULL,
         title VARCHAR(200),
-        pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill') DEFAULT 'usage_cases',
+        pattern_type ENUM('usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_mcq','image_description','audio_listening') DEFAULT 'usage_cases',
         level ENUM('Beginner','Intermediate','Advanced') DEFAULT 'Beginner',
         question_text TEXT,
         content_data JSON,

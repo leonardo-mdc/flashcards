@@ -210,8 +210,17 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             <span class="text-sm text-gray-500">👤 <?= escapeHtml($currentUser['username']) ?></span>
             <button id="toggleUsersBtn" class="btn btn-secondary text-sm">👥 Users</button>
             <a href="?logout=1" class="btn btn-logout">🚪 Logout</a>
+            <form action="api/migrate_types.php" method="POST" style="display:inline" onsubmit="return confirm('Fix truncated card types? This will update cards with empty pattern_type.');">
+                <button type="submit" class="btn btn-secondary text-sm">🛠 Fix Card Types</button>
+            </form>
         </div>
     </div>
+
+    <?php if (isset($_GET['migrate'])): ?>
+        <div class="px-4 py-2 rounded-xl mb-4 text-sm <?= $_GET['migrate'] === 'done' ? 'bg-green-100 border-2 border-green-400 text-green-800' : 'bg-red-100 border-2 border-red-400 text-red-800' ?>">
+            <?= escapeHtml($_SESSION['migrate_result'] ?? ($_GET['migrate'] === 'done' ? 'Cards fixed successfully.' : 'Migration failed.')) ?>
+        </div>
+    <?php unset($_SESSION['migrate_result']); endif; ?>
 
     <div id="cardEditorSection">
         <div class="whiteboard-card fixed-header">
@@ -271,6 +280,9 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                 <option value="formula_table">📐 Pure Text - Formula Table</option>
                                 <option value="multiple_choice">❓ Multiple Choice (Quiz)</option>
                                 <option value="gap_fill">✏️ Gap Fill (Quiz)</option>
+                                <option value="image_mcq">🖼️ Image MCQ (Quiz)</option>
+                                <option value="image_description">🖼️ Image Description</option>
+                                <option value="audio_listening">🎧 Audio Listening</option>
                             </select>
                         </div>
                     </div>

@@ -13,6 +13,14 @@ $cardSets = $dbConnected ? CardSet::getWithCards() : [];
 
 $loggedInStudent = isset($_SESSION['student_user']) ? $_SESSION['student_user'] : null;
 
+if ($loggedInStudent && isset($loggedInStudent['id'])) {
+    $fresh = User::getById((int) $loggedInStudent['id']);
+    if ($fresh) {
+        $_SESSION['student_user'] = $fresh;
+        $loggedInStudent = $fresh;
+    }
+}
+
 if (isset($_GET['logout'])) {
     session_destroy();
     header('Location: index.php');

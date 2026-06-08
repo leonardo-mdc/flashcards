@@ -40,7 +40,7 @@ body {
     background-image: radial-gradient(#f0f0f0 1px, transparent 0);
     background-size: 30px 30px;
     border: 8px solid #374151;
-    border-radius: 4px;
+    border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.03), 12px 12px 24px rgba(0,0,0,0.1);
 }
 .marker-border { border: 3px solid #1f2937; border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; }
@@ -49,9 +49,10 @@ body {
 .flashcard-container { perspective: 1600px; }
 .flashcard { transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; min-height: 400px; position: relative; cursor: pointer; }
 .flashcard.flipped { transform: rotateY(180deg); }
-.card-front, .card-back { backface-visibility: hidden; border-radius: 1rem; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; }
+.card-front, .card-back { backface-visibility: hidden; border-radius: 1rem; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; display: flex; flex-direction: column; }
 .card-front { transform: rotateY(0deg); z-index: 2; background: white; }
-.card-back { transform: rotateY(180deg); background: linear-gradient(135deg, #fef9e8, #ffffff); overflow-y: auto; }
+.card-front > div { flex: 1; }
+.card-back { transform: rotateY(180deg); background: linear-gradient(135deg, #fef9e8, #ffffff); }
 
 .card-back::-webkit-scrollbar { width: 6px; }
 .card-back::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
@@ -112,6 +113,35 @@ body {
     margin-top: 4px; 
     margin-bottom: 6px;
     text-align: center;
+}
+.card-front img {
+    max-height: 200px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 0.75rem;
+}
+@media (min-width: 768px) {
+    .card-front img { max-height: 260px; }
+}
+.card-front audio {
+    width: 100%;
+    max-width: 280px;
+}
+.card-front .image-mcq-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 8px;
+}
+.card-front .image-mcq-media img {
+    max-height: 180px;
+}
+@media (min-width: 768px) {
+    .card-front .image-mcq-media { min-height: 100%; }
+    .card-front .image-mcq-media img { max-height: 100%; }
 }
 .admin-link {
     position: fixed;

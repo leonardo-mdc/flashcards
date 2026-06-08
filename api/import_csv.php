@@ -70,7 +70,7 @@ try {
 
         if (empty($title) || empty($type)) continue;
 
-        $validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill'];
+        $validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill', 'image_description', 'audio_listening', 'image_mcq'];
         if (!in_array($type, $validTypes)) {
             $errors[] = "Row $rowNum: Invalid type '$type'";
             continue;
@@ -116,6 +116,12 @@ try {
 
         $contentData = [];
 
+        $imageUrl = trim($data['image_url'] ?? '');
+        $audioUrl = trim($data['audio_url'] ?? '');
+        $description = trim($data['description'] ?? '');
+        $prompt = trim($data['prompt'] ?? '');
+        $transcript = trim($data['transcript'] ?? '');
+
         if ($type === 'multiple_choice') {
             $options = [];
             for ($i = 1; $i <= 4; $i++) {
@@ -136,6 +142,8 @@ try {
                 'correct_index' => $correctIdx,
                 'question_text' => $questionText ?: 'Select the correct answer:',
                 'explanation' => $explanation,
+                'image_url' => $imageUrl,
+                'audio_url' => $audioUrl,
             ];
         } elseif ($type === 'gap_fill') {
             $answers = !empty($correctAnswer) ? array_map('trim', explode(',', $correctAnswer)) : ['answer'];
@@ -143,10 +151,50 @@ try {
                 'sentence' => $sentence ?: 'Complete: ______',
                 'correct_answers' => $answers,
                 'example' => $examples[0] ?? '',
+                'image_url' => $imageUrl,
+                'audio_url' => $audioUrl,
+            ];
+        } elseif ($type === 'image_mcq') {
+            $options = [];
+            for ($i = 1; $i <= 4; $i++) {
+                $val = trim($data["opt$i"] ?? '');
+                if (!empty($val)) $options[] = $val;
+            }
+            if (empty($options)) {
+                $errors[] = "Row $rowNum: image_mcq needs at least one option";
+                continue;
+            }
+            $correctIdx = 0;
+            if ($correctAnswer !== '') {
+                $correctIdx = (int) $correctAnswer;
+                if ($correctIdx < 0 || $correctIdx >= count($options)) $correctIdx = 0;
+            }
+            $contentData = [
+                'image_url' => $imageUrl,
+                'options' => $options,
+                'correct_index' => $correctIdx,
+                'question_text' => $questionText ?: 'Select the correct answer:',
+                'explanation' => $explanation,
+            ];
+        } elseif ($type === 'image_description') {
+            $contentData = [
+                'image_url' => $imageUrl,
+                'description' => $description ?: $definition ?: 'No description',
+            ];
+        } elseif ($type === 'audio_listening') {
+            $answers = !empty($correctAnswer) ? array_map('trim', explode(',', $correctAnswer)) : [];
+            $contentData = [
+                'audio_url' => $audioUrl,
+                'prompt' => $prompt,
+                'correct_answers' => $answers,
+                'transcript' => $transcript,
+                'notes' => $transcript,
             ];
         } else {
             $contentData = [
                 'definition' => $definition ?: 'No definition',
+                'image_url' => $imageUrl,
+                'audio_url' => $audioUrl,
             ];
             if (!empty($usage1)) $contentData['usage1'] = $usage1;
             if (!empty($examples)) $contentData['example1a'] = $examples[0];
@@ -166,7 +214,7 @@ try {
             'title' => $title,
             'pattern_type' => $type,
             'level' => $level,
-            'question_text' => $type === 'multiple_choice' ? $questionText : '',
+            'question_text' => ($type === 'multiple_choice' || $type === 'image_mcq') ? $questionText : '',
             'content_data' => $contentData,
         ]);
         $imported++;
