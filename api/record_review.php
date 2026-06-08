@@ -33,12 +33,7 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) FROM cards");
     $totalCards = (int) $stmt->fetchColumn();
     $progressPercent = $totalCards > 0 ? min(100, (int) round(($stats['cards_reviewed'] / $totalCards) * 100)) : 0;
-    $user = User::getById($userId);
-    if (!$user) {
-        echo json_encode(['success' => false, 'error' => 'User not found']);
-        exit;
-    }
-    User::updateProgress($userId, $progressPercent, $user['english_level'] ?? 'Beginner');
+    User::updateProgress($userId, $progressPercent);
 
     $daysToAdd = match ($quality) {
         0 => 1,

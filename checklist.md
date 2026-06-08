@@ -91,7 +91,7 @@ These were in the base code and need no reimplementation:
 - [ ] ⬜ `admin_cards.php` crash prevention (null pointer guards)
 - [ ] ⬜ CSV data loss on import/export round-trip
 - [ ] ⬜ `pattern_type` ENUM truncation (convert to VARCHAR)
-- [ ] ⬜ `english_level` overwritten on review
+- [x] ✅ `english_level` overwritten on review — decoupled `updateProgress` from level
 - [ ] ⬜ MCQ `correct_index` bug (`||` vs `??`)
 - [ ] ⬜ Import preview interval mismatch
 - [ ] ⬜ Due button sizing on mobile

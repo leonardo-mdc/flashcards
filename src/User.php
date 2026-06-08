@@ -128,12 +128,12 @@ class User
         $stmt->execute([$id]);
     }
 
-    public static function updateProgress(int $id, int $progress, string $englishLevel): void
+    public static function updateProgress(int $id, int $progress): void
     {
         self::ensureTable();
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("UPDATE users SET progress = ?, english_level = ? WHERE id = ?");
-        $stmt->execute([$progress, $englishLevel, $id]);
+        $stmt = $pdo->prepare("UPDATE users SET progress = ? WHERE id = ?");
+        $stmt->execute([$progress, $id]);
     }
 
     public static function resetProgress(int $id): void
