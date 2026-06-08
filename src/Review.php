@@ -188,6 +188,50 @@ class Review
         return false;
     }
 
+    public static function getStreakDays(int $userId): int
+    {
+        self::ensureHistoryTable();
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT DATE(reviewed_at) as review_date
+            FROM review_history
+            WHERE user_id = ?
+            ORDER BY review_date DESC
+        ");
+        $stmt->execute([$userId]);
+        $dates = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+        if (empty($dates)) return 0;
+
+        $streak = 0;
+        $today = new \DateTime();
+        $checkDate = clone $today;
+
+        foreach ($dates as $dateStr) {
+            $date = new \DateTime($dateStr);
+            $diff = (int) $checkDate->diff($date)->days;
+
+            if ($streak === 0) {
+                if ($diff <= 1) {
+                    $streak = 1;
+                    $checkDate = $date;
+                } else {
+                    break;
+                }
+            } else {
+                if ($diff === 1) {
+                    $streak++;
+                    $checkDate = $date;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return $streak;
+    }
+
     public static function getStats(int $userId): array
     {
         self::ensureHistoryTable();
@@ -219,6 +263,8 @@ class Review
         $upcoming->execute([$userId]);
         $dueToday = (int) $upcoming->fetchColumn();
 
+        $streak = self::getStreakDays($userId);
+
         return [
             'total_reviews' => $totalReviews,
             'correct_count' => $correctCount,
@@ -226,6 +272,7 @@ class Review
             'cards_reviewed' => $cardsReviewed,
             'daily' => $dailyStats,
             'due_today' => $dueToday,
+            'streak_days' => $streak,
         ];
     }
 }

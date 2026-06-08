@@ -72,6 +72,7 @@
     }
 
     let allDueReviewed = false;
+    let streakDays = 0;
 
     async function loadCardsFromAPI(setId, levels, studentId, randomMode = false, studentLevel = '') {
         allDueReviewed = false;
@@ -122,7 +123,9 @@
 
     async function loadStats() {
         const res = await apiCall('api/get_stats.php', 'POST', { user_id: currentStudent?.id });
-        return res?.stats || null;
+        const stats = res?.stats || null;
+        if (stats?.streak_days !== undefined) streakDays = stats.streak_days;
+        return stats;
     }
 
     let statusTimeout;
@@ -258,6 +261,10 @@
 
         const stats = await loadStats();
 
+        const streakHtml = streakDays > 0
+            ? `<span class="streak-badge">🔥 ${streakDays}d</span>`
+            : '';
+
         const html = `
             <div class="whiteboard-card p-4 md:p-6 shadow-2xl">
                 <div class="text-center mb-4 md:mb-5">
@@ -275,8 +282,9 @@
                             </div>
                         </div>
                         <div class="text-sm text-gray-500 mt-1">📝 ${escapeHtml(currentStudent?.full_name || currentStudent?.username)}</div>
-                        <div class="flex gap-4 mt-2 text-sm items-center">
+                        <div class="flex gap-4 mt-2 text-sm items-center flex-wrap">
                             <span>🎯 Level: <strong>${escapeHtml(currentStudent?.english_level || 'Beginner')}</strong></span>
+                            ${streakHtml}
                             <a href="?logout=1" class="text-xs text-red-600 underline ml-auto">Logout</a>
                         </div>
                     </div>
@@ -710,9 +718,10 @@
 
     function renderStudyScreen() {
         if (!currentCards.length || currentIndex >= currentCards.length) {
+            const streakMsg = streakDays > 1 ? `<div class="streak-badge text-lg my-3">🔥 ${streakDays} day streak!</div>` : '';
             const message = allDueReviewed
-                ? `<div class="text-5xl md:text-6xl mb-2">🎉📚</div><h2 class="text-2xl md:text-3xl text-blue-800 marker-underline mb-2">All cards viewed!</h2><p class="text-sm md:text-base mb-3">You've seen all due cards for this set.<br>Try another set or come back later!</p>`
-                : `<div class="text-5xl md:text-6xl mb-2">🏆✨</div><h2 class="text-2xl md:text-3xl text-green-800 marker-underline mb-2">All caught up!</h2><p class="text-sm md:text-base mb-3">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>`;
+                ? `<div class="text-5xl md:text-6xl mb-2">🎉📚</div><h2 class="text-2xl md:text-3xl text-blue-800 marker-underline mb-2">All cards viewed!</h2><p class="text-sm md:text-base mb-3">You've seen all due cards for this set.<br>Try another set or come back later!</p>${streakMsg}`
+                : `<div class="text-5xl md:text-6xl mb-2">🏆✨</div><h2 class="text-2xl md:text-3xl text-green-800 marker-underline mb-2">All caught up!</h2><p class="text-sm md:text-base mb-3">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>${streakMsg}`;
             appEl.innerHTML = `<div class="whiteboard-card p-4 md:p-8 text-center">${message}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-4 md:px-6 py-1 md:py-2 text-base md:text-lg rounded-xl btn-chalk">← Back</button></div>`;
             document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
             return;
