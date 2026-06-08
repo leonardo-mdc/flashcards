@@ -1,2 +1,4 @@
 config.php
 import/export/
+conversations/
+import/CSV_STRUCTURE_FOR_AI.txt
