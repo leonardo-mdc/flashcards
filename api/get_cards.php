@@ -98,6 +98,14 @@ try {
 
     $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $studentId, !empty($setIds) ? $setIds : null);
 
+    if ($dueOnly && $studentId > 0) {
+        $dueStmt = $pdo->prepare("SELECT card_id FROM user_card_progress WHERE user_id = ? AND next_review <= CURDATE()");
+        $dueStmt->execute([$studentId]);
+        $dueIds = $dueStmt->fetchAll(PDO::FETCH_COLUMN);
+        $dueIds = array_map('intval', $dueIds);
+        $cards = array_values(array_filter($cards, fn($c) => in_array((int)$c['id'], $dueIds)));
+    }
+
     $allDueReviewed = $totalAvailable > 0 && empty($cards);
 
     $setName = null;
