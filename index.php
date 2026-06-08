@@ -9,7 +9,7 @@ require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/Review.php';
 
 $dbConnected = Database::testConnection();
-$cardSets = $dbConnected ? CardSet::getWithCards() : [];
+$cardSets = $dbConnected ? CardSet::getWithCards($loggedInStudent['username'] ?? '') : [];
 
 $loggedInStudent = isset($_SESSION['student_user']) ? $_SESSION['student_user'] : null;
 
@@ -78,7 +78,7 @@ if (!$loggedInStudent) {
             loggedInStudent: <?php
                 $studentData = $loggedInStudent;
                 if ($studentData && isset($studentData['id'])) {
-                    $studentData['accessible_set_ids'] = Review::getAccessibleSets((int) $studentData['id']);
+                    $studentData['accessible_set_ids'] = Review::getAccessibleSets((int) $studentData['id'], $studentData['username'] ?? '');
                 }
                 echo json_encode($studentData);
             ?>

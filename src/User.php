@@ -106,6 +106,14 @@ class User
         return $row ?: null;
     }
 
+    public static function getStudents(): array
+    {
+        self::ensureTable();
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT id, username, full_name FROM users WHERE is_admin = 0 OR is_admin IS NULL ORDER BY username ASC");
+        return $stmt->fetchAll();
+    }
+
     public static function hasAdmins(): bool
     {
         self::ensureTable();

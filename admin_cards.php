@@ -135,7 +135,8 @@ if ($isAjax && isset($_GET['action'])) {
                 echo json_encode(['success' => false, 'error' => 'Name is required']);
                 exit;
             }
-            $id = CardSet::create($name);
+            $exclusiveTo = $data['exclusive_to'] ?? '';
+            $id = CardSet::create($name, $exclusiveTo);
             echo json_encode(['success' => true, 'id' => $id, 'name' => $name]);
         } elseif ($action === 'update_set') {
             $data = json_decode(file_get_contents('php://input'), true);
@@ -145,8 +146,11 @@ if ($isAjax && isset($_GET['action'])) {
                 echo json_encode(['success' => false, 'error' => 'Invalid data']);
                 exit;
             }
-            CardSet::update($id, $name);
+            $exclusiveTo = $data['exclusive_to'] ?? '';
+            CardSet::update($id, $name, $exclusiveTo);
             echo json_encode(['success' => true]);
+        } elseif ($action === 'get_students') {
+            echo json_encode(['success' => true, 'students' => User::getStudents()]);
         } elseif ($action === 'delete_set') {
             $id = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 0;
             if ($id <= 0) {
@@ -373,14 +377,19 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
 </div>
 
     <div id="manageSetsModal" class="modal-overlay hidden">
-        <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
+        <div class="whiteboard-card" style="max-width:560px;width:95%;padding:24px;max-height:85vh;overflow-y:auto;">
             <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg marker-underline">⚙️ Manage Card Sets</h3>
                 <button id="closeSetsModalBtn" class="text-gray-500 text-xl font-bold">&times;</button>
             </div>
-            <div class="mb-3 flex gap-2">
-                <input type="text" id="newSetNameInput" class="form-input flex-1" placeholder="New set name...">
-                <button id="addSetBtn" class="btn btn-success whitespace-nowrap">➕ Add</button>
+            <div class="mb-2">
+                <div class="flex gap-2 items-start">
+                    <div class="flex-1">
+                        <input type="text" id="newSetNameInput" class="form-input w-full" placeholder="New set name...">
+                        <div id="newSetExclusiveContainer"></div>
+                    </div>
+                    <button id="addSetBtn" class="btn btn-success whitespace-nowrap mt-0">➕ Add</button>
+                </div>
             </div>
             <div id="setListContainer">
                 <div class="text-center text-gray-500 py-4">Loading...</div>

@@ -832,8 +832,31 @@
     const manageSetsModal = document.getElementById('manageSetsModal');
     const setListContainer = document.getElementById('setListContainer');
 
+    let cachedStudents = null;
+
+    async function getStudents() {
+        if (cachedStudents) return cachedStudents;
+        const res = await fetch('admin_cards.php?action=get_students&t=' + Date.now(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        cachedStudents = data.success ? data.students : [];
+        return cachedStudents;
+    }
+
+    function renderExclusiveSelect(exclusiveTo, students) {
+        const selected = exclusiveTo ? exclusiveTo.split(',').map(s => s.trim()).filter(s => s) : [];
+        let opts = '<option value="">— No one (public) —</option>';
+        students.forEach(s => {
+            const sel = selected.includes(s.username) ? 'selected' : '';
+            opts += `<option value="${escapeHtml(s.username)}" ${sel}>${escapeHtml(s.full_name || s.username)}</option>`;
+        });
+        return `<select class="exclusive-select text-xs mt-1 w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;">${opts}</select>`;
+    }
+
     async function loadSetsList() {
         if (!setListContainer) return;
+        const students = await getStudents();
         setListContainer.innerHTML = '<div class="text-center text-gray-500 py-4"><div class="loader"></div> Loading...</div>';
         const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -845,14 +868,24 @@
         }
         let html = '';
         data.sets.forEach(set => {
+            const excl = set.exclusive_to || '';
             html += `
-                <div class="set-item" data-id="${set.id}">
-                    <span class="set-name-display font-bold">${escapeHtml(set.name)}</span>
-                    <input type="text" class="set-name-input hidden" value="${escapeHtml(set.name)}">
-                    <button class="edit-set-btn btn btn-primary text-xs" style="padding:4px 10px;font-size:0.7rem;">✏️</button>
-                    <button class="save-set-btn btn btn-success text-xs hidden" style="padding:4px 10px;font-size:0.7rem;">💾</button>
-                    <button class="cancel-set-btn btn btn-secondary text-xs hidden" style="padding:4px 10px;font-size:0.7rem;">✕</button>
-                    <button class="delete-set-btn btn btn-danger text-xs" style="padding:4px 10px;font-size:0.7rem;">🗑</button>
+                <div class="set-item mb-3 p-3 border-2 border-gray-200 rounded-xl" data-id="${set.id}">
+                    <div class="flex justify-between items-center flex-wrap gap-1">
+                        <span class="set-name-display font-bold text-sm">${escapeHtml(set.name)}</span>
+                        <input type="text" class="set-name-input hidden text-sm" value="${escapeHtml(set.name)}">
+                        <div class="flex gap-1 flex-wrap">
+                            <button class="edit-set-btn btn btn-primary text-xs" style="padding:3px 8px;font-size:0.65rem;">✏️</button>
+                            <button class="save-set-btn btn btn-success text-xs hidden" style="padding:3px 8px;font-size:0.65rem;">💾</button>
+                            <button class="cancel-set-btn btn btn-secondary text-xs hidden" style="padding:3px 8px;font-size:0.65rem;">✕</button>
+                            <button class="delete-set-btn btn btn-danger text-xs" style="padding:3px 8px;font-size:0.65rem;">🗑</button>
+                        </div>
+                    </div>
+                    <div class="mt-1 exclusive-row">
+                        <label class="text-xs text-gray-500">🎯 Exclusivity:</label>
+                        ${renderExclusiveSelect(excl, students)}
+                        <p class="text-xs text-gray-400 mt-1">Select students who can see this set. Leave empty for public.</p>
+                    </div>
                 </div>`;
         });
         setListContainer.innerHTML = html;
@@ -890,10 +923,12 @@
                 const id = parseInt(item.dataset.id);
                 const name = item.querySelector('.set-name-input').value.trim();
                 if (!name) { alert('Name cannot be empty'); return; }
+                const select = item.querySelector('.exclusive-select');
+                const exclusiveTo = select ? Array.from(select.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
                 const response = await fetch('admin_cards.php?action=update_set', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    body: JSON.stringify({ id, name })
+                    body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -925,6 +960,26 @@
         });
     }
 
+    let newSetExclusiveSelectHtml = '';
+
+    async function loadNewSetExclusiveSelect() {
+        const students = await getStudents();
+        let opts = '';
+        students.forEach(s => {
+            opts += `<option value="${escapeHtml(s.username)}">${escapeHtml(s.full_name || s.username)}</option>`;
+        });
+        newSetExclusiveSelectHtml = `
+            <div class="mt-1">
+                <label class="text-xs text-gray-500">🎯 Exclusivity (optional):</label>
+                <select id="newSetExclusiveSelect" class="text-xs w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;margin-top:2px;">
+                    <option value="">— Public (all students) —</option>
+                    ${opts}
+                </select>
+            </div>`;
+        const container = document.getElementById('newSetExclusiveContainer');
+        if (container) container.innerHTML = newSetExclusiveSelectHtml;
+    }
+
     async function refreshSets() {
         const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -952,6 +1007,7 @@
 
     document.getElementById('manageSetsBtn')?.addEventListener('click', () => {
         manageSetsModal.classList.remove('hidden');
+        loadNewSetExclusiveSelect();
         loadSetsList();
     });
 
@@ -967,10 +1023,12 @@
         const input = document.getElementById('newSetNameInput');
         const name = input.value.trim();
         if (!name) { alert('Enter a name for the new set'); return; }
+        const exclSelect = document.getElementById('newSetExclusiveSelect');
+        const exclusiveTo = exclSelect ? Array.from(exclSelect.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
         const response = await fetch('admin_cards.php?action=create_set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, exclusive_to: exclusiveTo })
         });
         const result = await response.json();
         if (result.success) {

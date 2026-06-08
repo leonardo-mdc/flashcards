@@ -107,13 +107,33 @@ class Review
         )");
     }
 
-    public static function getAccessibleSets(int $userId): array
+    public static function getAccessibleSets(int $userId, string $username = ''): array
     {
         self::ensureSetAccessTable();
         $pdo = Database::getConnection();
+
+        $stmt = $pdo->query("SELECT COUNT(*) FROM card_sets WHERE exclusive_to IS NOT NULL AND exclusive_to != ''");
+        $hasExclusive = $stmt->fetchColumn() > 0;
+
+        if (!$hasExclusive) {
+            $stmt = $pdo->prepare("SELECT set_id FROM student_set_access WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        }
+
+        if ($username !== '') {
+            $stmt = $pdo->prepare("SELECT id FROM card_sets WHERE exclusive_to = '' OR FIND_IN_SET(?, exclusive_to)");
+            $stmt->execute([$username]);
+        } else {
+            $stmt = $pdo->query("SELECT id FROM card_sets WHERE exclusive_to = ''");
+        }
+        $accessible = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
         $stmt = $pdo->prepare("SELECT set_id FROM student_set_access WHERE user_id = ?");
         $stmt->execute([$userId]);
-        return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $assigned = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+        return array_values(array_unique(array_merge($accessible, $assigned)));
     }
 
     public static function setAccessibleSets(int $userId, array $setIds): void
