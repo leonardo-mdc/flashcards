@@ -61,7 +61,35 @@ if ($isAjax && isset($_GET['action'])) {
     try {
         $action = $_GET['action'];
 
-        if ($action === 'get_cards') {
+        if ($action === 'preview_csv') {
+            if (!isset($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
+                echo json_encode(['success' => false, 'error' => 'CSV file required']);
+                exit;
+            }
+            $handle = fopen($_FILES['csv']['tmp_name'], 'r');
+            if (!$handle) {
+                echo json_encode(['success' => false, 'error' => 'Cannot read file']);
+                exit;
+            }
+            $header = fgetcsv($handle);
+            if (!$header) {
+                fclose($handle);
+                echo json_encode(['success' => false, 'error' => 'Empty CSV']);
+                exit;
+            }
+            $header = array_map('trim', $header);
+            if (isset($header[0])) {
+                $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+            }
+            $rows = [];
+            while (($row = fgetcsv($handle)) !== false) {
+                $row = array_slice(array_map('trim', $row), 0, count($header));
+                $rows[] = array_combine($header, array_pad($row, count($header), ''));
+            }
+            fclose($handle);
+            echo json_encode(['success' => true, 'header' => $header, 'rows' => $rows, 'total' => count($rows)]);
+            exit;
+        } elseif ($action === 'get_cards') {
             $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
             echo json_encode(['success' => true, 'cards' => Card::getBySet($setId)]);
         } elseif ($action === 'get_sets') {
@@ -240,7 +268,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <button id="manageSetsBtn" class="btn btn-secondary text-sm">⚙️ Manage</button>
                     <button id="importCsvBtn" class="btn btn-secondary text-sm">📥 Import</button>
                     <a href="api/export_csv.php" class="btn btn-secondary text-sm">📤 Export</a>
-                    <input type="file" id="importCsvInput" accept=".csv" class="hidden">
                     <div class="flex gap-2">
                         <button id="saveCardBtn" class="btn btn-success">💾 SAVE</button>
                         <button id="revertCardBtn" class="btn btn-warning">↺ REVERT</button>
@@ -393,6 +420,135 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             </div>
             <div id="setListContainer">
                 <div class="text-center text-gray-500 py-4">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="importModal" class="modal-overlay hidden">
+        <div class="import-modal-content">
+            <div class="import-header">
+                <h2 class="text-xl marker-underline">📥 Import CSV</h2>
+                <button id="closeImportBtn" class="text-gray-500 text-xl font-bold">&times;</button>
+            </div>
+
+            <!-- Step 1: File Selection -->
+            <div id="importStepFile">
+                <div class="import-file-area" id="importDropZone">
+                    <div class="import-file-placeholder">
+                        <span class="text-4xl">📂</span>
+                        <p class="text-lg font-bold mt-2">Drop CSV file here or click to browse</p>
+                        <p class="text-sm text-gray-400 mt-1">Accepts .csv files with flashcard data</p>
+                    </div>
+                    <input type="file" id="importFileInput" accept=".csv" class="hidden">
+                </div>
+            </div>
+
+            <!-- Step 2: Preview & Mapping (hidden initially) -->
+            <div id="importStepPreview" class="hidden">
+                <div class="import-toolbar">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-600">File:</span>
+                        <span id="importFileName" class="text-sm text-gray-800 font-mono"></span>
+                        <span id="importRowCount" class="text-xs text-gray-400"></span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="importChangeFileBtn" class="btn btn-secondary btn-sm">📁 Change</button>
+                        <button id="importExecuteBtn" class="btn btn-success">🚀 Import</button>
+                        <button id="importCancelBtn" class="btn btn-danger btn-sm">Cancel</button>
+                    </div>
+                </div>
+
+                <div class="import-mapping-bar">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <label class="text-sm font-bold">Map to Card Set:</label>
+                        <select id="importSetSelector" class="form-select" style="width:220px;margin:0;">
+                            <option value="">-- Select Set --</option>
+                            <?php foreach ($cardSets as $set): ?>
+                                <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <label class="filter-checkbox text-sm">
+                            <input type="checkbox" id="importApplySetAll"> Apply to all
+                        </label>
+                        <div class="flex gap-1 items-center">
+                            <input type="text" id="importNewSetName" class="form-input form-input-sm" style="width:160px;margin:0;" placeholder="Or create new set...">
+                            <button id="importCreateSetBtn" class="btn btn-primary btn-xs">➕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="import-records-container">
+                    <table class="import-table" id="importPreviewTable">
+                        <thead>
+                            <tr>
+                                <th style="width:32px;">#</th>
+                                <th style="width:140px;">Card Set</th>
+                                <th style="width:120px;">Style</th>
+                                <th>Title</th>
+                                <th>Level</th>
+                                <th>Content Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody id="importPreviewBody">
+                            <tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="import-editor-panel" id="importEditorPanel">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="panel-title" style="margin-bottom:0;">✏️ Edit Selected Card</h3>
+                        <div class="flex gap-2">
+                            <button id="importApplyCardBtn" class="btn btn-primary btn-sm">Apply</button>
+                            <button id="importApplyAllBtn" class="btn btn-secondary btn-sm">Apply to all</button>
+                            <button id="importDeleteCardBtn" class="btn btn-danger btn-sm">🗑 Remove</button>
+                        </div>
+                    </div>
+                    <div class="import-edit-grid">
+                        <div>
+                            <label class="field-label">Title</label>
+                            <input type="text" id="importEditTitle" class="form-input" placeholder="Card title">
+                        </div>
+                        <div>
+                            <label class="field-label">Card Set</label>
+                            <select id="importEditSetId" class="form-select">
+                                <option value="">-- Select Set --</option>
+                                <?php foreach ($cardSets as $set): ?>
+                                    <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Style</label>
+                            <select id="importEditStyle" class="form-select">
+                                <option value="usage_cases">📘 Usage Cases</option>
+                                <option value="deep_dive">🧠 Deep Dive</option>
+                                <option value="formula_table">📐 Formula Table</option>
+                                <option value="multiple_choice">❓ Multiple Choice</option>
+                                <option value="gap_fill">✏️ Gap Fill</option>
+                                <option value="image_mcq">🖼️ Image MCQ</option>
+                                <option value="image_description">🖼️ Image Description</option>
+                                <option value="audio_listening">🎧 Audio Listening</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Level</label>
+                            <select id="importEditLevel" class="form-select">
+                                <option value="Beginner">🔰 Beginner</option>
+                                <option value="Intermediate">📚 Intermediate</option>
+                                <option value="Advanced">🎓 Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="field-label">Definition / Question</label>
+                        <textarea id="importEditDefinition" class="form-textarea" rows="3" placeholder="Definition, question text, or sentence..."></textarea>
+                    </div>
+                    <div>
+                        <label class="field-label">Example / Options / Answers</label>
+                        <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, options (comma-sep), or correct answer..."></textarea>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

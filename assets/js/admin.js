@@ -987,6 +987,8 @@
         const data = await response.json();
         if (data.success && data.sets) {
             const currentVal = setSelector.value;
+            const importVal = importSetSelector ? importSetSelector.value : '';
+            const importEditVal = importEditSetId ? importEditSetId.value : '';
             setSelector.innerHTML = '<option value="">-- Choose Card Set --</option>';
             if (editSetId) {
                 const currentEditVal = editSetId.value;
@@ -1002,6 +1004,15 @@
                 });
             }
             if (currentVal) setSelector.value = currentVal;
+            // Sync import modal selectors
+            if (importSetSelector) {
+                importSetSelector.innerHTML = setSelector.innerHTML.replace('-- Choose Card Set --', '-- Select Set --');
+                if (importVal) importSetSelector.value = importVal;
+            }
+            if (importEditSetId) {
+                importEditSetId.innerHTML = editSetId ? editSetId.innerHTML : setSelector.innerHTML;
+                if (importEditVal) importEditSetId.value = importEditVal;
+            }
         }
     }
 
@@ -1056,15 +1067,362 @@
         }
     });
 
-    // --- Import CSV ---
-    document.getElementById('importCsvBtn')?.addEventListener('click', () => {
-        document.getElementById('importCsvInput').click();
+    // --- Import CSV with Preview/Checkout Modal ---
+    let importRows = [];
+    let importHeader = [];
+    let importSelectedIdx = -1;
+    let importFileHandle = null;
+
+    const importModal = document.getElementById('importModal');
+    const importStepFile = document.getElementById('importStepFile');
+    const importStepPreview = document.getElementById('importStepPreview');
+    const importDropZone = document.getElementById('importDropZone');
+    const importFileInput = document.getElementById('importFileInput');
+    const importFileName = document.getElementById('importFileName');
+    const importRowCount = document.getElementById('importRowCount');
+    const importPreviewBody = document.getElementById('importPreviewBody');
+    const importSetSelector = document.getElementById('importSetSelector');
+    const importApplySetAll = document.getElementById('importApplySetAll');
+    const importNewSetName = document.getElementById('importNewSetName');
+    const importEditTitle = document.getElementById('importEditTitle');
+    const importEditSetId = document.getElementById('importEditSetId');
+    const importEditStyle = document.getElementById('importEditStyle');
+    const importEditLevel = document.getElementById('importEditLevel');
+    const importEditDefinition = document.getElementById('importEditDefinition');
+    const importEditExtra = document.getElementById('importEditExtra');
+
+    function openImportModal() {
+        importModal.classList.remove('hidden');
+        importStepFile.classList.remove('hidden');
+        importStepPreview.classList.add('hidden');
+        importRows = [];
+        importHeader = [];
+        importSelectedIdx = -1;
+        importFileHandle = null;
+        importFileName.textContent = '';
+        importRowCount.textContent = '';
+        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
+    }
+
+    function closeImportModal() {
+        importModal.classList.add('hidden');
+    }
+
+    importDropZone.addEventListener('click', () => importFileInput.click());
+
+    importDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        importDropZone.classList.add('dragover');
     });
-    document.getElementById('importCsvInput')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    importDropZone.addEventListener('dragleave', () => {
+        importDropZone.classList.remove('dragover');
+    });
+    importDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        importDropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].name.endsWith('.csv')) {
+            loadCsvPreview(files[0]);
+        } else {
+            alert('Please drop a .csv file');
+        }
+    });
+
+    importFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            loadCsvPreview(e.target.files[0]);
+        }
+    });
+
+    document.getElementById('importChangeFileBtn')?.addEventListener('click', () => {
+        importFileInput.click();
+    });
+
+    document.getElementById('importCancelBtn')?.addEventListener('click', closeImportModal);
+    document.getElementById('closeImportBtn')?.addEventListener('click', closeImportModal);
+    importModal?.addEventListener('click', (e) => {
+        if (e.target === importModal) closeImportModal();
+    });
+
+    document.getElementById('importCsvBtn')?.addEventListener('click', openImportModal);
+
+    async function loadCsvPreview(file) {
+        importFileHandle = file;
+        importFileName.textContent = file.name;
+
         const formData = new FormData();
         formData.append('csv', file);
+
+        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
+
+        try {
+            const response = await fetch('admin_cards.php?action=preview_csv&t=' + Date.now(), {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const result = await response.json();
+
+            if (!result.success) {
+                alert('❌ ' + (result.error || 'Failed to parse CSV'));
+                return;
+            }
+
+            importHeader = result.header || [];
+            importRows = (result.rows || []).map(row => {
+                const levelMap = {
+                    'beginner': 'Beginner', 'a1': 'Beginner', 'a2': 'Beginner',
+                    'intermediate': 'Intermediate', 'b1': 'Intermediate', 'b2': 'Intermediate',
+                    'advanced': 'Advanced', 'c1': 'Advanced', 'c2': 'Advanced',
+                };
+                let level = (row.level || 'Beginner').trim();
+                level = levelMap[level.toLowerCase()] || level;
+                let type = (row.type || 'usage_cases').trim().toLowerCase();
+                const validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill', 'image_mcq', 'image_description', 'audio_listening'];
+                if (!validTypes.includes(type)) type = 'usage_cases';
+                return {
+                    ...row,
+                    _setName: (row.set || '').trim(),
+                    type: type,
+                    level: level,
+                };
+            });
+
+            importRowCount.textContent = `(${result.total} rows)`;
+            renderImportPreview();
+            importStepFile.classList.add('hidden');
+            importStepPreview.classList.remove('hidden');
+
+        } catch (err) {
+            alert('❌ Network error during CSV preview');
+        }
+    }
+
+    function renderImportPreview() {
+        const styleLabels = {
+            usage_cases: '📘 Usage Cases',
+            deep_dive: '🧠 Deep Dive',
+            formula_table: '📐 Formula Table',
+            multiple_choice: '❓ MCQ',
+            gap_fill: '✏️ Gap Fill',
+            image_mcq: '🖼️ Image MCQ',
+            image_description: '🖼️ Image Desc',
+            audio_listening: '🎧 Audio Listening',
+        };
+
+        let html = '';
+        importRows.forEach((row, idx) => {
+            const isSelected = idx === importSelectedIdx;
+            const style = row.type || 'usage_cases';
+            const title = row.title || 'Untitled';
+            const level = row.level || 'Beginner';
+            const setName = row._setName || '';
+            const preview = row.definition || row.question_text || row.sentence || '';
+            const previewTrim = preview.length > 60 ? preview.substring(0, 60) + '...' : preview;
+            const styleClass = style === 'multiple_choice' || style === 'image_mcq' ? 'mcq' : (style === 'gap_fill' ? 'gap' : 'text');
+
+            html += `<tr class="${isSelected ? 'selected' : ''}" data-idx="${idx}">
+                <td class="text-gray-400 text-xs">${idx + 1}</td>
+                <td>${escapeHtml(setName)}</td>
+                <td><span class="card-type ${styleClass}">${styleLabels[style] || style}</span></td>
+                <td class="import-row-title">${escapeHtml(title)}</td>
+                <td><span class="text-xs bg-gray-100 px-2 py-0.5 rounded">${escapeHtml(level)}</span></td>
+                <td class="text-gray-500 text-xs">${escapeHtml(previewTrim)}</td>
+            </tr>`;
+        });
+
+        importPreviewBody.innerHTML = html;
+
+        importPreviewBody.querySelectorAll('tr').forEach(tr => {
+            tr.addEventListener('click', () => {
+                const idx = parseInt(tr.dataset.idx);
+                selectImportRow(idx);
+            });
+        });
+
+        if (importRows.length > 0 && importSelectedIdx < 0) {
+            selectImportRow(0);
+        }
+    }
+
+    function selectImportRow(idx) {
+        if (idx < 0 || idx >= importRows.length) return;
+        importSelectedIdx = idx;
+        const row = importRows[idx];
+
+        importEditTitle.value = row.title || '';
+        importEditStyle.value = row.type || 'usage_cases';
+        importEditLevel.value = row.level || 'Beginner';
+
+        const setName = row._setName || '';
+        let matchedSetId = '';
+        if (setName) {
+            const options = importEditSetId.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].text === setName) {
+                    matchedSetId = options[i].value;
+                    break;
+                }
+            }
+        }
+        importEditSetId.value = matchedSetId || '';
+
+        const def = row.definition || row.question_text || row.sentence || '';
+        const extra = row.example1 || row.usage1 || row.tip || row.correct_answer || '';
+
+        importEditDefinition.value = def;
+        importEditExtra.value = extra;
+
+        importPreviewBody.querySelectorAll('tr').forEach(tr => {
+            tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
+        });
+    }
+
+    function updateRowFromEditor(idx) {
+        if (idx < 0 || idx >= importRows.length) return;
+        const row = importRows[idx];
+        row.title = importEditTitle.value;
+        row.type = importEditStyle.value;
+        row.level = importEditLevel.value;
+
+        const setId = importEditSetId.value;
+        const setName = importEditSetId.options[importEditSetId.selectedIndex]?.text || '';
+        if (setId) {
+            row._setName = setName;
+            row.set_id = setId;
+        } else {
+            row._setName = '';
+            row.set_id = '';
+        }
+
+        row.definition = importEditDefinition.value;
+        row.question_text = importEditDefinition.value;
+        row.sentence = importEditDefinition.value;
+
+        const extra = importEditExtra.value;
+        if (row.type === 'gap_fill') {
+            row.correct_answer = extra;
+        } else if (row.type === 'multiple_choice' || row.type === 'image_mcq') {
+            row.correct_answer = '';
+            row.question_text = importEditDefinition.value;
+        } else {
+            row.example1 = extra;
+            row.tip = extra;
+            row.usage1 = extra;
+        }
+    }
+
+    document.getElementById('importApplyCardBtn')?.addEventListener('click', () => {
+        if (importSelectedIdx < 0) { alert('Select a row first'); return; }
+        updateRowFromEditor(importSelectedIdx);
+        renderImportPreview();
+        selectImportRow(importSelectedIdx);
+    });
+
+    document.getElementById('importApplyAllBtn')?.addEventListener('click', () => {
+        if (importRows.length === 0) return;
+        for (let i = 0; i < importRows.length; i++) {
+            updateRowFromEditor(i);
+        }
+        renderImportPreview();
+        if (importSelectedIdx >= 0) selectImportRow(importSelectedIdx);
+    });
+
+    document.getElementById('importDeleteCardBtn')?.addEventListener('click', () => {
+        if (importSelectedIdx < 0) { alert('Select a row first'); return; }
+        if (!confirm('Remove this row from import?')) return;
+        importRows.splice(importSelectedIdx, 1);
+        importSelectedIdx = -1;
+        renderImportPreview();
+        if (importRows.length > 0) selectImportRow(0);
+    });
+
+    document.getElementById('importCreateSetBtn')?.addEventListener('click', async () => {
+        const name = importNewSetName.value.trim();
+        if (!name) { alert('Enter a set name'); return; }
+        const response = await fetch('admin_cards.php?action=create_set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ name })
+        });
+        const result = await response.json();
+        if (result.success) {
+            await refreshSets();
+            importSetSelector.innerHTML = setSelector.innerHTML;
+            importEditSetId.innerHTML = editSetId ? editSetId.innerHTML : setSelector.innerHTML;
+            if (result.id) importSetSelector.value = String(result.id);
+            importNewSetName.value = '';
+        } else {
+            alert(result.error || 'Error creating set');
+        }
+    });
+
+    importApplySetAll.addEventListener('change', () => {
+        if (importApplySetAll.checked && importSetSelector.value) {
+            const setName = importSetSelector.options[importSetSelector.selectedIndex]?.text || '';
+            importRows.forEach(row => {
+                row._setName = setName;
+                row.set_id = importSetSelector.value;
+            });
+            renderImportPreview();
+        }
+    });
+
+    importSetSelector.addEventListener('change', () => {
+        if (importApplySetAll.checked && importSetSelector.value) {
+            const setName = importSetSelector.options[importSetSelector.selectedIndex]?.text || '';
+            importRows.forEach(row => {
+                row._setName = setName;
+                row.set_id = importSetSelector.value;
+            });
+            renderImportPreview();
+        }
+    });
+
+    document.getElementById('importExecuteBtn')?.addEventListener('click', async () => {
+        if (importRows.length === 0) { alert('No rows to import'); return; }
+        if (!confirm(`Import ${importRows.length} cards?`)) return;
+
+        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation'];
+        const csvRows = [csvCols.join(',')];
+
+        importRows.forEach(row => {
+            const vals = csvCols.map(col => {
+                let val = '';
+                if (col === 'set') {
+                    val = row._setName || '';
+                } else if (col === 'set_id') {
+                    val = row.set_id || '';
+                } else if (col === 'type') {
+                    val = row.type || 'usage_cases';
+                } else if (col === 'level') {
+                    val = row.level || 'Beginner';
+                } else if (col === 'title') {
+                    val = row.title || '';
+                } else if (col === 'definition' || col === 'question_text' || col === 'sentence') {
+                    val = row.definition || row.question_text || row.sentence || '';
+                } else if (col === 'usage1' || col === 'tip') {
+                    val = row.usage1 || row.tip || '';
+                } else if (col === 'example1' || col === 'example2') {
+                    val = row.example1 || row.example2 || '';
+                } else if (col === 'correct_answer') {
+                    val = row.correct_answer || '';
+                } else {
+                    val = row[col] || '';
+                }
+                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                    val = '"' + val.replace(/"/g, '""') + '"';
+                }
+                return val;
+            });
+            csvRows.push(vals.join(','));
+        });
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const formData = new FormData();
+        formData.append('csv', blob, (importFileHandle ? importFileHandle.name : 'import.csv'));
+
         try {
             const response = await fetch('api/import_csv.php', { method: 'POST', body: formData });
             const result = await response.json();
@@ -1073,6 +1431,8 @@
                 if (result.errors.length) msg += `\n⚠️ ${result.errors.length} errors:\n` + result.errors.slice(0, 10).join('\n');
                 if (result.errors.length > 10) msg += `\n...and ${result.errors.length - 10} more`;
                 alert(msg);
+                closeImportModal();
+                await refreshSets();
                 if (setSelector.value) loadCards(setSelector.value);
             } else {
                 alert('❌ Import failed: ' + (result.error || 'Unknown error'));
@@ -1080,7 +1440,6 @@
         } catch (err) {
             alert('❌ Network error during import');
         }
-        e.target.value = '';
     });
 
     loadCardSets();

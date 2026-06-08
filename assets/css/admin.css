@@ -238,3 +238,123 @@ body {
     border-radius: 8px;
     font-size: 0.85rem;
 }
+
+/* === Import CSV Modal === */
+.import-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 1100px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.import-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e5e7eb;
+}
+.import-file-area {
+    border: 3px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f9fafb;
+}
+.import-file-area:hover,
+.import-file-area.dragover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+.import-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+}
+.import-mapping-bar {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+.import-records-container {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+.import-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+.import-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #f3f4f6;
+    border-bottom: 2px solid #e5e7eb;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.import-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.import-table tr:hover td {
+    background: #f9fafb;
+}
+.import-table tr.selected td {
+    background: #eff6ff;
+}
+.import-table .import-row-title {
+    font-weight: 600;
+    color: #1f2937;
+}
+.import-editor-panel {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px;
+}
+.import-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.field-label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    color: #374151;
+}
+.form-input-sm {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .import-modal-content { padding: 12px; width: 98%; }
+    .import-edit-grid { grid-template-columns: 1fr; }
+    .import-table { font-size: 0.7rem; }
+    .import-table th, .import-table td { padding: 4px 6px; }
+    .import-records-container { max-height: 180px; }
+}
