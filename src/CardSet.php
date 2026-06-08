@@ -19,20 +19,16 @@ class CardSet
         return $stmt->fetchAll();
     }
 
-    public static function getWithCards(string $username = ''): array
+    public static function getWithCards(): array
     {
-        self::ensureTable();
         $pdo = Database::getConnection();
-        $sql = "
+        $stmt = $pdo->query("
             SELECT DISTINCT cs.id, cs.name
             FROM card_sets cs
             INNER JOIN cards c ON c.set_id = cs.id
-        ";
-        if ($username !== '') {
-            $sql .= " WHERE cs.exclusive_to = '' OR FIND_IN_SET(" . $pdo->quote($username) . ", cs.exclusive_to)";
-        }
-        $sql .= " GROUP BY cs.id, cs.name ORDER BY cs.name ASC";
-        $stmt = $pdo->query($sql);
+            GROUP BY cs.id, cs.name
+            ORDER BY cs.name ASC
+        ");
         return $stmt->fetchAll();
     }
 

@@ -19,7 +19,7 @@ try {
         $username = $user ? ($user['username'] ?? '') : '';
     }
 
-    $sets = CardSet::getWithCards($username);
+    $sets = CardSet::getWithCards();
 
     if ($userId > 0) {
         $accessible = Review::getAccessibleSets($userId, $username);

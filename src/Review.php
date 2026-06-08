@@ -112,28 +112,38 @@ class Review
         self::ensureSetAccessTable();
         $pdo = Database::getConnection();
 
-        $stmt = $pdo->query("SELECT COUNT(*) FROM card_sets WHERE exclusive_to IS NOT NULL AND exclusive_to != ''");
-        $hasExclusive = $stmt->fetchColumn() > 0;
-
-        if (!$hasExclusive) {
-            $stmt = $pdo->prepare("SELECT set_id FROM student_set_access WHERE user_id = ?");
-            $stmt->execute([$userId]);
-            return $stmt->fetchAll(\PDO::FETCH_COLUMN);
-        }
-
-        if ($username !== '') {
-            $stmt = $pdo->prepare("SELECT id FROM card_sets WHERE exclusive_to = '' OR FIND_IN_SET(?, exclusive_to)");
-            $stmt->execute([$username]);
-        } else {
-            $stmt = $pdo->query("SELECT id FROM card_sets WHERE exclusive_to = ''");
-        }
-        $accessible = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-
+        // Layer 1: user → sets (student_set_access).
         $stmt = $pdo->prepare("SELECT set_id FROM student_set_access WHERE user_id = ?");
         $stmt->execute([$userId]);
-        $assigned = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $allowed = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $allowed = array_map('intval', $allowed);
 
-        return array_values(array_unique(array_merge($accessible, $assigned)));
+        // Admin context (no username): return only explicit assignments
+        if ($username === '') {
+            return $allowed;
+        }
+
+        // Student context: empty = all sets
+        if (empty($allowed)) {
+            $stmt = $pdo->query("SELECT id FROM card_sets");
+            $all = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            $allowed = array_map('intval', $all);
+        }
+
+        // Layer 2: set → users (exclusive_to). Remove sets where user isn't listed.
+        $stmt = $pdo->query("SELECT id, exclusive_to FROM card_sets WHERE exclusive_to IS NOT NULL AND exclusive_to != ''");
+        $exclusiveSets = $stmt->fetchAll();
+        foreach ($exclusiveSets as $set) {
+            $setId = (int) $set['id'];
+            if (in_array($setId, $allowed)) {
+                $usernames = array_map('trim', explode(',', $set['exclusive_to']));
+                if (!in_array($username, $usernames)) {
+                    $allowed = array_values(array_filter($allowed, fn($id) => $id !== $setId));
+                }
+            }
+        }
+
+        return $allowed;
     }
 
     public static function setAccessibleSets(int $userId, array $setIds): void

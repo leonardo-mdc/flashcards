@@ -9,7 +9,7 @@ require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/Review.php';
 
 $dbConnected = Database::testConnection();
-$cardSets = $dbConnected ? CardSet::getWithCards($loggedInStudent['username'] ?? '') : [];
+$cardSets = $dbConnected ? CardSet::getWithCards() : [];
 
 $loggedInStudent = isset($_SESSION['student_user']) ? $_SESSION['student_user'] : null;
 
