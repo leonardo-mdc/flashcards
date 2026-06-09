@@ -14,6 +14,7 @@
     const editFieldsContainer = document.getElementById('editFieldsContainer');
     const frontPreviewContent = document.getElementById('frontPreviewContent');
     const backPreviewContent = document.getElementById('backPreviewContent');
+    const cardSearchInput = document.getElementById('cardSearchInput');
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -47,6 +48,8 @@
             return;
         }
         currentSetId = setId;
+        if (cardSearchInput) { cardSearchInput.value = ''; }
+        cardSearchTerm = '';
 
         const levels = [];
         if (document.getElementById('levelBeginner').checked) levels.push('Beginner');
@@ -67,10 +70,16 @@
         }
     }
 
+    let cardSearchTerm = '';
+
     function renderCardList(levelFilter = []) {
         let filteredCards = currentCards;
         if (levelFilter.length > 0) {
             filteredCards = currentCards.filter(card => levelFilter.includes(card.level));
+        }
+        if (cardSearchTerm) {
+            const term = cardSearchTerm.toLowerCase();
+            filteredCards = filteredCards.filter(card => (card.title || '').toLowerCase().includes(term));
         }
 
         if (!filteredCards.length) {
@@ -677,6 +686,10 @@
         modal.innerHTML = `
             <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit User</h3>
+                <div class="flex gap-2 mb-3">
+                    <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
+                    <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
+                </div>
                 <input type="hidden" id="editUserId" value="${data.id}">
                 <input type="hidden" id="editUserLevel" value="${data.level || 'Beginner'}">
                 <label class="block font-bold mb-1">Username:</label>
@@ -697,10 +710,6 @@
                     <div id="userSetAccessContainer" class="space-y-1">
                         <div class="text-sm text-gray-400">Loading sets...</div>
                     </div>
-                </div>
-                <div class="flex gap-2 mt-3">
-                    <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
-                    <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
                 </div>
                 <p id="editUserError" class="text-red-600 text-center mt-2 hidden"></p>
             </div>
@@ -831,6 +840,17 @@
     document.getElementById('filterCardsBtn').addEventListener('click', () => {
         if (setSelector.value) loadCards(setSelector.value);
     });
+
+    if (cardSearchInput) {
+        cardSearchInput.addEventListener('input', () => {
+            cardSearchTerm = cardSearchInput.value;
+            const levels = [];
+            if (document.getElementById('levelBeginner').checked) levels.push('Beginner');
+            if (document.getElementById('levelIntermediate').checked) levels.push('Intermediate');
+            if (document.getElementById('levelAdvanced').checked) levels.push('Advanced');
+            renderCardList(levels);
+        });
+    }
 
     setInterval(() => {
         if (document.activeElement && (document.activeElement.classList?.contains('form-input') ||
@@ -1808,5 +1828,53 @@
     });
     importEditLevel?.addEventListener('change', renderImportCardPreview);
 
-    loadCardSets();
+    loadCardSets().then(async () => {
+        const params = new URLSearchParams(window.location.search);
+        const focusCardId = params.get('focus_card');
+        const returnUrl = params.get('return_url');
+
+        if (returnUrl) {
+            const header = document.querySelector('.fixed-header .flex');
+            if (header) {
+                const backLink = document.createElement('a');
+                backLink.href = returnUrl;
+                backLink.className = 'btn btn-secondary btn-sm';
+                backLink.innerHTML = '← Back to Study';
+                header.prepend(backLink);
+            }
+        }
+
+        if (focusCardId) {
+            try {
+                const res = await fetch(`admin_cards.php?action=get_card&card_id=${focusCardId}&t=${Date.now()}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (data.success && data.card) {
+                    const card = data.card;
+                    const setId = card.set_id;
+                    if (setId) {
+                        setSelector.value = setId;
+                        setSelector.dispatchEvent(new Event('change'));
+                        // After cards load, find and select this card
+                        const checkCards = setInterval(() => {
+                            const found = currentCards.find(c => c.id == focusCardId);
+                            if (found) {
+                                clearInterval(checkCards);
+                                loadCardIntoEditor(found);
+                                document.querySelectorAll('.card-item').forEach(i => {
+                                    i.classList.toggle('selected', parseInt(i.dataset.id) == focusCardId);
+                                });
+                                selectedCardId = parseInt(focusCardId);
+                            }
+                        }, 200);
+                        // Stop checking after 10 seconds
+                        setTimeout(() => clearInterval(checkCards), 10000);
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading focused card:', e);
+            }
+        }
+    });
 })();

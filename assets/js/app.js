@@ -723,7 +723,14 @@
                 ? `<div class="text-5xl md:text-6xl mb-2">🎉📚</div><h2 class="text-2xl md:text-3xl text-blue-800 marker-underline mb-2">All cards viewed!</h2><p class="text-sm md:text-base mb-3">You've seen all due cards for this set.<br>Try another set or come back later!</p>${streakMsg}`
                 : `<div class="text-5xl md:text-6xl mb-2">🏆✨</div><h2 class="text-2xl md:text-3xl text-green-800 marker-underline mb-2">All caught up!</h2><p class="text-sm md:text-base mb-3">Great job, ${escapeHtml(currentStudent?.username || currentStudent?.name || 'student')}!</p>${streakMsg}`;
             appEl.innerHTML = `<div class="whiteboard-card p-4 md:p-8 text-center">${message}<button id="backToWelcomeBtn" class="bg-gray-800 text-white px-4 md:px-6 py-1 md:py-2 text-base md:text-lg rounded-xl btn-chalk">← Back</button></div>`;
-            document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
+            document.getElementById('backToWelcomeBtn')?.addEventListener('click', () => {
+                dueOnlyMode = false;
+                currentView = 'welcome';
+                render();
+                if (allDueReviewed) {
+                    displayStatusMessage('✅ All due cards reviewed! Great job!', 'success');
+                }
+            });
             return;
         }
 

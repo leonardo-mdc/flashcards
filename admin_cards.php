@@ -290,6 +290,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         <div class="grid-2cols">
             <div class="whiteboard-card">
                 <h2 class="text-xl marker-underline mb-3">📋 Cards in Set</h2>
+                <input type="text" id="cardSearchInput" class="form-input mb-2" placeholder="🔍 Search cards by title..." style="margin-bottom:8px;">
                 <div id="cardListContainer" class="card-list">
                     <div class="text-center text-gray-500 py-8">Select a card set to load cards</div>
                 </div>
