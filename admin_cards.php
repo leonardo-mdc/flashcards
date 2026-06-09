@@ -541,14 +541,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <label class="field-label">Definition / Question</label>
-                        <textarea id="importEditDefinition" class="form-textarea" rows="3" placeholder="Definition, question text, or sentence..."></textarea>
-                    </div>
-                    <div>
-                        <label class="field-label">Example / Options / Answers</label>
-                        <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, options (comma-sep), or correct answer..."></textarea>
-                    </div>
+                    <div id="importDynamicFields"></div>
                 </div>
 
                 <!-- Visual Preview -->

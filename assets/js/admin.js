@@ -1103,8 +1103,75 @@
     const importEditSetId = document.getElementById('importEditSetId');
     const importEditStyle = document.getElementById('importEditStyle');
     const importEditLevel = document.getElementById('importEditLevel');
-    const importEditDefinition = document.getElementById('importEditDefinition');
-    const importEditExtra = document.getElementById('importEditExtra');
+    const importDynamicFields = document.getElementById('importDynamicFields');
+
+    function getImportField(id) { return document.getElementById(id)?.value || ''; }
+    function setImportField(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
+
+    function renderImportEditorFields(type, row) {
+        const r = row || {};
+        const cd = {};
+        let contentData = r.content_data;
+        if (typeof contentData === 'string' && contentData) {
+            try { contentData = JSON.parse(contentData); } catch (e) { contentData = {}; }
+        }
+        if (contentData && typeof contentData === 'object') Object.assign(cd, contentData);
+
+        const val = (...fields) => { for (const f of fields) { const v = r[f] || cd[f]; if (v != null && v !== '') return escapeHtml(v); } return ''; };
+        let html = '';
+
+        if (type === 'multiple_choice' || type === 'image_mcq') {
+            const opts = cd.options || [];
+            const optStr = Array.isArray(opts) ? opts.join(', ') : (r.opt1 ? [r.opt1, r.opt2, r.opt3, r.opt4].filter(Boolean).join(', ') : '');
+            const corrIdx = cd.correct_index !== undefined ? cd.correct_index : (r.correct_answer || '1');
+            html = `
+                ${type === 'image_mcq' ? `<div><label class="field-label">Image URL</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>` : ''}
+                <div><label class="field-label">Question Text</label><textarea id="importEditQuestionText" class="form-textarea" rows="2">${val('question_text')}</textarea></div>
+                <div><label class="field-label">Options (comma separated)</label><input type="text" id="importEditOptions" class="form-input" value="${escapeHtml(optStr)}"></div>
+                <div><label class="field-label">Correct Index (0, 1, 2...)</label><input type="number" id="importEditCorrectIndex" class="form-input" value="${corrIdx}" min="0"></div>
+                <div><label class="field-label">Explanation</label><textarea id="importEditExplanation" class="form-textarea" rows="2">${val('explanation')}</textarea></div>
+                ${type === 'multiple_choice' ? `<div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div><div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>` : ''}
+            `;
+        } else if (type === 'gap_fill') {
+            const answers = cd.correct_answers || [];
+            const ansStr = Array.isArray(answers) ? answers.join(', ') : (r.correct_answer || '');
+            html = `
+                <div><label class="field-label">Sentence with ______</label><textarea id="importEditSentence" class="form-textarea" rows="3">${val('sentence')}</textarea></div>
+                <div><label class="field-label">Correct Answer(s) (comma separated)</label><input type="text" id="importEditCorrectAnswers" class="form-input" value="${escapeHtml(ansStr)}"></div>
+                <div><label class="field-label">Example Sentence</label><textarea id="importEditExample" class="form-textarea" rows="2">${val('example', 'example1', 'example')}</textarea></div>
+                <div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
+                <div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
+            `;
+        } else if (type === 'image_description') {
+            html = `
+                <div><label class="field-label">Image URL</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
+                <div><label class="field-label">Description</label><textarea id="importEditDescription" class="form-textarea" rows="5">${val('description')}</textarea></div>
+            `;
+        } else if (type === 'audio_listening') {
+            html = `
+                <div><label class="field-label">Audio URL</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
+                <div><label class="field-label">Prompt</label><textarea id="importEditPrompt" class="form-textarea" rows="2">${val('prompt')}</textarea></div>
+                <div><label class="field-label">Correct Answer(s) (comma separated)</label><input type="text" id="importEditCorrectAnswers" class="form-input" value="${escapeHtml(r.correct_answer || (cd.correct_answers || []).join(', ') || '')}"></div>
+                <div><label class="field-label">Notes / Transcript</label><textarea id="importEditTranscript" class="form-textarea" rows="3">${val('transcript')}</textarea></div>
+            `;
+        } else {
+            // Text types: usage_cases, deep_dive, formula_table
+            html = `
+                <div><label class="field-label">Definition / Description</label><textarea id="importEditDefinition" class="form-textarea" rows="5">${val('definition')}</textarea></div>
+                <div><label class="field-label">Usage / Example</label><textarea id="importEditExample" class="form-textarea" rows="3">${val('usage1', 'example1', 'example')}</textarea></div>
+                <div><label class="field-label">Tip</label><textarea id="importEditTip" class="form-textarea" rows="2">${val('tip')}</textarea></div>
+                <div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
+                <div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
+            `;
+        }
+        importDynamicFields.innerHTML = html;
+
+        // Attach input listeners on new fields to update preview
+        importDynamicFields.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', renderImportCardPreview);
+            el.addEventListener('change', renderImportCardPreview);
+        });
+    }
 
     function openImportModal() {
         importModal.classList.remove('hidden');
@@ -1117,6 +1184,7 @@
         importFileName.textContent = '';
         importRowCount.textContent = '';
         importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
+        importDynamicFields.innerHTML = '';
         document.getElementById('importPreviewSection')?.classList.add('hidden');
     }
 
@@ -1302,52 +1370,54 @@
 
     function getImportContentData(row, overrideType) {
         const type = overrideType || row.type || 'usage_cases';
-        const definition = (document.getElementById('importEditDefinition')?.value || row.definition || '').trim();
-        const extra = (document.getElementById('importEditExtra')?.value || '').trim();
+        const gf = getImportField;
 
         if (type === 'multiple_choice' || type === 'image_mcq') {
-            const parts = extra.split(',').map(s => s.trim()).filter(Boolean);
+            const optsStr = gf('importEditOptions') || (row.opt1 ? [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean).join(', ') : '');
+            const parts = optsStr.split(',').map(s => s.trim()).filter(Boolean);
             const options = parts.length >= 2 ? parts : ['Option A', 'Option B', 'Option C'];
             return {
-                image_url: row.image_url || '',
-                audio_url: row.audio_url || '',
+                image_url: gf('importEditImageUrl') || row.image_url || '',
+                audio_url: gf('importEditAudioUrl') || row.audio_url || '',
                 options: options,
-                correct_index: row.correct_index !== undefined ? parseInt(row.correct_index) : 1,
-                question_text: definition || 'Select the correct answer:',
-                explanation: row.explanation || '',
+                correct_index: parseInt(gf('importEditCorrectIndex') || row.correct_answer || '1'),
+                question_text: gf('importEditQuestionText') || row.question_text || 'Select the correct answer:',
+                explanation: gf('importEditExplanation') || row.explanation || '',
             };
         }
         if (type === 'gap_fill') {
-            const answers = extra ? extra.split(',').map(s => s.trim()).filter(Boolean) : ['answer'];
+            const ans = gf('importEditCorrectAnswers') || row.correct_answer || '';
+            const answers = ans ? ans.split(',').map(s => s.trim()).filter(Boolean) : ['answer'];
             return {
-                sentence: definition || 'Complete: ______',
+                sentence: gf('importEditSentence') || row.sentence || 'Complete: ______',
                 correct_answers: answers,
-                example: row.example1 || row.example || '',
-                image_url: row.image_url || '',
-                audio_url: row.audio_url || '',
+                example: gf('importEditExample') || row.example1 || row.example || '',
+                image_url: gf('importEditImageUrl') || row.image_url || '',
+                audio_url: gf('importEditAudioUrl') || row.audio_url || '',
             };
         }
         if (type === 'image_description') {
             return {
-                image_url: row.image_url || '',
-                description: definition || row.description || '',
+                image_url: gf('importEditImageUrl') || row.image_url || '',
+                description: gf('importEditDescription') || row.description || 'No description',
             };
         }
         if (type === 'audio_listening') {
-            const answers = extra ? extra.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const ans = gf('importEditCorrectAnswers') || row.correct_answer || '';
+            const answers = ans ? ans.split(',').map(s => s.trim()).filter(Boolean) : [];
             return {
-                audio_url: row.audio_url || '',
-                prompt: definition || '',
+                audio_url: gf('importEditAudioUrl') || row.audio_url || '',
+                prompt: gf('importEditPrompt') || row.prompt || '',
                 correct_answers: answers,
-                notes: extra || row.transcript || '',
-                transcript: extra || row.transcript || '',
+                notes: gf('importEditTranscript') || row.transcript || '',
+                transcript: gf('importEditTranscript') || row.transcript || '',
             };
         }
         return {
-            image_url: row.image_url || '',
-            audio_url: row.audio_url || '',
-            definition: definition,
-            example: extra || row.example1 || '',
+            image_url: gf('importEditImageUrl') || row.image_url || '',
+            audio_url: gf('importEditAudioUrl') || row.audio_url || '',
+            definition: gf('importEditDefinition') || row.definition || 'No definition',
+            example: gf('importEditExample') || row.example1 || row.usage1 || '',
         };
     }
 
@@ -1547,11 +1617,7 @@
         }
         importEditSetId.value = matchedSetId || '';
 
-        const def = row.definition || row.question_text || row.sentence || '';
-        const extra = row.example1 || row.usage1 || row.tip || row.correct_answer || '';
-
-        importEditDefinition.value = def;
-        importEditExtra.value = extra;
+        renderImportEditorFields(row.type || 'usage_cases', row);
 
         importPreviewBody.querySelectorAll('tr').forEach(tr => {
             tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
@@ -1577,20 +1643,28 @@
             row.set_id = '';
         }
 
-        row.definition = importEditDefinition.value;
-        row.question_text = importEditDefinition.value;
-        row.sentence = importEditDefinition.value;
+        const type = row.type;
+        row.definition = getImportField('importEditDefinition');
+        row.question_text = getImportField('importEditQuestionText');
+        row.sentence = getImportField('importEditSentence');
+        row.correct_answer = getImportField('importEditCorrectAnswer') || getImportField('importEditCorrectAnswers') || '';
+        row.explanation = getImportField('importEditExplanation');
+        row.image_url = getImportField('importEditImageUrl');
+        row.audio_url = getImportField('importEditAudioUrl');
+        row.description = getImportField('importEditDescription');
+        row.prompt = getImportField('importEditPrompt');
+        row.transcript = getImportField('importEditTranscript');
+        row.example1 = getImportField('importEditExample') || row.example1;
+        row.usage1 = getImportField('importEditExample') || row.usage1;
+        row.tip = getImportField('importEditTip');
 
-        const extra = importEditExtra.value;
-        if (row.type === 'gap_fill') {
-            row.correct_answer = extra;
-        } else if (row.type === 'multiple_choice' || row.type === 'image_mcq') {
-            row.correct_answer = '';
-            row.question_text = importEditDefinition.value;
-        } else {
-            row.example1 = extra;
-            row.tip = extra;
-            row.usage1 = extra;
+        if (type === 'multiple_choice' || type === 'image_mcq') {
+            const opts = getImportField('importEditOptions');
+            const parts = opts.split(',').map(s => s.trim()).filter(Boolean);
+            parts.forEach((opt, i) => { if (i < 4) row['opt' + (i + 1)] = opt; });
+            row.correct_answer = getImportField('importEditCorrectIndex');
+        } else if (type === 'gap_fill' || type === 'audio_listening') {
+            row.correct_answer = getImportField('importEditCorrectAnswers');
         }
     }
 
@@ -1725,10 +1799,14 @@
     });
 
     importEditTitle?.addEventListener('input', renderImportCardPreview);
-    importEditStyle?.addEventListener('change', renderImportCardPreview);
+    importEditStyle?.addEventListener('change', () => {
+        if (importSelectedIdx >= 0 && importSelectedIdx < importRows.length) {
+            const row = importRows[importSelectedIdx];
+            renderImportEditorFields(importEditStyle.value, row);
+        }
+        renderImportCardPreview();
+    });
     importEditLevel?.addEventListener('change', renderImportCardPreview);
-    importEditDefinition?.addEventListener('input', renderImportCardPreview);
-    importEditExtra?.addEventListener('input', renderImportCardPreview);
 
     loadCardSets();
 })();
