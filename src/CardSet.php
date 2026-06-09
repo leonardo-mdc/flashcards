@@ -15,7 +15,12 @@ class CardSet
     {
         self::ensureTable();
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT id, name, exclusive_to FROM card_sets ORDER BY name ASC");
+        $stmt = $pdo->query("
+            SELECT cs.id, cs.name, cs.exclusive_to,
+                   (SELECT COUNT(*) FROM cards c WHERE c.set_id = cs.id) AS card_count
+            FROM card_sets cs
+            ORDER BY cs.name ASC
+        ");
         return $stmt->fetchAll();
     }
 

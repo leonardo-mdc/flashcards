@@ -429,25 +429,23 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
 </div>
 
     <div id="manageSetsModal" class="modal-overlay hidden">
-        <div class="whiteboard-card" style="max-width:560px;width:95%;padding:24px;max-height:85vh;overflow-y:auto;">
+        <div class="whiteboard-card" style="max-width:580px;width:95%;padding:24px;max-height:85vh;overflow-y:auto;">
             <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg marker-underline">⚙️ Manage Card Sets</h3>
                 <button id="closeSetsModalBtn" class="text-gray-500 text-xl font-bold">&times;</button>
             </div>
-            <div class="mb-2">
-                <div class="flex gap-2 items-start">
-                    <div class="flex-1">
-                        <input type="text" id="newSetNameInput" class="form-input w-full" placeholder="New set name...">
-                        <div id="newSetExclusiveContainer"></div>
-                    </div>
-                    <button id="addSetBtn" class="btn btn-success whitespace-nowrap mt-0">➕ Add</button>
-                </div>
+            <div class="flex gap-2 mb-2">
+                <input type="text" id="setsSearchInput" class="form-input flex-1" placeholder="🔍 Search sets..." style="padding:6px 10px;">
+                <input type="text" id="newSetNameInput" class="form-input" placeholder="New set name..." style="padding:6px 10px;max-width:180px;">
+                <button id="addSetBtn" class="btn btn-success whitespace-nowrap" style="padding:6px 12px;">➕ Add</button>
             </div>
+            <div id="newSetExclusiveContainer"></div>
             <div id="setListContainer">
                 <div class="text-center text-gray-500 py-4">Loading...</div>
             </div>
         </div>
     </div>
+    <div id="manageSetsToast" style="display:none;position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;"></div>
 
     <div id="importModal" class="modal-overlay hidden">
         <div class="import-modal-content">

@@ -918,8 +918,23 @@
     // --- Manage Sets ---
     const manageSetsModal = document.getElementById('manageSetsModal');
     const setListContainer = document.getElementById('setListContainer');
+    const toastEl = document.getElementById('manageSetsToast');
+
+    let toastTimeout;
+
+    function showToast(message, type = 'info') {
+        if (!toastEl) return;
+        const colors = { success: '#16a34a', error: '#dc2626', warning: '#d97706', info: '#2563eb' };
+        toastEl.style.background = colors[type];
+        toastEl.style.color = 'white';
+        toastEl.textContent = message;
+        toastEl.style.display = 'block';
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => { toastEl.style.display = 'none'; }, 3000);
+    }
 
     let cachedStudents = null;
+    let cachedSets = null;
 
     async function getStudents() {
         if (cachedStudents) return cachedStudents;
@@ -931,87 +946,124 @@
         return cachedStudents;
     }
 
-    function renderExclusiveSelect(exclusiveTo, students) {
-        const selected = exclusiveTo ? exclusiveTo.split(',').map(s => s.trim()).filter(s => s) : [];
-        let opts = '<option value="">— No one (public) —</option>';
-        students.forEach(s => {
-            const sel = selected.includes(s.username) ? 'selected' : '';
-            opts += `<option value="${escapeHtml(s.username)}" ${sel}>${escapeHtml(s.full_name || s.username)}</option>`;
-        });
-        return `<select class="exclusive-select text-xs mt-1 w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;">${opts}</select>`;
-    }
-
-    async function loadSetsList() {
-        if (!setListContainer) return;
-        const students = await getStudents();
-        setListContainer.innerHTML = '<div class="text-center text-gray-500 py-4"><div class="loader"></div> Loading...</div>';
+    async function fetchSets() {
         const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
         if (!data.success || !data.sets) {
-            setListContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading sets</div>';
+            if (setListContainer) setListContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading sets</div>';
             return;
         }
+        cachedSets = data.sets;
+        renderSetsList(data.sets);
+        refreshSetSelectors(data.sets);
+    }
+
+    function renderSetsList(sets) {
+        if (!setListContainer) return;
+        const searchVal = document.getElementById('setsSearchInput')?.value.toLowerCase() || '';
+        const filtered = searchVal ? sets.filter(s => s.name.toLowerCase().includes(searchVal)) : sets;
+
         let html = '';
-        data.sets.forEach(set => {
+        filtered.forEach(set => {
+            const count = set.card_count !== undefined ? parseInt(set.card_count) : 0;
             const excl = set.exclusive_to || '';
+            const names = excl.split(',').map(s => s.trim()).filter(Boolean);
+            let chipHtml;
+            if (names.length) {
+                const shown = names.slice(0, 3);
+                const remainder = names.length - shown.length;
+                chipHtml = shown.map(u => `<span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full mr-1 mb-0.5">🔒 ${escapeHtml(u)}</span>`).join('');
+                if (remainder > 0) chipHtml += `<span class="text-xs text-gray-400 mr-1">+${remainder} more</span>`;
+            } else {
+                chipHtml = '<span class="text-xs text-gray-400">🌐 Public</span>';
+            }
             html += `
-                <div class="set-item mb-3 p-3 border-2 border-gray-200 rounded-xl" data-id="${set.id}">
-                    <div class="flex justify-between items-center flex-wrap gap-1">
-                        <span class="set-name-display font-bold text-sm">${escapeHtml(set.name)}</span>
-                        <input type="text" class="set-name-input hidden text-sm" value="${escapeHtml(set.name)}">
-                        <div class="flex gap-1 flex-wrap">
-                            <button class="edit-set-btn btn btn-primary text-xs" style="padding:3px 8px;font-size:0.65rem;">✏️</button>
-                            <button class="save-set-btn btn btn-success text-xs hidden" style="padding:3px 8px;font-size:0.65rem;">💾</button>
-                            <button class="cancel-set-btn btn btn-secondary text-xs hidden" style="padding:3px 8px;font-size:0.65rem;">✕</button>
-                            <button class="delete-set-btn btn btn-danger text-xs" style="padding:3px 8px;font-size:0.65rem;">🗑</button>
+                <div class="set-item mb-2 p-2.5 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-colors" data-id="${set.id}">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="set-name-display font-bold text-sm flex-1 cursor-text" contenteditable="true">${escapeHtml(set.name)}</span>
+                        <span class="text-xs text-gray-400 font-mono">${count} card${count !== 1 ? 's' : ''}</span>
+                        <div class="flex gap-1">
+                            <button class="delete-set-btn btn btn-danger text-xs" style="padding:2px 6px;font-size:0.65rem;">🗑</button>
                         </div>
                     </div>
-                    <div class="mt-1 exclusive-row">
-                        <label class="text-xs text-gray-500">🎯 Exclusivity:</label>
-                        ${renderExclusiveSelect(excl, students)}
-                        <p class="text-xs text-gray-400 mt-1">Select students who can see this set. Leave empty for public.</p>
+                    <div class="mt-1 flex items-center gap-2 flex-wrap">
+                        <div class="exclusive-chips">${chipHtml}</div>
+                        <button class="toggle-exclusive-btn text-xs text-blue-500 hover:text-blue-700" style="background:none;border:none;cursor:pointer;">✏️ access</button>
+                    </div>
+                    <div class="exclusive-editor hidden mt-1.5 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                        <label class="text-xs text-gray-500 block mb-1">🎯 Select students who can see this set (leave empty = public):</label>
+                        <div class="exclusive-select-wrap"></div>
+                        <div class="flex gap-2 mt-1">
+                            <button class="save-exclusive-btn btn btn-success text-xs" style="padding:2px 8px;">💾 Save access</button>
+                            <button class="cancel-exclusive-btn btn btn-secondary text-xs" style="padding:2px 8px;">✕ Cancel</button>
+                        </div>
                     </div>
                 </div>`;
         });
+        if (!filtered.length) {
+            html = '<div class="text-center text-gray-400 py-4">' + (searchVal ? 'No sets match your search' : 'No sets yet. Add one above!') + '</div>';
+        }
         setListContainer.innerHTML = html;
 
-        document.querySelectorAll('.edit-set-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const item = btn.closest('.set-item');
-                item.querySelector('.set-name-display').classList.add('hidden');
-                item.querySelector('.set-name-input').classList.remove('hidden');
-                btn.classList.add('hidden');
-                item.querySelector('.save-set-btn').classList.remove('hidden');
-                item.querySelector('.cancel-set-btn').classList.remove('hidden');
-                item.querySelector('.delete-set-btn').classList.add('hidden');
-                item.querySelector('.set-name-input').focus();
+        setListContainer.querySelectorAll('.set-name-display').forEach(el => {
+            el.addEventListener('blur', () => saveSetName(el));
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+                if (e.key === 'Escape') { el.textContent = el.dataset.origName || el.textContent; el.blur(); }
             });
+            el.dataset.origName = el.textContent;
         });
 
-        document.querySelectorAll('.cancel-set-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const item = btn.closest('.set-item');
-                item.querySelector('.set-name-display').classList.remove('hidden');
-                item.querySelector('.set-name-input').classList.add('hidden');
-                item.querySelector('.edit-set-btn').classList.remove('hidden');
-                btn.classList.add('hidden');
-                item.querySelector('.save-set-btn').classList.add('hidden');
-                item.querySelector('.cancel-set-btn').classList.add('hidden');
-                item.querySelector('.delete-set-btn').classList.remove('hidden');
-                item.querySelector('.set-name-input').value = item.querySelector('.set-name-display').textContent.trim();
-            });
-        });
-
-        document.querySelectorAll('.save-set-btn').forEach(btn => {
+        setListContainer.querySelectorAll('.delete-set-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const item = btn.closest('.set-item');
                 const id = parseInt(item.dataset.id);
-                const name = item.querySelector('.set-name-input').value.trim();
-                if (!name) { alert('Name cannot be empty'); return; }
+                const name = item.querySelector('.set-name-display').textContent.trim();
+                if (!confirm(`Delete "${name}"? Cards will become orphaned.`)) return;
+                const response = await adminFetch(`admin_cards.php?action=delete_set&set_id=${id}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast(`✅ "${name}" deleted`, 'success');
+                    fetchSets();
+                } else {
+                    showToast('❌ ' + (result.error || 'Error deleting set'), 'error');
+                }
+            });
+        });
+
+        setListContainer.querySelectorAll('.toggle-exclusive-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = btn.closest('.set-item');
+                const editor = item.querySelector('.exclusive-editor');
+                const isHidden = editor.classList.contains('hidden');
+                editor.classList.toggle('hidden', !isHidden);
+                btn.textContent = isHidden ? '✕ close' : '✏️ access';
+                if (isHidden) {
+                    const wrap = editor.querySelector('.exclusive-select-wrap');
+                    const students = await getStudents();
+                    const set = cachedSets?.find(s => s.id == item.dataset.id);
+                    const excl = (set?.exclusive_to || '').split(',').map(s => s.trim()).filter(Boolean);
+                    let opts = '';
+                    students.forEach(s => {
+                        const sel = excl.includes(s.username) ? 'selected' : '';
+                        opts += `<option value="${escapeHtml(s.username)}" ${sel}>${escapeHtml(s.full_name || s.username)}</option>`;
+                    });
+                    wrap.innerHTML = `<select class="exclusive-select text-xs w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;">${opts}</select>`;
+                }
+            });
+        });
+
+        setListContainer.querySelectorAll('.save-exclusive-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = btn.closest('.set-item');
+                const id = parseInt(item.dataset.id);
                 const select = item.querySelector('.exclusive-select');
                 const exclusiveTo = select ? Array.from(select.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
+                const name = item.querySelector('.set-name-display').textContent.trim();
                 const response = await adminFetch('admin_cards.php?action=update_set', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1019,32 +1071,78 @@
                 });
                 const result = await response.json();
                 if (result.success) {
-                    await refreshSets();
-                    loadSetsList();
+                    showToast('✅ Access updated', 'success');
+                    item.querySelector('.exclusive-editor').classList.add('hidden');
+                    item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access';
+                    fetchSets();
                 } else {
-                    alert(result.error || 'Error updating set');
+                    showToast('❌ ' + (result.error || 'Error saving access'), 'error');
                 }
             });
         });
 
-        document.querySelectorAll('.delete-set-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+        setListContainer.querySelectorAll('.cancel-exclusive-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
                 const item = btn.closest('.set-item');
-                const id = parseInt(item.dataset.id);
-                if (confirm('Delete this card set? Cards in this set will remain but become orphaned.')) {
-                    const response = await adminFetch(`admin_cards.php?action=delete_set&set_id=${id}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        await refreshSets();
-                        loadSetsList();
-                    } else {
-                        alert(result.error || 'Error deleting set');
-                    }
-                }
+                item.querySelector('.exclusive-editor').classList.add('hidden');
+                item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access';
             });
         });
+    }
+
+    async function saveSetName(el) {
+        const item = el.closest('.set-item');
+        const id = parseInt(item.dataset.id);
+        const name = el.textContent.trim();
+        if (!name) { el.textContent = el.dataset.origName || ''; showToast('Name cannot be empty', 'error'); return; }
+        if (name === el.dataset.origName) return;
+        const set = cachedSets?.find(s => s.id == id);
+        const exclusiveTo = set?.exclusive_to || '';
+        const response = await adminFetch('admin_cards.php?action=update_set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
+        });
+        const result = await response.json();
+        if (result.success) {
+            el.dataset.origName = name;
+            showToast('✅ Renamed', 'success');
+            fetchSets();
+        } else {
+            el.textContent = el.dataset.origName || name;
+            showToast('❌ ' + (result.error || 'Error renaming set'), 'error');
+        }
+    }
+
+    function refreshSetSelectors(sets) {
+        const setSel = document.getElementById('setSelector');
+        const editSel = document.getElementById('editSetId');
+        const importSel = document.getElementById('importSetSelector');
+        const importEditSel = document.getElementById('importEditSetId');
+
+        const curSet = setSel?.value;
+        const curEdit = editSel?.value;
+        const curImport = importSel?.value;
+        const curImportEdit = importEditSel?.value;
+
+        const build = (placeholder) => {
+            let h = placeholder ? `<option value="">${placeholder}</option>` : '';
+            sets.forEach(s => { h += `<option value="${s.id}">${escapeHtml(s.name)}</option>`; });
+            return h;
+        };
+
+        if (setSel) { setSel.innerHTML = build('-- Choose Card Set --'); if (curSet) setSel.value = curSet; }
+        if (editSel) { editSel.innerHTML = build(''); if (curEdit) editSel.value = curEdit; }
+        if (importSel) { importSel.innerHTML = build('-- Select Set --'); if (curImport) importSel.value = curImport; }
+        if (importEditSel) { importEditSel.innerHTML = editSel ? editSel.innerHTML : build(''); if (curImportEdit) importEditSel.value = curImportEdit; }
+    }
+
+    async function refreshSets() {
+        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await response.json();
+        if (data.success && data.sets) refreshSetSelectors(data.sets);
     }
 
     let newSetExclusiveSelectHtml = '';
@@ -1056,9 +1154,9 @@
             opts += `<option value="${escapeHtml(s.username)}">${escapeHtml(s.full_name || s.username)}</option>`;
         });
         newSetExclusiveSelectHtml = `
-            <div class="mt-1">
+            <div class="mt-1 mb-2">
                 <label class="text-xs text-gray-500">🎯 Exclusivity (optional):</label>
-                <select id="newSetExclusiveSelect" class="text-xs w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;margin-top:2px;">
+                <select id="newSetExclusiveSelect" class="text-xs w-full" multiple size="3" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;margin-top:2px;">
                     <option value="">— Public (all students) —</option>
                     ${opts}
                 </select>
@@ -1067,46 +1165,14 @@
         if (container) container.innerHTML = newSetExclusiveSelectHtml;
     }
 
-    async function refreshSets() {
-        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const data = await response.json();
-        if (data.success && data.sets) {
-            const currentVal = setSelector.value;
-            const importVal = importSetSelector ? importSetSelector.value : '';
-            const importEditVal = importEditSetId ? importEditSetId.value : '';
-            setSelector.innerHTML = '<option value="">-- Choose Card Set --</option>';
-            if (editSetId) {
-                const currentEditVal = editSetId.value;
-                editSetId.innerHTML = '';
-                data.sets.forEach(set => {
-                    setSelector.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
-                    editSetId.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
-                });
-                if (currentEditVal) editSetId.value = currentEditVal;
-            } else {
-                data.sets.forEach(set => {
-                    setSelector.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
-                });
-            }
-            if (currentVal) setSelector.value = currentVal;
-            // Sync import modal selectors
-            if (importSetSelector) {
-                importSetSelector.innerHTML = setSelector.innerHTML.replace('-- Choose Card Set --', '-- Select Set --');
-                if (importVal) importSetSelector.value = importVal;
-            }
-            if (importEditSetId) {
-                importEditSetId.innerHTML = editSetId ? editSetId.innerHTML : setSelector.innerHTML;
-                if (importEditVal) importEditSetId.value = importEditVal;
-            }
-        }
-    }
+    document.getElementById('setsSearchInput')?.addEventListener('input', () => {
+        if (cachedSets) renderSetsList(cachedSets);
+    });
 
     document.getElementById('manageSetsBtn')?.addEventListener('click', () => {
         manageSetsModal.classList.remove('hidden');
         loadNewSetExclusiveSelect();
-        loadSetsList();
+        fetchSets();
     });
 
     document.getElementById('closeSetsModalBtn')?.addEventListener('click', () => {
@@ -1120,7 +1186,7 @@
     document.getElementById('addSetBtn')?.addEventListener('click', async () => {
         const input = document.getElementById('newSetNameInput');
         const name = input.value.trim();
-        if (!name) { alert('Enter a name for the new set'); return; }
+        if (!name) { showToast('Enter a name for the new set', 'warning'); return; }
         const exclSelect = document.getElementById('newSetExclusiveSelect');
         const exclusiveTo = exclSelect ? Array.from(exclSelect.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
         const response = await adminFetch('admin_cards.php?action=create_set', {
@@ -1131,10 +1197,10 @@
         const result = await response.json();
         if (result.success) {
             input.value = '';
-            await refreshSets();
-            loadSetsList();
+            showToast(`✅ "${name}" created`, 'success');
+            fetchSets();
         } else {
-            alert(result.error || 'Error creating set');
+            showToast('❌ ' + (result.error || 'Error creating set'), 'error');
         }
     });
 
@@ -1806,7 +1872,7 @@
 
     document.getElementById('importCreateSetBtn')?.addEventListener('click', async () => {
         const name = importNewSetName.value.trim();
-        if (!name) { alert('Enter a set name'); return; }
+        if (!name) { showToast('Enter a set name', 'warning'); return; }
         const response = await adminFetch('admin_cards.php?action=create_set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1815,12 +1881,10 @@
         const result = await response.json();
         if (result.success) {
             await refreshSets();
-            importSetSelector.innerHTML = setSelector.innerHTML;
-            importEditSetId.innerHTML = editSetId ? editSetId.innerHTML : setSelector.innerHTML;
-            if (result.id) importSetSelector.value = String(result.id);
+            if (result.id && importSetSelector) importSetSelector.value = String(result.id);
             importNewSetName.value = '';
         } else {
-            alert(result.error || 'Error creating set');
+            showToast('❌ ' + (result.error || 'Error creating set'), 'error');
         }
     });
 
