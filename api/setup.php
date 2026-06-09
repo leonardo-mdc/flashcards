@@ -1,12 +1,15 @@
 <?php
 
 header('Content-Type: application/json');
-$host = 'localhost';
-$dbname = 'flashcard_db';
-$user = 'root';
-$pass = '';
 
 try {
+    $config = require __DIR__ . '/../config.php';
+    $db = $config['db'];
+    $host = $db['host'];
+    $dbname = $db['name'];
+    $user = $db['user'];
+    $pass = $db['pass'];
+
     $pdo = new PDO("mysql:host=$host", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec("CREATE DATABASE IF NOT EXISTS $dbname");

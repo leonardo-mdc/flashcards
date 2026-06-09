@@ -58,6 +58,7 @@
         <h1 class="text-2xl text-center marker-underline" style="margin-bottom: 12px;">👑 First-Time Setup</h1>
         <p class="text-center text-gray-600 mb-4">Create the first admin account.</p>
         <form method="post">
+            <?= csrfField() ?>
             <input type="text" name="username" placeholder="Admin username" autofocus required>
             <input type="password" name="password" placeholder="Admin password" required minlength="6">
             <div class="hint">Minimum 6 characters.</div>

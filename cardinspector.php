@@ -22,6 +22,12 @@ if ($isAjax && isset($_GET['action'])) {
         exit;
     }
 
+    if ($action !== 'login' && !verifyCsrfToken($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Invalid security token']);
+        exit;
+    }
+
     try {
         $action = $_GET['action'];
 
@@ -106,8 +112,10 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
     <style>
         body { padding: 0; background: #e5e7eb; }
         .inspector-container { max-width: 1400px; margin: 0 auto; padding: 16px; }
-        .split-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: calc(100vh - 120px); }
-        @media (max-width: 900px) { .split-layout { grid-template-columns: 1fr; height: auto; } }
+        .split-3col-layout { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 12px; align-items: start; }
+        .preview-panel { background: white; border-radius: 12px; border: 2px solid #e5e7eb; padding: 20px; overflow-y: auto; max-height: calc(100vh - 120px); }
+        @media (max-width: 1100px) { .split-3col-layout { grid-template-columns: 1fr 1fr; } .preview-panel { display: none; } }
+        @media (max-width: 700px) { .split-3col-layout { grid-template-columns: 1fr; } }
         .card-list-panel { overflow-y: auto; background: white; border-radius: 12px; border: 2px solid #e5e7eb; max-height: calc(100vh - 120px); }
         .card-list-panel .card-row { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.1s; }
         .card-list-panel .card-row:hover { background: #f9fafb; }
@@ -149,13 +157,17 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             <span id="rowCount" class="text-xs text-gray-400 ml-auto"></span>
         </div>
 
-        <div class="split-layout">
+        <div class="split-3col-layout">
             <div class="card-list-panel" id="cardListPanel">
                 <div class="text-center text-gray-500 py-8 text-sm">Load a CSV to see cards</div>
             </div>
 
             <div class="editor-panel" id="editorPanel">
                 <div class="text-center text-gray-500 py-12">Select a card from the list</div>
+            </div>
+
+            <div class="preview-panel" id="previewPanel">
+                <div class="text-center text-gray-500 py-12">Select a card to preview</div>
             </div>
         </div>
     </div>
@@ -180,6 +192,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
 <?php endif; ?>
 
 <script>
+    window.CARDINSPECTOR_CSRF = <?= json_encode(csrfToken()) ?>;
 (function() {
     const styleLabels = {
         usage_cases: 'Usage Cases', deep_dive: 'Deep Dive', formula_table: 'Formula Table',
@@ -192,6 +205,14 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
     let selectedIdx = -1;
     let originalFile = null;
     let cardSets = [];
+
+    const csrfToken = window.CARDINSPECTOR_CSRF || '';
+
+    function adminFetch(url, options = {}) {
+        const headers = new Headers(options.headers || {});
+        if (csrfToken) headers.set('X-CSRF-Token', csrfToken);
+        return window.fetch(url, { ...options, headers });
+    }
 
     const cardListPanel = document.getElementById('cardListPanel');
     const editorPanel = document.getElementById('editorPanel');
@@ -215,7 +236,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
     document.getElementById('loginBtn')?.addEventListener('click', async () => {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
-        const res = await fetch('cardinspector.php?action=login', {
+        const res = await adminFetch('cardinspector.php?action=login', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({ username, password })
         });
@@ -258,14 +279,14 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
 
         const formData = new FormData();
         formData.append('csv', file);
-        const res = await fetch('cardinspector.php?action=preview_csv&t=' + Date.now(), {
+        const res = await adminFetch('cardinspector.php?action=preview_csv&t=' + Date.now(), {
             method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const result = await res.json();
         if (!result.success) { alert(result.error || 'Failed to parse CSV'); return; }
 
         // Fetch sets for mapping
-        const setsRes = await fetch('cardinspector.php?action=get_sets&t=' + Date.now(), {
+        const setsRes = await adminFetch('cardinspector.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const setsData = await setsRes.json();
@@ -323,7 +344,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
     // ── Editor ─────────────────────────────────────────────────
     function renderEditor(row) {
         const type = row.type || 'usage_cases';
-        let html = `
+        const editorHtml = `
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                     <label class="field-label">Title</label>
@@ -355,33 +376,33 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                 </div>
             </div>
             <div id="dynamicFields">${renderDynamicFields(row)}</div>
-            <div id="cardPreviewSection" class="mt-4 pt-3 border-t border-gray-200">
-                <h3 class="panel-title" style="margin-bottom:8px;">👁️ Card Preview</h3>
-                <div class="preview-grid">
-                    <div class="card-preview">
-                        <div class="card-front-preview" style="position:relative;min-height:280px;">
-                            <span class="preview-label">📖 FRONT</span>
-                            <div id="inspectorFrontPreview" class="flex items-center justify-center min-h-[200px]">
-                                <div class="text-center text-gray-400">Select a card to preview</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-preview">
-                        <div class="card-back-preview" style="position:relative;min-height:280px;">
-                            <span class="preview-label">🔍 BACK</span>
-                            <div id="inspectorBackPreview" class="flex items-center justify-center min-h-[200px]">
-                                <div class="text-center text-gray-400">Select a card to preview</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <div class="flex gap-2 mt-4 pt-3 border-t border-gray-200">
                 <button id="applyCardBtn" class="btn btn-primary btn-sm">Apply</button>
                 <button id="deleteCardBtn" class="btn btn-danger btn-sm">Remove</button>
             </div>
         `;
-        editorPanel.innerHTML = html;
+        editorPanel.innerHTML = editorHtml;
+
+        const previewHtml = `
+            <h3 class="panel-title" style="margin-bottom:8px;">👁️ Preview</h3>
+            <div class="card-preview">
+                <div class="card-front-preview" style="position:relative;min-height:200px;">
+                    <span class="preview-label">📖 FRONT</span>
+                    <div id="inspectorFrontPreview" class="flex items-center justify-center min-h-[160px]">
+                        <div class="text-center text-gray-400">Select a card to preview</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-preview">
+                <div class="card-back-preview" style="position:relative;min-height:200px;">
+                    <span class="preview-label">🔍 BACK</span>
+                    <div id="inspectorBackPreview" class="flex items-center justify-center min-h-[160px]">
+                        <div class="text-center text-gray-400">Select a card to preview</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        previewPanel.innerHTML = previewHtml;
 
         document.getElementById('editType').addEventListener('change', () => {
             const newType = document.getElementById('editType').value;
@@ -391,8 +412,8 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             refreshCardPreview();
         });
 
-        const editorFields = editorPanel.querySelectorAll('input, textarea, select');
-        editorFields.forEach(el => {
+        const allFields = document.querySelectorAll('#editorPanel input, #editorPanel textarea, #editorPanel select');
+        allFields.forEach(el => {
             el.addEventListener('input', refreshCardPreview);
             el.addEventListener('change', refreshCardPreview);
         });
@@ -435,8 +456,9 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         const example = exArr[0] || contentData.example1a || row.example1 || contentData.example || '';
         const example2 = exArr[1] || row.example2 || (contentData.example && contentData.example !== example ? contentData.example : '');
         const correctAnswer = contentData.correct_answer || row.correct_answer || '';
-        const options = (contentData.options || ['Option A', 'Option B', 'Option C']).join(', ');
-        const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : 1;
+        const optArr = contentData.options;
+        const optStr = Array.isArray(optArr) && optArr.length ? optArr.join(', ') : (row.opt1 ? [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean).join(', ') : '');
+        const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : (row.correct_answer || 1);
         const imageUrl = contentData.image_url || row.image_url || '';
         const audioUrl = contentData.audio_url || row.audio_url || '';
         const description = contentData.description || row.description || '';
@@ -449,7 +471,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             return `
                 ${type === 'image_mcq' ? `<div><label class="field-label">Image URL</label><input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(imageUrl)}"></div>` : ''}
                 <div><label class="field-label">Question Text</label><input type="text" id="editQuestionText" class="form-input" value="${escapeHtml(questionText)}"></div>
-                <div><label class="field-label">Options (comma separated)</label><input type="text" id="editOptions" class="form-input" value="${escapeHtml(options)}"></div>
+                <div><label class="field-label">Options (comma separated)</label><input type="text" id="editOptions" class="form-input" value="${escapeHtml(optStr)}"></div>
                 <div><label class="field-label">Correct Index (0,1,2...)</label><input type="number" id="editCorrectIndex" class="form-input" value="${correctIdx}" min="0"></div>
                 <div><label class="field-label">Explanation</label><textarea id="editExplanation" class="form-textarea" rows="2">${escapeHtml(explanation)}</textarea></div>
             `;
@@ -853,7 +875,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         formData.append('csv', blob, (originalFile ? originalFile.name : 'import.csv'));
 
         try {
-            const res = await fetch('api/import_csv.php', { method: 'POST', body: formData });
+            const res = await adminFetch('api/import_csv.php', { method: 'POST', body: formData });
             const result = await res.json();
             if (result.success) {
                 let msg = `✅ Imported ${result.imported} cards.`;

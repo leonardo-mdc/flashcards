@@ -3,18 +3,17 @@
 session_start();
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/CardSet.php';
 require_once __DIR__ . '/../src/Card.php';
+require_once __DIR__ . '/../src/helpers.php';
 
 $currentUser = $_SESSION['admin_user'] ?? null;
 $isAdmin = $currentUser !== null && ($currentUser['is_admin'] ?? false);
-if (!$isAdmin) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+if (!$isAdmin || !verifyCsrfToken($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Forbidden']);
     exit;
 }
 
@@ -26,6 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     if (!isset($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
         echo json_encode(['success' => false, 'error' => 'CSV file required']);
+        exit;
+    }
+
+    if ($_FILES['csv']['size'] > 5 * 1024 * 1024) {
+        echo json_encode(['success' => false, 'error' => 'File too large (max 5MB)']);
         exit;
     }
 
@@ -57,6 +61,9 @@ try {
     $imported = 0;
     $errors = [];
     $rowNum = 1;
+
+    $pdo = Database::getConnection();
+    $pdo->beginTransaction();
 
     while (($row = fgetcsv($handle)) !== false) {
         $rowNum++;
@@ -227,6 +234,7 @@ try {
     }
 
     fclose($handle);
+    $pdo->commit();
 
     echo json_encode([
         'success' => true,
@@ -234,6 +242,9 @@ try {
         'errors' => $errors,
     ]);
 } catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage(),

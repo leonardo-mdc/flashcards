@@ -56,6 +56,7 @@
     <div class="login-card">
         <h1 class="text-2xl text-center marker-underline" style="margin-bottom: 20px;">🔒 Admin Login</h1>
         <form method="post">
+            <?= csrfField() ?>
             <input type="text" name="username" placeholder="Username" autofocus required>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit" name="login">Sign In</button>

@@ -4,6 +4,14 @@
     let selectedCardId = null;
     let currentSetId = null;
 
+    const csrfToken = window.FLASHCARD_ADMIN?.csrfToken || '';
+
+    function adminFetch(url, options = {}) {
+        const headers = new Headers(options.headers || {});
+        if (csrfToken) headers.set('X-CSRF-Token', csrfToken);
+        return window.fetch(url, { ...options, headers });
+    }
+
     const setSelector = document.getElementById('setSelector');
     const cardListContainer = document.getElementById('cardListContainer');
     const editCardId = document.getElementById('editCardId');
@@ -28,7 +36,7 @@
     }
 
     async function loadCardSets() {
-        const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
+        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
@@ -58,7 +66,7 @@
 
         cardListContainer.innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading cards...</div>';
 
-        const response = await fetch(`admin_cards.php?action=get_cards&set_id=${setId}&t=${Date.now()}`, {
+        const response = await adminFetch(`admin_cards.php?action=get_cards&set_id=${setId}&t=${Date.now()}`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
@@ -559,7 +567,7 @@
             content_data: contentData
         };
 
-        const response = await fetch('admin_cards.php?action=save_card', {
+        const response = await adminFetch('admin_cards.php?action=save_card', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify(cardData)
@@ -583,7 +591,7 @@
             return;
         }
         if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
-            const response = await fetch(`admin_cards.php?action=delete_card&card_id=${cardId}`, {
+            const response = await adminFetch(`admin_cards.php?action=delete_card&card_id=${cardId}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             const result = await response.json();
@@ -636,7 +644,7 @@
         if (!userListContainer) return;
         userListContainer.innerHTML = '<div class="text-center py-4"><div class="loader"></div> Loading users...</div>';
 
-        const response = await fetch('admin_cards.php?action=get_users&t=' + Date.now(), {
+        const response = await adminFetch('admin_cards.php?action=get_users&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
@@ -683,7 +691,7 @@
             btn.addEventListener('click', async () => {
                 const userId = parseInt(btn.dataset.id);
                 if (confirm('Delete this user? This action cannot be undone.')) {
-                    const response = await fetch(`admin_cards.php?action=delete_user&user_id=${userId}`, {
+                    const response = await adminFetch(`admin_cards.php?action=delete_user&user_id=${userId}`, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const result = await response.json();
@@ -700,7 +708,7 @@
             btn.addEventListener('click', async () => {
                 const userId = parseInt(btn.dataset.id);
                 if (confirm('Reset all progress for this user? This will clear review history and progress.')) {
-                    const response = await fetch(`admin_cards.php?action=reset_user_progress&user_id=${userId}`, {
+                    const response = await adminFetch(`admin_cards.php?action=reset_user_progress&user_id=${userId}`, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const result = await response.json();
@@ -763,8 +771,8 @@
         // Load card sets and user's current access
         (async () => {
             const [setsRes, accessRes] = await Promise.all([
-                fetch('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-                fetch(`admin_cards.php?action=get_user_sets&user_id=${data.id}&t=${Date.now()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+                adminFetch(`admin_cards.php?action=get_user_sets&user_id=${data.id}&t=${Date.now()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             ]);
             const setsData = await setsRes.json();
             const accessData = await accessRes.json();
@@ -811,7 +819,7 @@
             const body = { id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin };
             if (password) body.password = password;
 
-            const response = await fetch('admin_cards.php?action=update_user', {
+            const response = await adminFetch('admin_cards.php?action=update_user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify(body)
@@ -820,7 +828,7 @@
             if (!result.success) { alert(result.error || 'Error saving user'); return; }
 
             const checkedSets = [...document.querySelectorAll('.user-set-checkbox:checked')].map(cb => parseInt(cb.value));
-            await fetch('admin_cards.php?action=set_user_sets', {
+            await adminFetch('admin_cards.php?action=set_user_sets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify({ user_id: id, set_ids: checkedSets })
@@ -841,7 +849,7 @@
         if (!username) { alert('Username is required'); return; }
         if (!password || password.length < 6) { alert('Password must be at least 6 characters'); return; }
 
-        const response = await fetch('admin_cards.php?action=create_user', {
+        const response = await adminFetch('admin_cards.php?action=create_user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({ username, full_name: fullName, password, english_level: englishLevel, is_admin: isAdmin })
@@ -915,7 +923,7 @@
 
     async function getStudents() {
         if (cachedStudents) return cachedStudents;
-        const res = await fetch('admin_cards.php?action=get_students&t=' + Date.now(), {
+        const res = await adminFetch('admin_cards.php?action=get_students&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await res.json();
@@ -937,7 +945,7 @@
         if (!setListContainer) return;
         const students = await getStudents();
         setListContainer.innerHTML = '<div class="text-center text-gray-500 py-4"><div class="loader"></div> Loading...</div>';
-        const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
+        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
@@ -1004,7 +1012,7 @@
                 if (!name) { alert('Name cannot be empty'); return; }
                 const select = item.querySelector('.exclusive-select');
                 const exclusiveTo = select ? Array.from(select.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
-                const response = await fetch('admin_cards.php?action=update_set', {
+                const response = await adminFetch('admin_cards.php?action=update_set', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
@@ -1024,7 +1032,7 @@
                 const item = btn.closest('.set-item');
                 const id = parseInt(item.dataset.id);
                 if (confirm('Delete this card set? Cards in this set will remain but become orphaned.')) {
-                    const response = await fetch(`admin_cards.php?action=delete_set&set_id=${id}`, {
+                    const response = await adminFetch(`admin_cards.php?action=delete_set&set_id=${id}`, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const result = await response.json();
@@ -1060,7 +1068,7 @@
     }
 
     async function refreshSets() {
-        const response = await fetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
+        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await response.json();
@@ -1115,7 +1123,7 @@
         if (!name) { alert('Enter a name for the new set'); return; }
         const exclSelect = document.getElementById('newSetExclusiveSelect');
         const exclusiveTo = exclSelect ? Array.from(exclSelect.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
-        const response = await fetch('admin_cards.php?action=create_set', {
+        const response = await adminFetch('admin_cards.php?action=create_set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({ name, exclusive_to: exclusiveTo })
@@ -1185,8 +1193,8 @@
         let html = '';
 
         if (type === 'multiple_choice' || type === 'image_mcq') {
-            const opts = cd.options || [];
-            const optStr = Array.isArray(opts) ? opts.join(', ') : (r.opt1 ? [r.opt1, r.opt2, r.opt3, r.opt4].filter(Boolean).join(', ') : '');
+            const opts = cd.options;
+            const optStr = Array.isArray(opts) && opts.length ? opts.join(', ') : (r.opt1 ? [r.opt1, r.opt2, r.opt3, r.opt4].filter(Boolean).join(', ') : '');
             const corrIdx = cd.correct_index !== undefined ? cd.correct_index : (r.correct_answer || '1');
             html = `
                 ${type === 'image_mcq' ? `<div><label class="field-label">Image URL</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>` : ''}
@@ -1261,7 +1269,7 @@
         importFileHandle = null;
         importFileName.textContent = '';
         importRowCount.textContent = '';
-        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
+        importPreviewBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-400 py-4">No data</td></tr>';
         importDynamicFields.innerHTML = '';
         document.getElementById('importPreviewSection')?.classList.add('hidden');
     }
@@ -1315,10 +1323,10 @@
         const formData = new FormData();
         formData.append('csv', file);
 
-        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
+        importPreviewBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
 
         try {
-            const response = await fetch('admin_cards.php?action=preview_csv&t=' + Date.now(), {
+            const response = await adminFetch('admin_cards.php?action=preview_csv&t=' + Date.now(), {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -1428,7 +1436,6 @@
                 <td><span class="card-type ${styleClass}">${styleLabels[style] || style}</span></td>
                 <td class="import-row-title">${escapeHtml(title)}</td>
                 <td><span class="text-xs bg-gray-100 px-2 py-0.5 rounded">${escapeHtml(level)}</span></td>
-                <td class="text-gray-500 text-xs">${escapeHtml(previewTrim)}</td>
             </tr>`;
         });
 
@@ -1800,7 +1807,7 @@
     document.getElementById('importCreateSetBtn')?.addEventListener('click', async () => {
         const name = importNewSetName.value.trim();
         if (!name) { alert('Enter a set name'); return; }
-        const response = await fetch('admin_cards.php?action=create_set', {
+        const response = await adminFetch('admin_cards.php?action=create_set', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({ name })
@@ -1843,7 +1850,7 @@
         if (importRows.length === 0) { alert('No rows to import'); return; }
         if (!confirm(`Import ${importRows.length} cards?`)) return;
 
-        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'front_fields', 'correct_answer', 'explanation'];
+        const csvCols = ['id', 'set', 'set_id', 'type', 'title', 'level', 'question_text', 'definition', 'sentence', 'opt1', 'opt2', 'opt3', 'opt4', 'correct_answer', 'explanation', 'example1', 'example2', 'example3', 'example4', 'usage1', 'tip', 'image_url', 'description', 'audio_url', 'prompt', 'transcript', 'front_fields'];
         const csvRows = [csvCols.join(',')];
 
         importRows.forEach(row => {
@@ -1857,18 +1864,8 @@
                     val = row.type || 'usage_cases';
                 } else if (col === 'level') {
                     val = row.level || 'Beginner';
-                } else if (col === 'title') {
-                    val = row.title || '';
-                } else if (col === 'definition' || col === 'question_text' || col === 'sentence') {
-                    val = row.definition || row.question_text || row.sentence || '';
-                } else if (col === 'usage1' || col === 'tip') {
-                    val = row.usage1 || row.tip || '';
-                } else if (col === 'example1' || col === 'example2') {
-                    val = row.example1 || row.example2 || '';
-                } else if (col === 'correct_answer') {
-                    val = row.correct_answer || '';
                 } else {
-                    val = row[col] || '';
+                    val = row[col] !== undefined ? String(row[col]) : '';
                 }
                 if (val.includes(',') || val.includes('"') || val.includes('\n')) {
                     val = '"' + val.replace(/"/g, '""') + '"';
@@ -1884,7 +1881,7 @@
         formData.append('csv', blob, (importFileHandle ? importFileHandle.name : 'import.csv'));
 
         try {
-            const response = await fetch('api/import_csv.php', { method: 'POST', body: formData });
+            const response = await adminFetch('api/import_csv.php', { method: 'POST', body: formData });
             const result = await response.json();
             if (result.success) {
                 let msg = `✅ Imported ${result.imported} cards.`;
@@ -1930,7 +1927,7 @@
 
         if (focusCardId) {
             try {
-                const res = await fetch(`admin_cards.php?action=get_card&card_id=${focusCardId}&t=${Date.now()}`, {
+                const res = await adminFetch(`admin_cards.php?action=get_card&card_id=${focusCardId}&t=${Date.now()}`, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 const data = await res.json();

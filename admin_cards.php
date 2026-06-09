@@ -13,32 +13,54 @@ $currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
 $isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
 $needsSetup = !User::hasAdmins();
 
+function adminCsrfTokenFromRequest(): ?string
+{
+    return $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null;
+}
+
+function requireAdminAjax(): void
+{
+    if (!verifyCsrfToken(adminCsrfTokenFromRequest())) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Invalid security token']);
+        exit;
+    }
+}
+
 if (isset($_POST['setup'])) {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-    if ($username !== '' && strlen($password) >= 6) {
-        User::create($username, $password, true);
-        $user = User::authenticate($username, $password);
-        if ($user) {
-            $_SESSION['admin_user'] = $user;
-            $currentUser = $user;
-            $isLoggedIn = true;
-        }
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $setupError = 'Invalid security token.';
     } else {
-        $setupError = 'Please fill in all fields (password min 6 chars).';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
+        if ($username !== '' && strlen($password) >= 6) {
+            User::create($username, $password, true);
+            $user = User::authenticate($username, $password);
+            if ($user) {
+                $_SESSION['admin_user'] = $user;
+                $currentUser = $user;
+                $isLoggedIn = true;
+            }
+        } else {
+            $setupError = 'Please fill in all fields (password min 6 chars).';
+        }
     }
 }
 
 if (isset($_POST['login'])) {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $user = User::authenticate($username, $password);
-    if ($user && $user['is_admin']) {
-        $_SESSION['admin_user'] = $user;
-        $currentUser = $user;
-        $isLoggedIn = true;
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $loginError = 'Invalid security token.';
     } else {
-        $loginError = 'Invalid credentials or insufficient permissions.';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $user = User::authenticate($username, $password);
+        if ($user && $user['is_admin']) {
+            $_SESSION['admin_user'] = $user;
+            $currentUser = $user;
+            $isLoggedIn = true;
+        } else {
+            $loginError = 'Invalid credentials or insufficient permissions.';
+        }
     }
 }
 
@@ -57,6 +79,7 @@ if ($isAjax && isset($_GET['action'])) {
         echo json_encode(['success' => false, 'error' => 'Unauthorized']);
         exit;
     }
+    requireAdminAjax();
 
     try {
         $action = $_GET['action'];
@@ -479,35 +502,36 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </div>
                 </div>
 
-                <div class="import-records-container">
-                    <table class="import-table" id="importPreviewTable">
-                        <thead>
-                            <tr>
-                                <th style="width:32px;">#</th>
-                                <th style="width:140px;">Card Set</th>
-                                <th style="width:120px;">Style</th>
-                                <th>Title</th>
-                                <th>Level</th>
-                                <th>Content Preview</th>
-                            </tr>
-                        </thead>
-                        <tbody id="importPreviewBody">
-                            <tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="import-editor-panel" id="importEditorPanel">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="panel-title" style="margin-bottom:0;">✏️ Edit Selected Card</h3>
-                        <div class="flex gap-2">
-                            <button id="importApplyCardBtn" class="btn btn-primary btn-sm">Apply</button>
-                            <button id="importApplyAllBtn" class="btn btn-secondary btn-sm">Apply to all</button>
-                            <button id="importDeleteCardBtn" class="btn btn-danger btn-sm">🗑 Remove</button>
+                <div class="import-3col-grid">
+                    <div class="import-list-col">
+                        <div class="import-records-container">
+                            <table class="import-table" id="importPreviewTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:32px;">#</th>
+                                        <th style="width:110px;">Card Set</th>
+                                        <th style="width:100px;">Style</th>
+                                        <th>Title</th>
+                                        <th style="width:80px;">Level</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="importPreviewBody">
+                                    <tr><td colspan="5" class="text-center text-gray-400 py-4">No data</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="import-edit-grid">
-                        <div>
+
+                    <div class="import-fields-col">
+                        <div class="import-editor-panel">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="panel-title" style="margin-bottom:0;">✏️ Fields</h3>
+                                <div class="flex gap-1">
+                                    <button id="importApplyCardBtn" class="btn btn-primary btn-xs">Apply</button>
+                                    <button id="importApplyAllBtn" class="btn btn-secondary btn-xs">Apply all</button>
+                                    <button id="importDeleteCardBtn" class="btn btn-danger btn-xs">🗑</button>
+                                </div>
+                            </div>
                             <div>
                                 <label class="field-label">Title</label>
                                 <input type="text" id="importEditTitle" class="form-input" placeholder="Card title">
@@ -544,20 +568,23 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                             </div>
                             <div id="importDynamicFields"></div>
                         </div>
+                    </div>
+
+                    <div class="import-preview-col">
                         <div class="import-preview-section hidden" id="importPreviewSection">
-                            <h3 class="panel-title" style="margin-bottom:8px;">👁️ Card Preview</h3>
+                            <h3 class="panel-title" style="margin-bottom:8px;">👁️ Preview</h3>
                             <div class="card-preview">
-                                <div class="card-front-preview" style="position:relative;min-height:200px;">
+                                <div class="card-front-preview" style="position:relative;min-height:180px;">
                                     <span class="preview-label">📖 FRONT</span>
-                                    <div id="importFrontPreview" class="flex items-center justify-center min-h-[160px]">
+                                    <div id="importFrontPreview" class="flex items-center justify-center min-h-[140px]">
                                         <div class="text-center text-gray-400">Select a card to preview</div>
                                     </div>
                                 </div>
                             </div>
                             <div class="card-preview">
-                                <div class="card-back-preview" style="position:relative;min-height:200px;">
+                                <div class="card-back-preview" style="position:relative;min-height:180px;">
                                     <span class="preview-label">🔍 BACK</span>
-                                    <div id="importBackPreview" class="flex items-center justify-center min-h-[160px]">
+                                    <div id="importBackPreview" class="flex items-center justify-center min-h-[140px]">
                                         <div class="text-center text-gray-400">Select a card to preview</div>
                                     </div>
                                 </div>
@@ -569,6 +596,11 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         </div>
     </div>
 
+<script>
+    window.FLASHCARD_ADMIN = {
+        csrfToken: <?= json_encode(csrfToken()) ?>
+    };
+</script>
 <script src="assets/js/admin.js"></script>
 </body>
 </html>

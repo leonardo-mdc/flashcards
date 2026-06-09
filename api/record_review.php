@@ -1,13 +1,13 @@
 <?php
 
+session_start();
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/Review.php';
 require_once __DIR__ . '/../src/User.php';
+require_once __DIR__ . '/../src/helpers.php';
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -17,7 +17,16 @@ try {
     $quality = isset($input['quality']) ? (int) $input['quality'] : 0;
     $wasCorrect = isset($input['correct']) ? (bool) $input['correct'] : ($quality > 0);
 
-    if ($cardId === 0 || $userId === 0) {
+    if (!requireSessionStudent($userId)) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Forbidden',
+        ]);
+        exit;
+    }
+
+    if ($cardId === 0 || $userId === 0 || $quality < 0 || $quality > 3) {
         echo json_encode([
             'success' => false,
             'error' => 'Missing card_id or user_id',

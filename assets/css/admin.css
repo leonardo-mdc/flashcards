@@ -244,8 +244,8 @@ body {
     background: white;
     border-radius: 12px;
     padding: 20px;
-    max-width: 1100px;
-    width: 95%;
+    max-width: 1400px;
+    width: 98%;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0,0,0,0.2);
@@ -332,11 +332,15 @@ body {
     border-radius: 8px;
     padding: 14px;
 }
-.import-edit-grid {
+.import-3col-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
 }
+.import-list-col { overflow: auto; max-height: 60vh; }
+.import-fields-col { overflow: auto; max-height: 60vh; }
+.import-preview-col { overflow: auto; max-height: 60vh; }
 .field-label {
     display: block;
     font-weight: 700;
@@ -359,8 +363,7 @@ body {
 
 @media (max-width: 768px) {
     .import-modal-content { padding: 12px; width: 98%; }
-    .import-edit-grid { grid-template-columns: 1fr; }
+    .import-3col-grid { grid-template-columns: 1fr; }
     .import-table { font-size: 0.7rem; }
     .import-table th, .import-table td { padding: 4px 6px; }
-    .import-records-container { max-height: 180px; }
 }
