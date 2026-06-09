@@ -96,13 +96,20 @@ foreach ($cards as $card) {
         $row['transcript'] = $cd['transcript'] ?? $cd['notes'] ?? '';
     } else {
         $row['definition'] = $cd['definition'] ?? '';
-        $row['example1'] = $cd['example1a'] ?? $cd['example'] ?? '';
+        if (!empty($cd['examples'])) {
+            $row['example1'] = $cd['examples'][0] ?? '';
+            $row['example2'] = $cd['examples'][1] ?? '';
+            $row['example3'] = $cd['examples'][2] ?? '';
+            $row['example4'] = $cd['examples'][3] ?? '';
+        } else {
+            $row['example1'] = $cd['example1a'] ?? $cd['example'] ?? '';
+            $row['example2'] = $cd['example'] ?? '';
+        }
         if ($type === 'usage_cases') {
             $row['usage1'] = $cd['usage1'] ?? '';
             $row['tip'] = $cd['tip'] ?? '';
         }
         if ($type === 'deep_dive' || $type === 'formula_table') {
-            $row['example2'] = !empty($cd['example']) && empty($row['example1']) ? '' : ($cd['example'] ?? '');
             $row['tip'] = $cd['tip'] ?? '';
         }
     }

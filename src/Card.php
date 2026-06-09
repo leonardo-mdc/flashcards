@@ -65,7 +65,16 @@ class Card
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("SELECT id, set_id, title, pattern_type, level, question_text, content_data FROM cards WHERE set_id = ? ORDER BY id");
         $stmt->execute([$setId]);
-        return $stmt->fetchAll();
+        $cards = $stmt->fetchAll();
+        foreach ($cards as &$card) {
+            if (!empty($card['content_data'])) {
+                $decoded = json_decode($card['content_data'], true);
+                $card['content_data'] = $decoded ?: [];
+            } else {
+                $card['content_data'] = [];
+            }
+        }
+        return $cards;
     }
 
     public static function getById(int $id): ?array

@@ -8,6 +8,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/Card.php';
 require_once __DIR__ . '/../src/Review.php';
+require_once __DIR__ . '/../src/User.php';
 
 try {
     $setId = null;
@@ -65,6 +66,17 @@ try {
         }
     }
 
+    $isAdmin = false;
+    if ($studentId > 0) {
+        $user = User::getById($studentId);
+        $isAdmin = $user && ($user['is_admin'] ?? false);
+    }
+    if ($isAdmin) {
+        $selectedLevels = [];
+        $dueOnly = false;
+        $setIds = [];
+    }
+
     Review::checkAndResetCycle($studentId);
 
     $totalAvailable = 0;
@@ -85,7 +97,7 @@ try {
             $countParams[] = (int) $sid;
         }
     }
-    if (!empty($selectedLevels)) {
+    if (!$isAdmin && !empty($selectedLevels)) {
         $placeholders = implode(',', array_fill(0, count($selectedLevels), '?'));
         $countSql .= " AND c.level IN ($placeholders)";
         foreach ($selectedLevels as $lvl) {
@@ -96,7 +108,8 @@ try {
     $stmt->execute($countParams);
     $totalAvailable = (int) $stmt->fetchColumn();
 
-    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $studentId, !empty($setIds) ? $setIds : null);
+    $excludeId = $isAdmin ? 0 : $studentId;
+    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $excludeId, !empty($setIds) ? $setIds : null);
 
     if ($dueOnly && $studentId > 0) {
         $dueStmt = $pdo->prepare("SELECT card_id FROM user_card_progress WHERE user_id = ? AND next_review <= CURDATE()");

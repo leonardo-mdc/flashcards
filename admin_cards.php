@@ -508,60 +508,58 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </div>
                     <div class="import-edit-grid">
                         <div>
-                            <label class="field-label">Title</label>
-                            <input type="text" id="importEditTitle" class="form-input" placeholder="Card title">
+                            <div>
+                                <label class="field-label">Title</label>
+                                <input type="text" id="importEditTitle" class="form-input" placeholder="Card title">
+                            </div>
+                            <div>
+                                <label class="field-label">Card Set</label>
+                                <select id="importEditSetId" class="form-select">
+                                    <option value="">-- Select Set --</option>
+                                    <?php foreach ($cardSets as $set): ?>
+                                        <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="field-label">Style</label>
+                                <select id="importEditStyle" class="form-select">
+                                    <option value="usage_cases">📘 Usage Cases</option>
+                                    <option value="deep_dive">🧠 Deep Dive</option>
+                                    <option value="formula_table">📐 Formula Table</option>
+                                    <option value="multiple_choice">❓ Multiple Choice</option>
+                                    <option value="gap_fill">✏️ Gap Fill</option>
+                                    <option value="image_mcq">🖼️ Image MCQ</option>
+                                    <option value="image_description">🖼️ Image Description</option>
+                                    <option value="audio_listening">🎧 Audio Listening</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="field-label">Level</label>
+                                <select id="importEditLevel" class="form-select">
+                                    <option value="Beginner">🔰 Beginner</option>
+                                    <option value="Intermediate">📚 Intermediate</option>
+                                    <option value="Advanced">🎓 Advanced</option>
+                                </select>
+                            </div>
+                            <div id="importDynamicFields"></div>
                         </div>
-                        <div>
-                            <label class="field-label">Card Set</label>
-                            <select id="importEditSetId" class="form-select">
-                                <option value="">-- Select Set --</option>
-                                <?php foreach ($cardSets as $set): ?>
-                                    <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="field-label">Style</label>
-                            <select id="importEditStyle" class="form-select">
-                                <option value="usage_cases">📘 Usage Cases</option>
-                                <option value="deep_dive">🧠 Deep Dive</option>
-                                <option value="formula_table">📐 Formula Table</option>
-                                <option value="multiple_choice">❓ Multiple Choice</option>
-                                <option value="gap_fill">✏️ Gap Fill</option>
-                                <option value="image_mcq">🖼️ Image MCQ</option>
-                                <option value="image_description">🖼️ Image Description</option>
-                                <option value="audio_listening">🎧 Audio Listening</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="field-label">Level</label>
-                            <select id="importEditLevel" class="form-select">
-                                <option value="Beginner">🔰 Beginner</option>
-                                <option value="Intermediate">📚 Intermediate</option>
-                                <option value="Advanced">🎓 Advanced</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="importDynamicFields"></div>
-                </div>
-
-                <!-- Visual Preview -->
-                <div class="import-preview-section hidden" id="importPreviewSection">
-                    <h3 class="panel-title" style="margin-bottom:8px;">👁️ Card Preview</h3>
-                    <div class="preview-grid">
-                        <div class="card-preview">
-                            <div class="card-front-preview" style="position:relative;min-height:280px;">
-                                <span class="preview-label">📖 FRONT</span>
-                                <div id="importFrontPreview" class="flex items-center justify-center min-h-[200px]">
-                                    <div class="text-center text-gray-400">Select a card to preview</div>
+                        <div class="import-preview-section hidden" id="importPreviewSection">
+                            <h3 class="panel-title" style="margin-bottom:8px;">👁️ Card Preview</h3>
+                            <div class="card-preview">
+                                <div class="card-front-preview" style="position:relative;min-height:200px;">
+                                    <span class="preview-label">📖 FRONT</span>
+                                    <div id="importFrontPreview" class="flex items-center justify-center min-h-[160px]">
+                                        <div class="text-center text-gray-400">Select a card to preview</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-preview">
-                            <div class="card-back-preview" style="position:relative;min-height:280px;">
-                                <span class="preview-label">🔍 BACK</span>
-                                <div id="importBackPreview" class="flex items-center justify-center min-h-[200px]">
-                                    <div class="text-center text-gray-400">Select a card to preview</div>
+                            <div class="card-preview">
+                                <div class="card-back-preview" style="position:relative;min-height:200px;">
+                                    <span class="preview-label">🔍 BACK</span>
+                                    <div id="importBackPreview" class="flex items-center justify-center min-h-[160px]">
+                                        <div class="text-center text-gray-400">Select a card to preview</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

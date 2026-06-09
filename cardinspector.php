@@ -341,7 +341,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                     <label class="field-label">Style</label>
-                    <select id="editType" class="form-select" onchange="updateFieldsFromType()">
+                    <select id="editType" class="form-select">
                         ${Object.entries(styleLabels).map(([k,v]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${v}</option>`).join('')}
                     </select>
                 </div>

@@ -197,9 +197,11 @@ try {
                 'audio_url' => $audioUrl,
             ];
             if (!empty($usage1)) $contentData['usage1'] = $usage1;
-            if (!empty($examples)) $contentData['example1a'] = $examples[0];
             if (!empty($tip)) $contentData['tip'] = $tip;
-            if (count($examples) > 1) $contentData['example'] = $examples[1] ?? $examples[0];
+            if (!empty($examples)) {
+                $contentData['example1a'] = $examples[0];
+                $contentData['examples'] = $examples;
+            }
         }
 
         if ($type === 'usage_cases' && empty($usage1) && !empty($examples)) {

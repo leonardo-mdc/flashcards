@@ -128,7 +128,7 @@ class User
         $pdo = Database::getConnection();
         if ($password !== null && $password !== '') {
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ?, password = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ?, password_hash = ? WHERE id = ?");
             $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $hash, $id]);
         } else {
             $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ? WHERE id = ?");

@@ -139,10 +139,6 @@
         if (editSetId) editSetId.value = card.set_id || 1;
 
         let contentData = card.content_data || {};
-        if (typeof contentData === 'string') {
-            try { contentData = JSON.parse(contentData); } catch (e) { contentData = {}; }
-        }
-
         renderEditFields(card.pattern_type || 'usage_cases', contentData);
         updatePreviews();
     }
@@ -267,6 +263,8 @@
                 </div>
             `;
         } else {
+            const ex1 = contentData.example1a || contentData.example || '';
+            const ex2 = contentData.example && contentData.example !== contentData.example1a ? contentData.example : '';
             html = `
                 <div class="mt-2">
                     <label class="block font-bold mb-1">Image URL (optional):</label>
@@ -281,8 +279,20 @@
                     <textarea id="editDefinition" class="form-textarea" rows="5" placeholder="Enter the definition or description...\brUse \br to create line breaks">${escapeHtml(contentData.definition || contentData.usage1 || '')}</textarea>
                 </div>
                 <div>
-                    <label class="block font-bold mb-1">Example (optional):</label>
-                    <textarea id="editExample" class="form-textarea" rows="3" placeholder="Example sentence showing usage\brUse \br for line breaks">${escapeHtml(contentData.example1a || contentData.example || '')}</textarea>
+                    <label class="block font-bold mb-1">Usage / Context:</label>
+                    <textarea id="editUsage" class="form-textarea" rows="2" placeholder="When/why to use this...\brUse \br for line breaks">${escapeHtml(contentData.usage1 || '')}</textarea>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Example 1:</label>
+                    <textarea id="editExample" class="form-textarea" rows="2" placeholder="First example...\brUse \br for line breaks">${escapeHtml(ex1)}</textarea>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Example 2 (optional):</label>
+                    <textarea id="editExample2" class="form-textarea" rows="2" placeholder="Second example...\brUse \br for line breaks">${escapeHtml(ex2)}</textarea>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">Tip (optional):</label>
+                    <textarea id="editTip" class="form-textarea" rows="2" placeholder="Helpful tip...\brUse \br for line breaks">${escapeHtml(contentData.tip || '')}</textarea>
                 </div>
             `;
         }
@@ -334,7 +344,10 @@
             contentData.image_url = document.getElementById('editImageUrl')?.value || '';
             contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
             contentData.definition = document.getElementById('editDefinition')?.value || '';
-            contentData.example = document.getElementById('editExample')?.value || '';
+            contentData.usage1 = document.getElementById('editUsage')?.value || '';
+            contentData.example1a = document.getElementById('editExample')?.value || '';
+            contentData.example = document.getElementById('editExample2')?.value || '';
+            contentData.tip = document.getElementById('editTip')?.value || '';
         }
 
         return contentData;
@@ -431,7 +444,8 @@
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                     ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                    <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
+                    <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
+                    <div class="text-lg text-center">${formatBreaks(escapeHtml(contentData.definition || contentData.usage1 || ''))}</div>
                     <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
                 </div>
             `;
@@ -491,13 +505,19 @@
                 </div>
             `;
         } else {
+            const exList = contentData.examples || [];
+            const exHtml = exList.length
+                ? exList.map((ex, i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${formatBreaks(escapeHtml(ex))}</p>`).join('')
+                : (contentData.example1a ? `<p class="text-md text-gray-600">📝 Example: ${formatBreaks(escapeHtml(contentData.example1a))}</p>` : '');
             backHtml = `
                 <div class="text-center">
                     <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
                     <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
                         <p class="text-lg">${formatBreaks(escapeHtml(contentData.definition || 'Definition would appear here.'))}</p>
                     </div>
-                    ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
+                    ${contentData.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${formatBreaks(escapeHtml(contentData.usage1))}</p>` : ''}
+                    ${exHtml ? `<div class="mt-2">${exHtml}</div>` : ''}
+                    ${contentData.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${formatBreaks(escapeHtml(contentData.tip))}</p></div>` : ''}
                 </div>
             `;
         }
@@ -692,7 +712,7 @@
                 </div>
                 <input type="hidden" id="editUserId" value="${data.id}">
                 <label class="block font-bold mb-1">Username:</label>
-                <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30">
+                <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30" autofocus>
                 <label class="block font-bold mb-1">Full Name:</label>
                 <input type="text" id="editUserFullName" class="form-input" value="${data.fullname}">
                 <label class="block font-bold mb-1">Level:</label>
@@ -1181,9 +1201,14 @@
             `;
         } else {
             // Text types: usage_cases, deep_dive, formula_table
+            const exArr = cd.examples || [];
+            const ex1 = exArr[0] || cd.example1a || r.example1 || cd.example || '';
+            const ex2 = exArr[1] || (cd.example && cd.example !== cd.example1a ? cd.example : '');
             html = `
                 <div><label class="field-label">Definition / Description</label><textarea id="importEditDefinition" class="form-textarea" rows="5">${val('definition')}</textarea></div>
-                <div><label class="field-label">Usage / Example</label><textarea id="importEditExample" class="form-textarea" rows="3">${val('usage1', 'example1', 'example')}</textarea></div>
+                <div><label class="field-label">Usage / Context</label><textarea id="importEditUsage" class="form-textarea" rows="2">${escapeHtml(r.usage1 || cd.usage1 || '')}</textarea></div>
+                <div><label class="field-label">Example 1</label><textarea id="importEditExample" class="form-textarea" rows="2">${escapeHtml(ex1)}</textarea></div>
+                <div><label class="field-label">Example 2 (optional)</label><textarea id="importEditExample2" class="form-textarea" rows="2">${escapeHtml(ex2)}</textarea></div>
                 <div><label class="field-label">Tip</label><textarea id="importEditTip" class="form-textarea" rows="2">${val('tip')}</textarea></div>
                 <div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
                 <div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
@@ -1438,11 +1463,17 @@
                 transcript: gf('importEditTranscript') || row.transcript || '',
             };
         }
+        const ex1 = gf('importEditExample') || row.example1 || '';
+        const ex2 = gf('importEditExample2') || row.example2 || '';
+        const allExamples = [ex1, ex2].filter(Boolean);
         return {
             image_url: gf('importEditImageUrl') || row.image_url || '',
             audio_url: gf('importEditAudioUrl') || row.audio_url || '',
             definition: gf('importEditDefinition') || row.definition || 'No definition',
-            example: gf('importEditExample') || row.example1 || row.usage1 || '',
+            usage1: gf('importEditUsage') || row.usage1 || '',
+            example1a: ex1,
+            examples: allExamples,
+            tip: gf('importEditTip') || row.tip || '',
         };
     }
 
@@ -1605,13 +1636,19 @@
                 </div>
             `;
         } else {
+            const exList = contentData.examples || [];
+            const exHtml = exList.length
+                ? exList.map((ex, i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${formatBreaks(escapeHtml(ex))}</p>`).join('')
+                : (contentData.example1a ? `<p class="text-md text-gray-600">📝 Example: ${formatBreaks(escapeHtml(contentData.example1a))}</p>` : '');
             backHtml = `
                 <div class="text-center">
                     <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
                     <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
                         <p class="text-lg">${formatBreaks(escapeHtml(contentData.definition || 'Definition would appear here.'))}</p>
                     </div>
-                    ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
+                    ${contentData.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${formatBreaks(escapeHtml(contentData.usage1))}</p>` : ''}
+                    ${exHtml ? `<div class="mt-2">${exHtml}</div>` : ''}
+                    ${contentData.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${formatBreaks(escapeHtml(contentData.tip))}</p></div>` : ''}
                 </div>
             `;
         }
@@ -1680,7 +1717,8 @@
         row.prompt = getImportField('importEditPrompt');
         row.transcript = getImportField('importEditTranscript');
         row.example1 = getImportField('importEditExample') || row.example1;
-        row.usage1 = getImportField('importEditExample') || row.usage1;
+        row.example2 = getImportField('importEditExample2') || row.example2;
+        row.usage1 = getImportField('importEditUsage') || row.usage1;
         row.tip = getImportField('importEditTip');
 
         if (type === 'multiple_choice' || type === 'image_mcq') {

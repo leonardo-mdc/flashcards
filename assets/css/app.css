@@ -73,6 +73,7 @@ body {
 .quiz-option.wrong-highlight { background: #fee2e2; border-color: #be123c; }
 .btn-chalk { transition: all 0.15s; box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.2); cursor: pointer; border: none; }
 .btn-chalk:hover { transform: translateY(2px); box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.2); }
+.btn-chalk:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 .flip-btn { cursor: pointer; transition: all 0.2s; background: #f1f5f9; border: 2px solid #64748b; }
 .flip-btn:active { transform: scale(0.96); }
 .progress-bar-container { background: #e2e8f0; border-radius: 20px; height: 3px; position: relative; padding-left: 28px; }

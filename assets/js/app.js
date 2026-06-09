@@ -94,7 +94,7 @@
             const res = await apiCall('api/get_cards.php', 'POST', body);
             if (res && res.success) {
                 if (res.all_due_reviewed) allDueReviewed = true;
-                if (res.cards && res.cards.length > 0) { dueOnlyMode = false; return res.cards; }
+                if (res.cards && res.cards.length > 0) { return res.cards; }
             }
         } catch (e) {}
         dueOnlyMode = false;
@@ -135,12 +135,16 @@
         const colors = { success: '#16a34a', error: '#dc2626', warning: '#d97706', info: '#2563eb' };
         const div = document.createElement('div');
         div.id = 'statusMessage';
-        div.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: ${colors[type]}; color: white; padding: 10px 16px; border-radius: 8px; font-size: 12px; z-index: 1000;`;
+        div.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: ${colors[type]}; color: white; padding: 10px 16px; border-radius: 8px; font-size: 12px; z-index: 9999;`;
         div.innerHTML = message;
         document.body.appendChild(div);
         if (statusTimeout) clearTimeout(statusTimeout);
         statusTimeout = setTimeout(() => div.remove(), 3000);
     }
+
+    document.addEventListener('error', (e) => {
+        if (e.target.tagName === 'IMG') e.target.style.display = 'none';
+    }, true);
 
     const appEl = document.getElementById('appRoot');
 
@@ -197,20 +201,14 @@
     }
 
     function getIntervalPreview(card, quality) {
+        if (quality === 0) return '1d';
         const p = card?.progress;
-        if (!p) {
-            if (quality === 0) return '1d';
-            if (quality === 2) return '3d';
-            if (quality === 3) return '7d';
-            return '';
-        }
+        if (!p) return quality === 3 ? '7d' : '3d';
         const ef = parseFloat(p.ease_factor) || 2.5;
         const rep = parseInt(p.repetitions) || 0;
         const prev = parseInt(p.interval_days) || 0;
-        if (quality === 0) return '1d';
         const newEF = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-        if (rep === 0) { return quality === 3 ? '7d' : '3d'; }
-        if (rep === 1) { return quality === 3 ? '7d' : '3d'; }
+        if (rep < 2) return quality === 3 ? '7d' : '3d';
         const base = Math.round(prev * newEF);
         return Math.round(base * (quality === 3 ? 1.3 : 1)) + 'd';
     }
@@ -448,7 +446,7 @@
             <div class="whiteboard-card" style="max-width:400px;width:90%;padding:24px;">
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit Profile</h3>
                 <label class="block font-bold mb-1">Full Name:</label>
-                <input type="text" id="editProfileFullName" class="form-input w-full p-2 border-2 rounded-xl mb-3" value="${escapeHtml(currentStudent?.full_name || '')}">
+                <input type="text" id="editProfileFullName" class="form-input w-full p-2 border-2 rounded-xl mb-3" value="${escapeHtml(currentStudent?.full_name || '')}" autofocus>
                 <label class="block font-bold mb-1">New Password:</label>
                 <input type="password" id="editProfilePassword" class="form-input w-full p-2 border-2 rounded-xl mb-3" placeholder="Leave empty to keep current">
                 <label class="block font-bold mb-1">Confirm Password:</label>
@@ -503,9 +501,10 @@
         if (pattern === 'multiple_choice') {
             const options = data.options || ['Option A', 'Option B', 'Option C'];
             const gridClass = options.length > 3 ? 'grid md:grid-cols-2 gap-3' : 'space-y-3';
+            const question = card.question_text || data.question_text || 'Select the correct answer:';
             return `
                 <div class="text-center">
-                    <p class="text-lg mb-3 font-bold">❓ ${escapeHtml(card.question_text || 'Select the correct answer:')}</p>
+                    <p class="text-lg mb-3 font-bold">❓ ${escapeHtml(question)}</p>
                     <div class="${gridClass}" id="mcqOptionsContainer">
                         ${options.map((opt, idx) => `<div class="quiz-option" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                     </div>
@@ -521,7 +520,7 @@
             const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
             const mediaHtml = (hasImage || hasAudio) ? `
                 <div class="w-full flex justify-center mb-2">
-                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-40 object-contain rounded-lg" onerror="this.style.display='none'">` : ''}
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-40 object-contain rounded-lg">` : ''}
                     ${hasAudio ? `<audio controls class="w-full max-w-xs" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : ''}
                 </div>
             ` : '';
@@ -539,16 +538,17 @@
             const imageUrl = data.image_url || '';
             const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
             const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const imqQuestion = data.question_text || 'Select the correct answer:';
             return `
                 <div class="flex flex-col md:flex-row gap-3 md:gap-4 h-full min-h-[200px]">
                     <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
                         ${hasImage
-                            ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg" onerror="this.style.display='none'">`
+                            ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg">`
                             : `<div class="text-6xl text-gray-300">🖼️</div>`
                         }
                     </div>
                     <div class="flex flex-col justify-center md:w-1/2 gap-2" id="mcqOptionsContainer">
-                        <p class="text-sm font-bold text-center md:text-left mb-1">Select the correct answer:</p>
+                        <p class="text-sm font-bold text-center md:text-left mb-1">${escapeHtml(imqQuestion)}</p>
                         ${options.map((opt, idx) => `<div class="quiz-option text-sm md:text-base py-2 px-3" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
                         <p class="text-xs text-gray-400 mt-1 text-center">👆 Tap your answer, then flip</p>
                     </div>
@@ -560,7 +560,7 @@
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</h1>
-                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-64 rounded-xl shadow-md mb-2 object-contain" onerror="this.style.display='none'">` : `<div class="text-6xl mb-2">🖼️</div>`}
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-64 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-6xl mb-2">🖼️</div>`}
                     <p class="text-sm text-gray-400 mt-2">👆 Tap card to flip</p>
                 </div>
             `;
@@ -579,9 +579,19 @@
                 </div>
             `;
         } else {
+            const def = data.definition || '';
+            const imgUrl = data.image_url || '';
+            const audUrl = data.audio_url || '';
+            const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('uploads/'));
+            const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://') || audUrl.startsWith('uploads/'));
+            const showDefOnFront = pattern !== 'deep_dive';
+
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
+                    ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(title)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
+                    ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}">Your browser does not support audio.</audio>` : ''}
                     <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
+                    ${showDefOnFront && def ? `<div class="card-definition mt-2 px-2">${formatBreaks(escapeHtml(def))}</div>` : ''}
                     <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;
@@ -595,7 +605,7 @@
 
         if (pattern === 'multiple_choice') {
             const options = data.options || ['Option A', 'Option B', 'Option C'];
-            const correctIdx = data.correct_index !== undefined ? data.correct_index : 1;
+            const correctIdx = data.correct_index !== undefined ? data.correct_index : 0;
             const correctAnswer = options[correctIdx];
             const selectedIdx = quizState?.selectedIdx;
             const isCorrect = (selectedIdx === correctIdx);
@@ -608,9 +618,11 @@
                         <div class="bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">
                             <p class="text-base font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(correctAnswer)}</p>
                         </div>
+                        ${selectedIdx !== null && selectedIdx !== undefined ? `
                         <div class="p-2 rounded-lg mb-2 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
                             <p class="text-sm">${isCorrect ? '✅ Correct!' : `❌ Incorrect. The correct answer is ${String.fromCharCode(65+correctIdx)}.`}</p>
                         </div>
+                        ` : ''}
                         ${explanation ? `<div class="text-sm text-gray-600 mt-1 p-2 bg-gray-50 rounded-lg">📝 ${explanation}</div>` : ''}
                         <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
@@ -701,21 +713,26 @@
                 </div>
             `;
         } else {
-            const definition = formatBreaks(escapeHtml(data.definition || data.usage1 || 'No definition available'));
-            const example = formatBreaks(escapeHtml(data.example1a || data.example || ''));
+            const def = formatBreaks(escapeHtml(data.definition || data.usage1 || 'No definition available'));
+            const exampleList = data.examples || [];
+            const examples = exampleList.length ? exampleList : [data.example1a || data.example].filter(Boolean);
+            const usage = data.usage1 ? formatBreaks(escapeHtml(data.usage1)) : '';
+            const t = data.tip ? formatBreaks(escapeHtml(data.tip)) : '';
 
             return `
                 <div class="back-content">
                     <div class="text-center">
                         <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
                         <div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
-                            ${definition}
+                            ${def}
                         </div>
-                        ${example ? `
+                        ${usage ? `<div class="mt-2 p-2 bg-indigo-50 rounded-lg text-sm">📝 ${usage}</div>` : ''}
+                        ${examples.map(ex => `
                             <div class="mt-2 p-2 bg-gray-100 rounded-lg">
-                                <p class="text-sm"><strong>Example:</strong> ${example}</p>
+                                <p class="text-sm"><strong>Example:</strong> ${ex}</p>
                             </div>
-                        ` : ''}
+                        `).join('')}
+                        ${t ? `<div class="mt-2 p-2 bg-yellow-50 rounded-lg text-sm">💡 ${t}</div>` : ''}
                         <p class="text-xs text-gray-400 mt-2">Rate your recall using the buttons below</p>
                     </div>
                 </div>
@@ -839,7 +856,11 @@
 
         document.getElementById('exitStudyBtn')?.addEventListener('click', () => { currentView = 'welcome'; render(); });
 
+        let reviewing = false;
         const handleReview = async (quality) => {
+            if (reviewing) return;
+            reviewing = true;
+            document.querySelectorAll('.btn-chalk').forEach(b => b.disabled = true);
             let wasCorrect = false;
             if (pattern === 'multiple_choice' || pattern === 'image_mcq' || pattern === 'gap_fill' || pattern === 'audio_listening') {
                 if (pattern === 'multiple_choice' || pattern === 'image_mcq') {
@@ -863,6 +884,7 @@
             }
             await recordReview(card.id, currentStudent.id, quality, wasCorrect);
             currentIndex++;
+            reviewing = false;
             render();
         };
 
