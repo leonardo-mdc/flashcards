@@ -351,10 +351,17 @@ body {
     border-radius: 8px;
 }
 
+.import-preview-section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 2px solid #e5e7eb;
+}
+
 @media (max-width: 768px) {
     .import-modal-content { padding: 12px; width: 98%; }
     .import-edit-grid { grid-template-columns: 1fr; }
     .import-table { font-size: 0.7rem; }
     .import-table th, .import-table td { padding: 4px 6px; }
     .import-records-container { max-height: 180px; }
+    .import-preview-section .preview-grid { grid-template-columns: 1fr; }
 }

@@ -133,11 +133,12 @@ if ($isAjax && isset($_GET['action'])) {
             $fullName = trim($data['full_name'] ?? '');
             $englishLevel = $data['english_level'] ?? 'Beginner';
             $isAdmin = !empty($data['is_admin']);
+            $password = $data['password'] ?? null;
             if ($userId <= 0 || $username === '') {
                 echo json_encode(['success' => false, 'error' => 'Invalid data']);
                 exit;
             }
-            User::update($userId, $username, $fullName, $englishLevel, $isAdmin);
+            User::update($userId, $username, $fullName, $englishLevel, $isAdmin, $password);
             echo json_encode(['success' => true]);
         } elseif ($action === 'reset_user_progress') {
             $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
@@ -547,6 +548,29 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <div>
                         <label class="field-label">Example / Options / Answers</label>
                         <textarea id="importEditExtra" class="form-textarea" rows="2" placeholder="Example, options (comma-sep), or correct answer..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Visual Preview -->
+                <div class="import-preview-section hidden" id="importPreviewSection">
+                    <h3 class="panel-title" style="margin-bottom:8px;">👁️ Card Preview</h3>
+                    <div class="preview-grid">
+                        <div class="card-preview">
+                            <div class="card-front-preview" style="position:relative;min-height:280px;">
+                                <span class="preview-label">📖 FRONT</span>
+                                <div id="importFrontPreview" class="flex items-center justify-center min-h-[200px]">
+                                    <div class="text-center text-gray-400">Select a card to preview</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-preview">
+                            <div class="card-back-preview" style="position:relative;min-height:280px;">
+                                <span class="preview-label">🔍 BACK</span>
+                                <div id="importBackPreview" class="flex items-center justify-center min-h-[200px]">
+                                    <div class="text-center text-gray-400">Select a card to preview</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

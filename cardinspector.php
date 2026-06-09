@@ -206,6 +206,11 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         return String(str).replace(/[&<>"']/g, m => map[m]);
     }
 
+    function formatBreaks(text) {
+        if (!text) return '';
+        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
+    }
+
     // ── Login ──────────────────────────────────────────────────
     document.getElementById('loginBtn')?.addEventListener('click', async () => {
         const username = document.getElementById('loginUsername').value.trim();
@@ -350,6 +355,27 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                 </div>
             </div>
             <div id="dynamicFields">${renderDynamicFields(row)}</div>
+            <div id="cardPreviewSection" class="mt-4 pt-3 border-t border-gray-200">
+                <h3 class="panel-title" style="margin-bottom:8px;">👁️ Card Preview</h3>
+                <div class="preview-grid">
+                    <div class="card-preview">
+                        <div class="card-front-preview" style="position:relative;min-height:280px;">
+                            <span class="preview-label">📖 FRONT</span>
+                            <div id="inspectorFrontPreview" class="flex items-center justify-center min-h-[200px]">
+                                <div class="text-center text-gray-400">Select a card to preview</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-preview">
+                        <div class="card-back-preview" style="position:relative;min-height:280px;">
+                            <span class="preview-label">🔍 BACK</span>
+                            <div id="inspectorBackPreview" class="flex items-center justify-center min-h-[200px]">
+                                <div class="text-center text-gray-400">Select a card to preview</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="flex gap-2 mt-4 pt-3 border-t border-gray-200">
                 <button id="applyCardBtn" class="btn btn-primary btn-sm">Apply</button>
                 <button id="deleteCardBtn" class="btn btn-danger btn-sm">Remove</button>
@@ -362,7 +388,16 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             const fieldsDiv = document.getElementById('dynamicFields');
             const dummyRow = { ...row, type: newType };
             fieldsDiv.innerHTML = renderDynamicFields(dummyRow);
+            refreshCardPreview();
         });
+
+        const editorFields = editorPanel.querySelectorAll('input, textarea, select');
+        editorFields.forEach(el => {
+            el.addEventListener('input', refreshCardPreview);
+            el.addEventListener('change', refreshCardPreview);
+        });
+
+        refreshCardPreview();
 
         document.getElementById('applyCardBtn')?.addEventListener('click', () => {
             applyEditorToRow(selectedIdx);
@@ -446,6 +481,209 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             <div><label class="field-label">Usage / Example</label><textarea id="editUsage" class="form-textarea" rows="3">${escapeHtml(usage1 || example)}</textarea></div>
             <div><label class="field-label">Tip</label><textarea id="editTip" class="form-textarea" rows="2">${escapeHtml(tip)}</textarea></div>
         `;
+    }
+
+    // ── Card preview ───────────────────────────────────────────
+    function refreshCardPreview() {
+        if (selectedIdx < 0 || selectedIdx >= rows.length) return;
+        const row = rows[selectedIdx];
+        const type = document.getElementById('editType')?.value || row.type || 'usage_cases';
+        const title = document.getElementById('editTitle')?.value || row.title || 'Untitled';
+        const level = document.getElementById('editLevel')?.value || row.level || 'Beginner';
+        const contentData = {};
+        const def = document.getElementById('editDefinition')?.value || '';
+        const questionText = document.getElementById('editQuestionText')?.value || '';
+        const sentence = document.getElementById('editSentence')?.value || '';
+        const usage = document.getElementById('editUsage')?.value || '';
+        const tip = document.getElementById('editTip')?.value || '';
+        const example = document.getElementById('editExample')?.value || '';
+        const correctAnswer = document.getElementById('editCorrectAnswers')?.value || document.getElementById('editCorrectAnswer')?.value || row.correct_answer || '';
+        const options = document.getElementById('editOptions')?.value || '';
+        const correctIdx = parseInt(document.getElementById('editCorrectIndex')?.value) || 1;
+        const imageUrl = document.getElementById('editImageUrl')?.value || '';
+        const audioUrl = document.getElementById('editAudioUrl')?.value || '';
+        const description = document.getElementById('editDescription')?.value || '';
+        const prompt = document.getElementById('editPrompt')?.value || '';
+        const transcript = document.getElementById('editNotes')?.value || '';
+        const explanation = document.getElementById('editExplanation')?.value || '';
+
+        if (type === 'multiple_choice' || type === 'image_mcq') {
+            const opts = options ? options.split(',').map(s => s.trim()).filter(Boolean) : ['Option A', 'Option B', 'Option C'];
+            contentData.options = opts;
+            contentData.correct_index = correctIdx;
+            contentData.question_text = questionText || 'Select the correct answer:';
+            contentData.explanation = explanation;
+            contentData.image_url = imageUrl;
+            contentData.audio_url = audioUrl;
+        } else if (type === 'gap_fill') {
+            const answers = correctAnswer ? correctAnswer.split(',').map(s => s.trim()).filter(Boolean) : ['answer'];
+            contentData.sentence = sentence || 'Complete: ______';
+            contentData.correct_answers = answers;
+            contentData.example = example;
+            contentData.image_url = imageUrl;
+            contentData.audio_url = audioUrl;
+        } else if (type === 'image_description') {
+            contentData.image_url = imageUrl;
+            contentData.description = description || 'No description';
+        } else if (type === 'audio_listening') {
+            const answers = correctAnswer ? correctAnswer.split(',').map(s => s.trim()).filter(Boolean) : [];
+            contentData.audio_url = audioUrl;
+            contentData.prompt = prompt;
+            contentData.correct_answers = answers;
+            contentData.transcript = transcript;
+            contentData.notes = transcript;
+        } else {
+            contentData.definition = def || 'No definition';
+            contentData.image_url = imageUrl;
+            contentData.audio_url = audioUrl;
+            contentData.example = usage || example;
+            contentData.tip = tip;
+        }
+
+        const frontHtml = renderCardFront(type, title, contentData);
+        const backHtml = renderCardBack(type, title, contentData);
+        document.getElementById('inspectorFrontPreview').innerHTML = frontHtml;
+        document.getElementById('inspectorBackPreview').innerHTML = backHtml;
+    }
+
+    function renderCardFront(type, title, data) {
+        if (type === 'image_mcq') {
+            const imageUrl = data.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            return `
+                <div class="flex flex-col md:flex-row gap-3 h-full min-h-[200px]">
+                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
+                        ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-32 object-contain">` : `<div class="text-5xl text-gray-300">🖼️</div>`}
+                    </div>
+                    <div class="flex flex-col justify-center md:w-1/2 gap-2">
+                        <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
+                        ${options.map((opt, i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${escapeHtml(opt)}</div>`).join('')}
+                    </div>
+                </div>`;
+        }
+        if (type === 'image_description') {
+            const imageUrl = data.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            return `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-xl font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</div>
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-5xl mb-2">🖼️</div>`}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
+                </div>`;
+        }
+        if (type === 'audio_listening') {
+            const audioUrl = data.audio_url || '';
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
+            const prompt = data.prompt || '';
+            const isInteractive = !!(prompt || (data.correct_answers && data.correct_answers.length));
+            return `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
+                    ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
+                </div>`;
+        }
+        if (type === 'multiple_choice') {
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const mcImageUrl = data.image_url || '';
+            const mcAudioUrl = data.audio_url || '';
+            const mcHasImage = mcImageUrl && (mcImageUrl.startsWith('http://') || mcImageUrl.startsWith('https://') || mcImageUrl.startsWith('uploads/'));
+            const mcHasAudio = mcAudioUrl && (mcAudioUrl.startsWith('http://') || mcAudioUrl.startsWith('https://') || mcAudioUrl.startsWith('uploads/'));
+            return `
+                <div class="text-center">
+                    ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
+                    ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
+                    <div class="text-4xl mb-3">❓</div>
+                    <p class="text-lg mb-4 font-bold">${escapeHtml(data.question_text || 'Select the correct answer:')}</p>
+                    ${options.map((opt, i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${escapeHtml(opt)}</div>`).join('')}
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
+                </div>`;
+        }
+        if (type === 'gap_fill') {
+            const gapImageUrl = data.image_url || '';
+            const gapAudioUrl = data.audio_url || '';
+            const gapHasImage = gapImageUrl && (gapImageUrl.startsWith('http://') || gapImageUrl.startsWith('https://') || gapImageUrl.startsWith('uploads/'));
+            const gapHasAudio = gapAudioUrl && (gapAudioUrl.startsWith('http://') || gapAudioUrl.startsWith('https://') || gapAudioUrl.startsWith('uploads/'));
+            const gapMediaHtml = (gapHasImage || gapHasAudio) ? `
+                <div class="w-full flex justify-center mb-2">
+                    ${gapHasImage ? `<img src="${escapeHtml(gapImageUrl)}" class="max-h-32 object-contain rounded-lg">` : ''}
+                    ${gapHasAudio ? `<div class="text-sm">🔊 Audio file provided</div>` : ''}
+                </div>` : '';
+            return `
+                <div class="text-center">
+                    ${gapMediaHtml}
+                    <div class="text-4xl mb-3">✏️</div>
+                    <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
+                    <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(data.sentence || 'Complete: ______')}</p>
+                    <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
+                    <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
+                </div>`;
+        }
+        const genImageUrl = data.image_url || '';
+        const genAudioUrl = data.audio_url || '';
+        const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
+        const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
+        return `
+            <div class="flex flex-col items-center justify-center min-h-[200px]">
+                ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
+                ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
+                <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
+                <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
+            </div>`;
+    }
+
+    function renderCardBack(type, title, data) {
+        if (type === 'image_mcq' || type === 'multiple_choice') {
+            const options = data.options || ['Option A', 'Option B', 'Option C'];
+            const correctIdx = data.correct_index || 1;
+            return `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
+                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
+                    </div>
+                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(data.explanation || 'Explanation would appear here.'))}</p>
+                </div>`;
+        }
+        if (type === 'image_description') {
+            return `
+                <div class="text-center">
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                        <p class="text-lg">${formatBreaks(escapeHtml(data.description || 'Description would appear here.'))}</p>
+                    </div>
+                </div>`;
+        }
+        if (type === 'audio_listening') {
+            const transcript = data.transcript || data.notes || '';
+            return `
+                <div class="text-center">
+                    <h3 class="text-2xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}
+                </div>`;
+        }
+        if (type === 'gap_fill') {
+            const answers = data.correct_answers || ['answer'];
+            return `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3>
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300">
+                        <p class="text-xl font-bold">${escapeHtml(answers.join(' / '))}</p>
+                    </div>
+                    ${data.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(data.example))}</p>` : ''}
+                </div>`;
+        }
+        return `
+            <div class="text-center">
+                <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                    <p class="text-lg">${formatBreaks(escapeHtml(data.definition || 'Definition would appear here.'))}</p>
+                </div>
+                ${data.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(data.example))}</p>` : ''}
+            </div>`;
     }
 
     // ── Apply editor to row ────────────────────────────────────

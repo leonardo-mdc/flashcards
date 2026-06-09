@@ -678,16 +678,15 @@
             <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit User</h3>
                 <input type="hidden" id="editUserId" value="${data.id}">
+                <input type="hidden" id="editUserLevel" value="${data.level || 'Beginner'}">
                 <label class="block font-bold mb-1">Username:</label>
                 <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30">
                 <label class="block font-bold mb-1">Full Name:</label>
                 <input type="text" id="editUserFullName" class="form-input" value="${data.fullname}">
-                <label class="block font-bold mb-1">English Level:</label>
-                <select id="editUserLevel" class="form-select">
-                    <option value="Beginner" ${data.level === 'Beginner' ? 'selected' : ''}>🔰 Beginner</option>
-                    <option value="Intermediate" ${data.level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
-                    <option value="Advanced" ${data.level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
-                </select>
+                <label class="block font-bold mb-1">New Password:</label>
+                <input type="password" id="editUserPassword" class="form-input" placeholder="Leave empty to keep current">
+                <label class="block font-bold mb-1">Confirm Password:</label>
+                <input type="password" id="editUserPasswordConfirm" class="form-input" placeholder="Repeat new password">
                 <label class="flex items-center gap-2 my-2">
                     <input type="checkbox" id="editUserIsAdmin" value="1" ${data.admin === 'true' || data.admin === '1' ? 'checked' : ''}>
                     <span class="font-bold">Admin privileges</span>
@@ -740,13 +739,29 @@
             const fullName = document.getElementById('editUserFullName').value.trim();
             const englishLevel = document.getElementById('editUserLevel').value;
             const isAdmin = document.getElementById('editUserIsAdmin').checked;
+            const pwd = document.getElementById('editUserPassword').value;
+            const pwdConfirm = document.getElementById('editUserPasswordConfirm').value;
 
             if (!username) { alert('Username is required'); return; }
+
+            let password = null;
+            if (pwd || pwdConfirm) {
+                if (pwd !== pwdConfirm) {
+                    alert('Passwords do not match');
+                    document.getElementById('editUserPassword').value = '';
+                    document.getElementById('editUserPasswordConfirm').value = '';
+                    return;
+                }
+                password = pwd;
+            }
+
+            const body = { id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin };
+            if (password) body.password = password;
 
             const response = await fetch('admin_cards.php?action=update_user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin })
+                body: JSON.stringify(body)
             });
             const result = await response.json();
             if (!result.success) { alert(result.error || 'Error saving user'); return; }
@@ -1102,6 +1117,7 @@
         importFileName.textContent = '';
         importRowCount.textContent = '';
         importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
+        document.getElementById('importPreviewSection')?.classList.add('hidden');
     }
 
     function closeImportModal() {
@@ -1180,6 +1196,45 @@
                 let type = (row.type || 'usage_cases').trim().toLowerCase();
                 const validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill', 'image_mcq', 'image_description', 'audio_listening'];
                 if (!validTypes.includes(type)) type = 'usage_cases';
+                // Parse content_data JSON if present and merge into row fields
+                let contentData = row.content_data;
+                if (typeof contentData === 'string' && contentData) {
+                    try { contentData = JSON.parse(contentData); } catch (e) { contentData = null; }
+                }
+                if (contentData && typeof contentData === 'object') {
+                    for (const key of Object.keys(contentData)) {
+                        const val = contentData[key];
+                        if (val != null && !row[key] && row[key] !== '') {
+                            if (Array.isArray(val)) {
+                                if (key === 'options' || key === 'correct_answers') {
+                                    row[key] = val.join(', ');
+                                }
+                            } else if (typeof val === 'string') {
+                                row[key] = val;
+                            }
+                        }
+                    }
+                    // Map common content_data fields to CSV column names
+                    if (contentData.definition && !row.definition) row.definition = contentData.definition;
+                    if (contentData.question_text && !row.question_text) row.question_text = contentData.question_text;
+                    if (contentData.sentence && !row.sentence) row.sentence = contentData.sentence;
+                    if (contentData.example && !row.example1) row.example1 = contentData.example;
+                    if (contentData.usage1 && !row.usage1) row.usage1 = contentData.usage1;
+                    if (contentData.tip && !row.tip) row.tip = contentData.tip;
+                    if (contentData.explanation && !row.explanation) row.explanation = contentData.explanation;
+                    if (contentData.image_url && !row.image_url) row.image_url = contentData.image_url;
+                    if (contentData.audio_url && !row.audio_url) row.audio_url = contentData.audio_url;
+                    if (contentData.description && !row.description) row.description = contentData.description;
+                    if (contentData.prompt && !row.prompt) row.prompt = contentData.prompt;
+                    if (contentData.transcript && !row.transcript) row.transcript = contentData.transcript;
+                    if (contentData.correct_index !== undefined && row.correct_answer === undefined) row.correct_answer = String(contentData.correct_index);
+                    if (contentData.options && Array.isArray(contentData.options) && !row.opt1) {
+                        contentData.options.forEach((opt, i) => { if (i < 4) row['opt' + (i+1)] = opt; });
+                    }
+                    if (contentData.correct_answers && Array.isArray(contentData.correct_answers) && !row.correct_answer) {
+                        row.correct_answer = contentData.correct_answers.join(',');
+                    }
+                }
                 return {
                     ...row,
                     _setName: (row.set || '').trim(),
@@ -1245,6 +1300,231 @@
         }
     }
 
+    function getImportContentData(row, overrideType) {
+        const type = overrideType || row.type || 'usage_cases';
+        const definition = (document.getElementById('importEditDefinition')?.value || row.definition || '').trim();
+        const extra = (document.getElementById('importEditExtra')?.value || '').trim();
+
+        if (type === 'multiple_choice' || type === 'image_mcq') {
+            const parts = extra.split(',').map(s => s.trim()).filter(Boolean);
+            const options = parts.length >= 2 ? parts : ['Option A', 'Option B', 'Option C'];
+            return {
+                image_url: row.image_url || '',
+                audio_url: row.audio_url || '',
+                options: options,
+                correct_index: row.correct_index !== undefined ? parseInt(row.correct_index) : 1,
+                question_text: definition || 'Select the correct answer:',
+                explanation: row.explanation || '',
+            };
+        }
+        if (type === 'gap_fill') {
+            const answers = extra ? extra.split(',').map(s => s.trim()).filter(Boolean) : ['answer'];
+            return {
+                sentence: definition || 'Complete: ______',
+                correct_answers: answers,
+                example: row.example1 || row.example || '',
+                image_url: row.image_url || '',
+                audio_url: row.audio_url || '',
+            };
+        }
+        if (type === 'image_description') {
+            return {
+                image_url: row.image_url || '',
+                description: definition || row.description || '',
+            };
+        }
+        if (type === 'audio_listening') {
+            const answers = extra ? extra.split(',').map(s => s.trim()).filter(Boolean) : [];
+            return {
+                audio_url: row.audio_url || '',
+                prompt: definition || '',
+                correct_answers: answers,
+                notes: extra || row.transcript || '',
+                transcript: extra || row.transcript || '',
+            };
+        }
+        return {
+            image_url: row.image_url || '',
+            audio_url: row.audio_url || '',
+            definition: definition,
+            example: extra || row.example1 || '',
+        };
+    }
+
+    function renderImportCardPreview() {
+        const idx = importSelectedIdx;
+        if (idx < 0 || idx >= importRows.length) {
+            document.getElementById('importPreviewSection')?.classList.add('hidden');
+            return;
+        }
+        document.getElementById('importPreviewSection')?.classList.remove('hidden');
+        const row = importRows[idx];
+        const title = document.getElementById('importEditTitle')?.value || row.title || 'Untitled';
+        const type = document.getElementById('importEditStyle')?.value || row.type || 'usage_cases';
+        const level = document.getElementById('importEditLevel')?.value || row.level || 'Beginner';
+        const contentData = getImportContentData(row, type);
+
+        let frontHtml = '';
+        if (type === 'image_mcq') {
+            const imageUrl = contentData.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
+            frontHtml = `
+                <div class="flex flex-col md:flex-row gap-3 h-full min-h-[200px]">
+                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
+                        ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-32 object-contain">` : `<div class="text-5xl text-gray-300">🖼️</div>`}
+                    </div>
+                    <div class="flex flex-col justify-center md:w-1/2 gap-2">
+                        <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
+                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        } else if (type === 'image_description') {
+            const imageUrl = contentData.image_url || '';
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-xl font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</div>
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-5xl mb-2">🖼️</div>`}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
+                </div>
+            `;
+        } else if (type === 'audio_listening') {
+            const audioUrl = contentData.audio_url || '';
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
+            const prompt = contentData.prompt || '';
+            const isInteractive = !!(prompt || (contentData.correct_answers && contentData.correct_answers.length));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
+                    ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
+                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
+                </div>
+            `;
+        } else if (type === 'multiple_choice') {
+            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
+            const mcImageUrl = contentData.image_url || '';
+            const mcAudioUrl = contentData.audio_url || '';
+            const mcHasImage = mcImageUrl && (mcImageUrl.startsWith('http://') || mcImageUrl.startsWith('https://') || mcImageUrl.startsWith('uploads/'));
+            const mcHasAudio = mcAudioUrl && (mcAudioUrl.startsWith('http://') || mcAudioUrl.startsWith('https://') || mcAudioUrl.startsWith('uploads/'));
+            frontHtml = `
+                <div class="text-center">
+                    ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
+                    ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
+                    <div class="text-4xl mb-3">❓</div>
+                    <p class="text-lg mb-4 font-bold">${escapeHtml(contentData.question_text || 'Select the correct answer:')}</p>
+                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
+                </div>
+            `;
+        } else if (type === 'gap_fill') {
+            const gapImageUrl = contentData.image_url || '';
+            const gapAudioUrl = contentData.audio_url || '';
+            const gapHasImage = gapImageUrl && (gapImageUrl.startsWith('http://') || gapImageUrl.startsWith('https://') || gapImageUrl.startsWith('uploads/'));
+            const gapHasAudio = gapAudioUrl && (gapAudioUrl.startsWith('http://') || gapAudioUrl.startsWith('https://') || gapAudioUrl.startsWith('uploads/'));
+            const gapMediaHtml = (gapHasImage || gapHasAudio) ? `
+                <div class="w-full flex justify-center mb-2">
+                    ${gapHasImage ? `<img src="${escapeHtml(gapImageUrl)}" class="max-h-32 object-contain rounded-lg">` : ''}
+                    ${gapHasAudio ? `<div class="text-sm">🔊 Audio file provided</div>` : ''}
+                </div>
+            ` : '';
+            frontHtml = `
+                <div class="text-center">
+                    ${gapMediaHtml}
+                    <div class="text-4xl mb-3">✏️</div>
+                    <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
+                    <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(contentData.sentence || 'Complete: ______')}</p>
+                    <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
+                    <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
+                </div>
+            `;
+        } else {
+            const genImageUrl = contentData.image_url || '';
+            const genAudioUrl = contentData.audio_url || '';
+            const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
+            const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
+            frontHtml = `
+                <div class="flex flex-col items-center justify-center min-h-[200px]">
+                    ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
+                    ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
+                    <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
+                    <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
+                </div>
+            `;
+        }
+
+        let backHtml = '';
+        if (type === 'image_mcq') {
+            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
+            const correctIdx = contentData.correct_index || 1;
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
+                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
+                    </div>
+                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
+                </div>
+            `;
+        } else if (type === 'image_description') {
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.description || 'Description would appear here.'))}</p>
+                    </div>
+                </div>
+            `;
+        } else if (type === 'audio_listening') {
+            const transcript = contentData.transcript || contentData.notes || '';
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}
+                </div>
+            `;
+        } else if (type === 'multiple_choice') {
+            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
+            const correctIdx = contentData.correct_index || 1;
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
+                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
+                    </div>
+                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
+                </div>
+            `;
+        } else if (type === 'gap_fill') {
+            const answers = contentData.correct_answers || ['answer'];
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3>
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300">
+                        <p class="text-xl font-bold">${escapeHtml(answers.join(' / '))}</p>
+                    </div>
+                    ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
+                </div>
+            `;
+        } else {
+            backHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
+                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.definition || 'Definition would appear here.'))}</p>
+                    </div>
+                    ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
+                </div>
+            `;
+        }
+
+        document.getElementById('importFrontPreview').innerHTML = frontHtml;
+        document.getElementById('importBackPreview').innerHTML = backHtml;
+    }
+
     function selectImportRow(idx) {
         if (idx < 0 || idx >= importRows.length) return;
         importSelectedIdx = idx;
@@ -1276,6 +1556,8 @@
         importPreviewBody.querySelectorAll('tr').forEach(tr => {
             tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
         });
+
+        renderImportCardPreview();
     }
 
     function updateRowFromEditor(idx) {
@@ -1441,6 +1723,12 @@
             alert('❌ Network error during import');
         }
     });
+
+    importEditTitle?.addEventListener('input', renderImportCardPreview);
+    importEditStyle?.addEventListener('change', renderImportCardPreview);
+    importEditLevel?.addEventListener('change', renderImportCardPreview);
+    importEditDefinition?.addEventListener('input', renderImportCardPreview);
+    importEditExtra?.addEventListener('input', renderImportCardPreview);
 
     loadCardSets();
 })();

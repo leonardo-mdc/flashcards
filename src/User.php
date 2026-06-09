@@ -122,12 +122,18 @@ class User
         return $stmt->fetchColumn() > 0;
     }
 
-    public static function update(int $id, string $username, string $fullName, string $englishLevel, bool $isAdmin): void
+    public static function update(int $id, string $username, string $fullName, string $englishLevel, bool $isAdmin, ?string $password = null): void
     {
         self::ensureTable();
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ? WHERE id = ?");
-        $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $id]);
+        if ($password !== null && $password !== '') {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ?, password = ? WHERE id = ?");
+            $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $hash, $id]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ? WHERE id = ?");
+            $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $id]);
+        }
     }
 
     public static function delete(int $id): void
