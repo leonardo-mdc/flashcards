@@ -1572,11 +1572,13 @@
             const genAudioUrl = contentData.audio_url || '';
             const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
             const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
+            const showDefOnFront = type !== 'deep_dive';
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                     ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                    <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
+                    <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
+                    ${showDefOnFront && contentData.definition ? `<div class="text-base text-center px-2">${formatBreaks(escapeHtml(contentData.definition))}</div>` : ''}
                     <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
                 </div>
             `;
