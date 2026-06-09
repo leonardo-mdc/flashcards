@@ -107,6 +107,7 @@ try {
         $explanation = trim($data['explanation'] ?? '');
         $usage1 = trim($data['usage1'] ?? '');
         $tip = trim($data['tip'] ?? '');
+        $frontFieldsRaw = trim($data['front_fields'] ?? '');
 
         $examples = [];
         for ($i = 1; $i <= 4; $i++) {
@@ -201,6 +202,9 @@ try {
             if (!empty($examples)) {
                 $contentData['example1a'] = $examples[0];
                 $contentData['examples'] = $examples;
+            }
+            if (!empty($frontFieldsRaw)) {
+                $contentData['front_fields'] = array_map('trim', explode(',', $frontFieldsRaw));
             }
         }
 

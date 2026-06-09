@@ -431,7 +431,9 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         const sentence = contentData.sentence || row.sentence || '';
         const usage1 = contentData.usage1 || row.usage1 || '';
         const tip = contentData.tip || row.tip || '';
-        const example = contentData.example || contentData.example1a || row.example1 || '';
+        const exArr = Array.isArray(contentData.examples) ? contentData.examples : [];
+        const example = exArr[0] || contentData.example1a || row.example1 || contentData.example || '';
+        const example2 = exArr[1] || row.example2 || (contentData.example && contentData.example !== example ? contentData.example : '');
         const correctAnswer = contentData.correct_answer || row.correct_answer || '';
         const options = (contentData.options || ['Option A', 'Option B', 'Option C']).join(', ');
         const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : 1;
@@ -474,12 +476,23 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             `;
         }
         // Text types: usage_cases, deep_dive, formula_table
+        const defFront = type === 'deep_dive' ? [] : ['definition'];
+        const ff = Array.isArray(contentData.front_fields) ? contentData.front_fields : defFront;
         return `
             <div><label class="field-label">Image URL (optional)</label><input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(imageUrl)}"></div>
             <div><label class="field-label">Audio URL (optional)</label><input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(audioUrl)}"></div>
             <div><label class="field-label">Definition / Description</label><textarea id="editDefinition" class="form-textarea" rows="5">${escapeHtml(def)}</textarea></div>
-            <div><label class="field-label">Usage / Example</label><textarea id="editUsage" class="form-textarea" rows="3">${escapeHtml(usage1 || example)}</textarea></div>
+            <div><label class="field-label">Usage / Context</label><textarea id="editUsage" class="form-textarea" rows="2">${escapeHtml(usage1)}</textarea></div>
+            <div><label class="field-label">Example 1</label><textarea id="editExample" class="form-textarea" rows="2">${escapeHtml(example)}</textarea></div>
+            <div><label class="field-label">Example 2 (optional)</label><textarea id="editExample2" class="form-textarea" rows="2">${escapeHtml(example2)}</textarea></div>
             <div><label class="field-label">Tip</label><textarea id="editTip" class="form-textarea" rows="2">${escapeHtml(tip)}</textarea></div>
+            <div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="field-label mb-1">Show on front:</label>
+                <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffDefinition" ${ff.includes('definition') ? 'checked' : ''}> Definition</label>
+                <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffUsage1" ${ff.includes('usage1') ? 'checked' : ''}> Usage</label>
+                <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffExamples" ${ff.includes('examples') ? 'checked' : ''}> Examples</label>
+                <label class="inline-flex items-center gap-1 text-xs"><input type="checkbox" id="ffTip" ${ff.includes('tip') ? 'checked' : ''}> Tip</label>
+            </div>
         `;
     }
 
@@ -533,11 +546,21 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             contentData.transcript = transcript;
             contentData.notes = transcript;
         } else {
+            const ex1 = document.getElementById('editExample')?.value || example || '';
+            const ex2 = document.getElementById('editExample2')?.value || '';
+            const ff = [];
+            if (document.getElementById('ffDefinition')?.checked) ff.push('definition');
+            if (document.getElementById('ffUsage1')?.checked) ff.push('usage1');
+            if (document.getElementById('ffExamples')?.checked) ff.push('examples');
+            if (document.getElementById('ffTip')?.checked) ff.push('tip');
             contentData.definition = def || 'No definition';
             contentData.image_url = imageUrl;
             contentData.audio_url = audioUrl;
-            contentData.example = usage || example;
+            contentData.usage1 = usage;
+            contentData.example1a = ex1;
+            contentData.examples = [ex1, ex2].filter(Boolean);
             contentData.tip = tip;
+            contentData.front_fields = ff;
         }
 
         const frontHtml = renderCardFront(type, title, contentData);
@@ -626,11 +649,18 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         const genAudioUrl = data.audio_url || '';
         const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
         const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
+        const defaultFront = type === 'deep_dive' ? [] : ['definition'];
+        const frontFields = Array.isArray(data.front_fields) ? data.front_fields : defaultFront;
+        const frontParts = [];
+        if (frontFields.includes('definition') && data.definition) frontParts.push(`<div class="text-base text-center px-2">${formatBreaks(escapeHtml(data.definition))}</div>`);
+        if (frontFields.includes('usage1') && data.usage1) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">${formatBreaks(escapeHtml(data.usage1))}</div>`);
+        if (frontFields.includes('tip') && data.tip) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${formatBreaks(escapeHtml(data.tip))}</div>`);
         return `
             <div class="flex flex-col items-center justify-center min-h-[200px]">
                 ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                 ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                <div class="text-4xl text-center font-bold">${escapeHtml(title)}</div>
+                <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
+                ${frontParts.join('')}
                 <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
             </div>`;
     }
@@ -676,13 +706,19 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                     ${data.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(data.example))}</p>` : ''}
                 </div>`;
         }
+        const exList = data.examples || [];
+        const exHtml = exList.length
+            ? exList.map((ex, i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${formatBreaks(escapeHtml(ex))}</p>`).join('')
+            : (data.example1a ? `<p class="text-md text-gray-600">📝 Example: ${formatBreaks(escapeHtml(data.example1a))}</p>` : '');
         return `
             <div class="text-center">
                 <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
                 <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
                     <p class="text-lg">${formatBreaks(escapeHtml(data.definition || 'Definition would appear here.'))}</p>
                 </div>
-                ${data.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(data.example))}</p>` : ''}
+                ${data.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${formatBreaks(escapeHtml(data.usage1))}</p>` : ''}
+                ${exHtml ? `<div class="mt-2">${exHtml}</div>` : ''}
+                ${data.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${formatBreaks(escapeHtml(data.tip))}</p></div>` : ''}
             </div>`;
     }
 
@@ -744,7 +780,15 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             row.audio_url = document.getElementById('editAudioUrl')?.value || '';
             row.definition = document.getElementById('editDefinition')?.value || '';
             row.usage1 = document.getElementById('editUsage')?.value || '';
+            row.example1 = document.getElementById('editExample')?.value || '';
+            row.example2 = document.getElementById('editExample2')?.value || '';
             row.tip = document.getElementById('editTip')?.value || '';
+            const ff = [];
+            if (document.getElementById('ffDefinition')?.checked) ff.push('definition');
+            if (document.getElementById('ffUsage1')?.checked) ff.push('usage1');
+            if (document.getElementById('ffExamples')?.checked) ff.push('examples');
+            if (document.getElementById('ffTip')?.checked) ff.push('tip');
+            row.front_fields = ff.join(',');
             row.question_text = '';
             row.sentence = '';
             row.correct_answer = '';
@@ -753,7 +797,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
 
     // ── Export CSV ─────────────────────────────────────────────
     function buildCsvContent() {
-        const cols = ['set','set_id','type','title','level','definition','question_text','sentence','example1','example2','usage1','tip','correct_answer','explanation','image_url','audio_url','description','prompt','transcript'];
+        const cols = ['set','set_id','type','title','level','definition','question_text','sentence','example1','example2','usage1','tip','front_fields','correct_answer','explanation','image_url','audio_url','description','prompt','transcript'];
         const lines = [cols.join(',')];
         rows.forEach(row => {
             const vals = cols.map(col => {

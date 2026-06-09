@@ -294,6 +294,13 @@
                     <label class="block font-bold mb-1">Tip (optional):</label>
                     <textarea id="editTip" class="form-textarea" rows="2" placeholder="Helpful tip...\brUse \br for line breaks">${escapeHtml(contentData.tip || '')}</textarea>
                 </div>
+                <div class="mt-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <label class="block font-bold mb-1 text-xs">Show on front:</label>
+                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffDefinition" ${(contentData.front_fields || ['definition']).includes('definition') ? 'checked' : ''}> Definition</label>
+                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffUsage1" ${(contentData.front_fields || []).includes('usage1') ? 'checked' : ''}> Usage</label>
+                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffExamples" ${(contentData.front_fields || []).includes('examples') ? 'checked' : ''}> Examples</label>
+                    <label class="inline-flex items-center gap-1 text-xs"><input type="checkbox" id="ffTip" ${(contentData.front_fields || []).includes('tip') ? 'checked' : ''}> Tip</label>
+                </div>
             `;
         }
 
@@ -348,6 +355,12 @@
             contentData.example1a = document.getElementById('editExample')?.value || '';
             contentData.example = document.getElementById('editExample2')?.value || '';
             contentData.tip = document.getElementById('editTip')?.value || '';
+            const ff = [];
+            if (document.getElementById('ffDefinition')?.checked) ff.push('definition');
+            if (document.getElementById('ffUsage1')?.checked) ff.push('usage1');
+            if (document.getElementById('ffExamples')?.checked) ff.push('examples');
+            if (document.getElementById('ffTip')?.checked) ff.push('tip');
+            contentData.front_fields = ff;
         }
 
         return contentData;
@@ -440,12 +453,18 @@
             const genAudioUrl = contentData.audio_url || '';
             const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
             const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
+            const defaultFront = patternType === 'deep_dive' ? [] : ['definition'];
+            const frontFields = Array.isArray(contentData.front_fields) ? contentData.front_fields : defaultFront;
+            const frontParts = [];
+            if (frontFields.includes('definition') && contentData.definition) frontParts.push(`<div class="text-base text-center">${formatBreaks(escapeHtml(contentData.definition))}</div>`);
+            if (frontFields.includes('usage1') && contentData.usage1) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">${formatBreaks(escapeHtml(contentData.usage1))}</div>`);
+            if (frontFields.includes('tip') && contentData.tip) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${formatBreaks(escapeHtml(contentData.tip))}</div>`);
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                     ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
-                    <div class="text-lg text-center">${formatBreaks(escapeHtml(contentData.definition || contentData.usage1 || ''))}</div>
+                    ${frontParts.join('')}
                     <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
                 </div>
             `;
@@ -1204,6 +1223,8 @@
             const exArr = cd.examples || [];
             const ex1 = exArr[0] || cd.example1a || r.example1 || cd.example || '';
             const ex2 = exArr[1] || (cd.example && cd.example !== cd.example1a ? cd.example : '');
+            const defFront = type === 'deep_dive' ? [] : ['definition'];
+            const ff = Array.isArray(cd.front_fields) ? cd.front_fields : defFront;
             html = `
                 <div><label class="field-label">Definition / Description</label><textarea id="importEditDefinition" class="form-textarea" rows="5">${val('definition')}</textarea></div>
                 <div><label class="field-label">Usage / Context</label><textarea id="importEditUsage" class="form-textarea" rows="2">${escapeHtml(r.usage1 || cd.usage1 || '')}</textarea></div>
@@ -1212,6 +1233,13 @@
                 <div><label class="field-label">Tip</label><textarea id="importEditTip" class="form-textarea" rows="2">${val('tip')}</textarea></div>
                 <div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
                 <div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
+                <div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <label class="field-label mb-1">Show on front:</label>
+                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="importFfDefinition" ${ff.includes('definition') ? 'checked' : ''}> Definition</label>
+                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="importFfUsage1" ${ff.includes('usage1') ? 'checked' : ''}> Usage</label>
+                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="importFfExamples" ${ff.includes('examples') ? 'checked' : ''}> Examples</label>
+                    <label class="inline-flex items-center gap-1 text-xs"><input type="checkbox" id="importFfTip" ${ff.includes('tip') ? 'checked' : ''}> Tip</label>
+                </div>
             `;
         }
         importDynamicFields.innerHTML = html;
@@ -1466,6 +1494,11 @@
         const ex1 = gf('importEditExample') || row.example1 || '';
         const ex2 = gf('importEditExample2') || row.example2 || '';
         const allExamples = [ex1, ex2].filter(Boolean);
+        const ff = [];
+        if (document.getElementById('importFfDefinition')?.checked) ff.push('definition');
+        if (document.getElementById('importFfUsage1')?.checked) ff.push('usage1');
+        if (document.getElementById('importFfExamples')?.checked) ff.push('examples');
+        if (document.getElementById('importFfTip')?.checked) ff.push('tip');
         return {
             image_url: gf('importEditImageUrl') || row.image_url || '',
             audio_url: gf('importEditAudioUrl') || row.audio_url || '',
@@ -1474,6 +1507,7 @@
             example1a: ex1,
             examples: allExamples,
             tip: gf('importEditTip') || row.tip || '',
+            front_fields: ff,
         };
     }
 
@@ -1572,13 +1606,18 @@
             const genAudioUrl = contentData.audio_url || '';
             const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
             const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
-            const showDefOnFront = type !== 'deep_dive';
+            const defaultFront = type === 'deep_dive' ? [] : ['definition'];
+            const frontFields = Array.isArray(contentData.front_fields) ? contentData.front_fields : defaultFront;
+            const frontParts = [];
+            if (frontFields.includes('definition') && contentData.definition) frontParts.push(`<div class="text-base text-center px-2">${formatBreaks(escapeHtml(contentData.definition))}</div>`);
+            if (frontFields.includes('usage1') && contentData.usage1) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">${formatBreaks(escapeHtml(contentData.usage1))}</div>`);
+            if (frontFields.includes('tip') && contentData.tip) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${formatBreaks(escapeHtml(contentData.tip))}</div>`);
             frontHtml = `
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                     ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
-                    ${showDefOnFront && contentData.definition ? `<div class="text-base text-center px-2">${formatBreaks(escapeHtml(contentData.definition))}</div>` : ''}
+                    ${frontParts.join('')}
                     <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
                 </div>
             `;
@@ -1804,7 +1843,7 @@
         if (importRows.length === 0) { alert('No rows to import'); return; }
         if (!confirm(`Import ${importRows.length} cards?`)) return;
 
-        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'correct_answer', 'explanation'];
+        const csvCols = ['set', 'set_id', 'type', 'title', 'level', 'definition', 'question_text', 'sentence', 'example1', 'example2', 'usage1', 'tip', 'front_fields', 'correct_answer', 'explanation'];
         const csvRows = [csvCols.join(',')];
 
         importRows.forEach(row => {

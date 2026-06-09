@@ -579,19 +579,24 @@
                 </div>
             `;
         } else {
-            const def = data.definition || '';
             const imgUrl = data.image_url || '';
             const audUrl = data.audio_url || '';
             const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('uploads/'));
             const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://') || audUrl.startsWith('uploads/'));
-            const showDefOnFront = pattern !== 'deep_dive';
+            const defaultFront = pattern === 'deep_dive' ? [] : ['definition'];
+            const frontFields = Array.isArray(data.front_fields) ? data.front_fields : defaultFront;
+            const frontParts = [];
+            if (frontFields.includes('definition') && data.definition) frontParts.push(`<div class="card-definition mt-2 px-2">${formatBreaks(escapeHtml(data.definition))}</div>`);
+            if (frontFields.includes('usage1') && data.usage1) frontParts.push(`<div class="text-sm mt-1 px-2 text-gray-700">${formatBreaks(escapeHtml(data.usage1))}</div>`);
+            if (frontFields.includes('examples') && data.examples) frontParts.push(`<div class="text-sm mt-1 px-2 text-gray-700">${data.examples.map(ex => formatBreaks(escapeHtml(ex))).join('<br>')}</div>`);
+            if (frontFields.includes('tip') && data.tip) frontParts.push(`<div class="text-sm mt-1 px-2 text-gray-700">💡 ${formatBreaks(escapeHtml(data.tip))}</div>`);
 
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(title)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                     ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}">Your browser does not support audio.</audio>` : ''}
                     <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
-                    ${showDefOnFront && def ? `<div class="card-definition mt-2 px-2">${formatBreaks(escapeHtml(def))}</div>` : ''}
+                    ${frontParts.join('')}
                     <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
             `;

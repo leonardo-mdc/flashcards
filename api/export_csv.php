@@ -114,6 +114,7 @@ foreach ($cards as $card) {
         }
     }
 
+    $row['front_fields'] = !empty($cd['front_fields']) ? implode(',', $cd['front_fields']) : '';
     $row['image_url'] = $cd['image_url'] ?? '';
     $row['description'] = $cd['description'] ?? '';
     $row['audio_url'] = $cd['audio_url'] ?? '';
