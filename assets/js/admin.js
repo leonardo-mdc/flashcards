@@ -691,11 +691,16 @@
                     <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
                 </div>
                 <input type="hidden" id="editUserId" value="${data.id}">
-                <input type="hidden" id="editUserLevel" value="${data.level || 'Beginner'}">
                 <label class="block font-bold mb-1">Username:</label>
                 <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30">
                 <label class="block font-bold mb-1">Full Name:</label>
                 <input type="text" id="editUserFullName" class="form-input" value="${data.fullname}">
+                <label class="block font-bold mb-1">Level:</label>
+                <select id="editUserLevel" class="form-select w-full p-2 border-2 rounded-xl mb-3 bg-white">
+                    <option value="Beginner" ${data.level === 'Beginner' ? 'selected' : ''}>🔰 Beginner</option>
+                    <option value="Intermediate" ${data.level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
+                    <option value="Advanced" ${data.level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
+                </select>
                 <label class="block font-bold mb-1">New Password:</label>
                 <input type="password" id="editUserPassword" class="form-input" placeholder="Leave empty to keep current">
                 <label class="block font-bold mb-1">Confirm Password:</label>

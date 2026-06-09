@@ -449,12 +449,10 @@
                 <h3 class="text-lg marker-underline mb-3">✏️ Edit Profile</h3>
                 <label class="block font-bold mb-1">Full Name:</label>
                 <input type="text" id="editProfileFullName" class="form-input w-full p-2 border-2 rounded-xl mb-3" value="${escapeHtml(currentStudent?.full_name || '')}">
-                <label class="block font-bold mb-1">English Level:</label>
-                <select id="editProfileLevel" class="form-select w-full p-2 border-2 rounded-xl mb-3 bg-white">
-                    <option value="Beginner" ${currentStudent?.english_level === 'Beginner' ? 'selected' : ''}>🔰 Beginner</option>
-                    <option value="Intermediate" ${currentStudent?.english_level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
-                    <option value="Advanced" ${currentStudent?.english_level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
-                </select>
+                <label class="block font-bold mb-1">New Password:</label>
+                <input type="password" id="editProfilePassword" class="form-input w-full p-2 border-2 rounded-xl mb-3" placeholder="Leave empty to keep current">
+                <label class="block font-bold mb-1">Confirm Password:</label>
+                <input type="password" id="editProfilePasswordConfirm" class="form-input w-full p-2 border-2 rounded-xl mb-3" placeholder="Repeat new password">
                 <div class="flex gap-2">
                     <button id="saveProfileBtn" class="flex-1 bg-blue-700 text-white py-2 rounded-xl font-bold">💾 Save</button>
                     <button id="cancelProfileBtn" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-xl font-bold">Cancel</button>
@@ -469,17 +467,26 @@
 
         document.getElementById('saveProfileBtn').addEventListener('click', async () => {
             const fullName = document.getElementById('editProfileFullName').value.trim();
-            const englishLevel = document.getElementById('editProfileLevel').value;
+            const pwd = document.getElementById('editProfilePassword').value;
+            const pwdConfirm = document.getElementById('editProfilePasswordConfirm').value;
+
+            if (pwd || pwdConfirm) {
+                if (pwd !== pwdConfirm) {
+                    alert('Passwords do not match');
+                    document.getElementById('editProfilePassword').value = '';
+                    document.getElementById('editProfilePasswordConfirm').value = '';
+                    return;
+                }
+            }
 
             const res = await apiCall('api/login.php', 'POST', {
                 action: 'update_profile',
                 user_id: currentStudent.id,
                 full_name: fullName,
-                english_level: englishLevel
+                password: pwd || null
             });
             if (res && res.success) {
                 currentStudent.full_name = fullName;
-                currentStudent.english_level = englishLevel;
                 modal.remove();
                 render();
             } else {
