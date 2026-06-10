@@ -215,7 +215,15 @@
 
     function formatBreaks(text) {
         if (!text) return '';
-        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
+        let s = String(text);
+        s = s.replace(/\\\\/g, '\\');
+        s = s.replace(/\\br ?/g, '<br>');
+        s = s.replace(/\\b(.*?)\\b/g, '<b>$1</b>');
+        s = s.replace(/\\i(.*?)\\i/g, '<i>$1</i>');
+        s = s.replace(/\\u(.*?)\\u/g, '<u>$1</u>');
+        s = s.replace(/\\em(.*?)\\em/g, '<em>$1</em>');
+        s = s.replace(/\\strong(.*?)\\strong/g, '<strong>$1</strong>');
+        return s;
     }
 
     function getGapFillHint(card) {
@@ -247,7 +255,7 @@
                 return '📝 Hint: This is happening now → use Present Continuous';
             }
         }
-        return '📝 Type the correct form of the verb in parentheses';
+        return '';
     }
 
     async function renderWelcomeScreen() {
@@ -504,9 +512,9 @@
             const question = card.question_text || data.question_text || 'Select the correct answer:';
             return `
                 <div class="text-center">
-                    <p class="text-lg mb-3 font-bold">❓ ${escapeHtml(question)}</p>
+                    <p class="text-lg mb-3 font-bold">❓ ${formatBreaks(escapeHtml(question))}</p>
                     <div class="${gridClass}" id="mcqOptionsContainer">
-                        ${options.map((opt, idx) => `<div class="quiz-option" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                        ${options.map((opt, idx) => `<div class="quiz-option" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     </div>
                     <p class="text-sm text-gray-400 mt-2">👆 Tap your answer, then flip the card</p>
                 </div>
@@ -528,7 +536,7 @@
                 <div class="text-center">
                     ${mediaHtml}
                     <p class="text-lg mb-1 font-bold">✏️ Complete the sentence:</p>
-                    <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${escapeHtml(sentence)}</p>
+                    <p class="text-sm bg-gray-100 p-3 rounded-xl mb-1">${formatBreaks(escapeHtml(sentence))}</p>
                     <div class="context-hint">${hint}</div>
                     <input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2">
                     <p class="text-sm text-gray-400 mt-1">👆 Type answer, then flip to check</p>
@@ -548,8 +556,8 @@
                         }
                     </div>
                     <div class="flex flex-col justify-center md:w-1/2 gap-2" id="mcqOptionsContainer">
-                        <p class="text-sm font-bold text-center md:text-left mb-1">${escapeHtml(imqQuestion)}</p>
-                        ${options.map((opt, idx) => `<div class="quiz-option text-sm md:text-base py-2 px-3" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                        <p class="text-sm font-bold text-center md:text-left mb-1">${formatBreaks(escapeHtml(imqQuestion))}</p>
+                        ${options.map((opt, idx) => `<div class="quiz-option text-sm md:text-base py-2 px-3" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                         <p class="text-xs text-gray-400 mt-1 text-center">👆 Tap your answer, then flip</p>
                     </div>
                 </div>
@@ -573,7 +581,7 @@
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</h1>
                     ${hasAudio ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : `<div class="text-6xl mb-2">🎧</div>`}
-                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2">` : ''}
                     <p class="text-sm text-gray-400 mt-1">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
                 </div>

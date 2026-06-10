@@ -2,14 +2,14 @@
 
 ## Common Columns (all card types)
 
-| Column     | Description |
-|------------|-------------|
-| `id`       | Leave empty for new cards, or set an existing ID to update |
-| `set`      | Card set name — if the set doesn't exist, it is **created automatically** during import |
-| `set_id`   | Optional numeric set ID. If both `set` and `set_id` are given, `set` takes priority |
-| `type`     | Card pattern: see table below |
-| `title`    | The word, phrase, or main subject of the card |
-| `level`    | `A1` `A2` `B1` `B2` `C1` `C2` (will be mapped to Beginner/Intermediate/Advanced on import) |
+| Column       | Description |
+|--------------|-------------|
+| `id`         | Leave empty for new cards, or set an existing ID to update |
+| `set`        | Card set name — if the set doesn't exist, it is **created automatically** during import |
+| `set_id`     | Optional numeric set ID. If both `set` and `set_id` are given, `set` takes priority |
+| `type`       | Card pattern: `usage_cases`, `deep_dive`, `formula_table`, `multiple_choice`, `gap_fill`, `image_mcq`, `image_description`, `audio_listening` |
+| `title`      | The word, phrase, or main subject of the card |
+| `level`      | `A1` `A2` `B1` `B2` `C1` `C2` (mapped to Beginner/Intermediate/Advanced on import) or use Beginner/Intermediate/Advanced directly |
 | `front_fields` | Comma-separated list of fields to display on the front (e.g. `title,image_url`). Only applies to text types. Defaults to `title` if empty. |
 
 ## Level Mapping
@@ -20,127 +20,152 @@
 | `B1` or `B2` | `Intermediate` |
 | `C1` or `C2` | `Advanced`     |
 
-You can also use `Beginner`, `Intermediate`, `Advanced` directly.
+---
 
-## Available Card Types
+## ⚠️ CRITICAL — The ONLY Valid Column Order (Master Table)
 
-| Card Type           | Description |
-|---------------------|-------------|
-| `usage_cases`       | Pure text — usage cases with examples |
-| `deep_dive`         | Pure text — deep dive into a topic |
-| `formula_table`     | Pure text — formula/rule/table display |
-| `multiple_choice`   | Quiz — pick the correct option |
-| `gap_fill`          | Quiz — type the missing word(s) |
-| `image_mcq`         | Quiz — image/audio on front + MCQ options (responsive layout) |
-| `image_description` | Image card — shows image, back shows description |
-| `audio_listening`   | Audio card — plays audio, may include Q&A or transcription |
+**You MUST produce every CSV using this exact 27-column order.** Never reorder columns. For unused columns, leave the cell empty but KEEP the column in the header. The header row must be this exact string:
+
+```
+id,set,set_id,type,title,level,question_text,definition,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,example1,example2,example3,example4,usage1,tip,image_url,description,audio_url,prompt,transcript,front_fields
+```
+
+| # | Column           | Filled for these types |
+|---|------------------|------------------------|
+| 1 | `id`             | all (leave empty for new cards) |
+| 2 | `set`            | all |
+| 3 | `set_id`         | all (optional, `set` takes priority) |
+| 4 | `type`           | all |
+| 5 | `title`          | all |
+| 6 | `level`          | all |
+| 7 | `question_text`  | multiple_choice, image_mcq |
+| 8 | `definition`     | usage_cases, deep_dive, formula_table |
+| 9 | `sentence`       | gap_fill |
+| 10 | `opt1`           | multiple_choice, image_mcq (at least 1 required) |
+| 11 | `opt2`           | multiple_choice, image_mcq (at least 1 required with opt1) |
+| 12 | `opt3`           | multiple_choice, image_mcq (optional) |
+| 13 | `opt4`           | multiple_choice, image_mcq (optional) |
+| 14 | `correct_answer` | multiple_choice (0-based index), image_mcq (0-based index), gap_fill (comma-separated), audio_listening (comma-separated) |
+| 15 | `explanation`    | multiple_choice, image_mcq |
+| 16 | `example1`       | usage_cases, deep_dive, formula_table, gap_fill |
+| 17 | `example2`       | usage_cases, deep_dive, formula_table |
+| 18 | `example3`       | usage_cases, deep_dive, formula_table |
+| 19 | `example4`       | usage_cases, deep_dive, formula_table |
+| 20 | `usage1`         | usage_cases |
+| 21 | `tip`            | usage_cases, deep_dive, formula_table |
+| 22 | `image_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, image_mcq, image_description |
+| 23 | `description`    | image_description |
+| 24 | `audio_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, audio_listening |
+| 25 | `prompt`         | audio_listening |
+| 26 | `transcript`     | audio_listening |
+| 27 | `front_fields`   | usage_cases, deep_dive, formula_table |
 
 ---
 
-## Type-Specific Fields
+## Type-Specific Field Guide
 
-### usage_cases (Pure Text — Usage Cases)
+For each type, fill these columns (by number from the Master Table above). Leave all other columns empty.
 
-Front shows the title. Back shows definition, usage context, examples, and tip.
+### usage_cases (text)
+- **Columns to fill**: 1, 2, 4, 5, 6, 8, 16–21, 22, 24, 27
+- `definition` (col 8) — what the word/phrase means (defaults to "No definition")
+- `example1`–`example4` (cols 16–19) — example sentences
+- `usage1` (col 20) — context of when to use it (auto-fills from example1)
+- `tip` (col 21) — memory aid or note
+- `image_url` (col 22), `audio_url` (col 24) — optional media
+- `front_fields` (col 27) — which fields appear on the front
 
-| Column       | Required | Description |
-|--------------|----------|-------------|
-| `definition` | no       | The definition or explanation of the word (defaults to "No definition" if empty) |
-| `usage1`     | no       | Usage context — when/where to use this word (auto-fills from `example1` if empty) |
-| `example1`   | no       | Example sentence (max 4: `example1` to `example4`) |
-| `tip`        | no       | Extra tip or memory aid |
-| `image_url`  | no       | Optional image shown on front above the title |
-| `audio_url`  | no       | Optional audio player shown on front above the title |
+### deep_dive (text)
+- **Columns to fill**: 1, 2, 4, 5, 6, 8, 16–19, 21, 22, 24, 27
+- Same as usage_cases but no `usage1` column
 
-### deep_dive (Pure Text — Deep Dive)
+### formula_table (text)
+- **Columns to fill**: same as deep_dive
+- Use `definition` for the formula/rule/table content
 
-Front shows the title. Back shows definition, examples, and tip.
+### multiple_choice (quiz)
+- **Columns to fill**: 1, 2, 4, 5, 6, 7, 10–14, 15, 22, 24
+- `question_text` (col 7) — the question (defaults to "Select the correct answer:")
+- `opt1`–`opt4` (cols 10–13) — answer choices (at least 1 required, max 4)
+- `correct_answer` (col 14) — **0-based index** of the correct option (0, 1, 2, or 3). Defaults to 0.
+- `explanation` (col 15) — text shown after answering
 
-| Column       | Required | Description |
-|--------------|----------|-------------|
-| `definition` | no       | Deep definition or explanation (defaults to "No definition" if empty) |
-| `example1`   | no       | Example sentence (max 4: `example1` to `example4`) |
-| `tip`        | no       | Extra note or insight |
-| `image_url`  | no       | Optional image shown on front above the title |
-| `audio_url`  | no       | Optional audio player shown on front above the title |
+### gap_fill (quiz)
+- **Columns to fill**: 1, 2, 4, 5, 6, 9, 14, 16, 22, 24
+- `sentence` (col 9) — the sentence with `______` for the blank (defaults to "Complete: ______")
+- `correct_answer` (col 14) — one answer, or comma-separated alternatives: `go,goes,went` (defaults to `answer`)
+- `example1` (col 16) — example showing correct usage
 
-### formula_table (Pure Text — Formula Table)
+### image_mcq (quiz)
+- **Columns to fill**: 1, 2, 4, 5, 6, 7, 10–14, 15, 22
+- Same as multiple_choice, plus `image_url` (col 22) is strongly recommended
 
-Front shows the title. Back shows formula, examples, and tip.
+### image_description (image card)
+- **Columns to fill**: 1, 2, 4, 5, 6, 22, 23
+- `image_url` (col 22) — image to show on front
+- `description` (col 23) — text shown on back (falls back to `definition`, then "No description")
 
-| Column       | Required | Description |
-|--------------|----------|-------------|
-| `definition` | no       | The formula, structure, or rule (defaults to "No definition" if empty) |
-| `example1`   | no       | Example sentence (max 4: `example1` to `example4`) |
-| `tip`        | no       | Extra note or memory aid |
-| `image_url`  | no       | Optional image shown on front above the title |
-| `audio_url`  | no       | Optional audio player shown on front above the title |
+### audio_listening (audio card)
+- **Columns to fill**: 1, 2, 4, 5, 6, 14, 24, 25, 26
+- `audio_url` (col 24) — audio file to play on front
+- `prompt` (col 25) — optional question/prompt shown below the player
+- `correct_answer` (col 14) — optional comma-separated answers for interactive mode
+- `transcript` (col 26) — text shown on the back
 
-### multiple_choice (Quiz)
+---
 
-Front shows a question with clickable answer options. Can optionally include an image or audio above the question.
+## Example CSV Rows
 
-| Column           | Required | Description |
-|------------------|----------|-------------|
-| `question_text`  | no       | The question to display (defaults to "Select the correct answer:") |
-| `opt1`           | no*      | Answer option 1 — at least one option required total (max 4: `opt1` to `opt4`) |
-| `opt2`           | no*      | Answer option 2 |
-| `opt3`           | no       | Answer option 3 |
-| `opt4`           | no       | Answer option 4 |
-| `correct_answer` | no       | Zero-based index of the correct option (0, 1, 2, or 3). Defaults to 0 if empty or invalid |
-| `explanation`    | no       | Text shown after answering explaining why it's correct |
-| `image_url`      | no       | Optional image displayed above the question on front |
-| `audio_url`      | no       | Optional audio player displayed above the question on front |
+All examples below keep columns in the EXACT order of the Master Table. Unused columns are omitted from the header but the RELATIVE order is always preserved.
 
-### gap_fill (Quiz)
+### Basic text cards (usage_cases, deep_dive, formula_table)
 
-Front shows a sentence with a blank. User types the missing word(s). Can optionally include image/audio.
+```
+id,set,type,title,level,definition,example1,usage1,tip,image_url,audio_url
+,Wh-Questions,usage_cases,WHAT - Asking for Information,Beginner,"How to use WHAT in questions?","What is your name?","Names & Identity","In Portuguese 'Qual é seu nome?' but English uses 'What is your name?'",uploads/images/wh-questions/what-intro.jpg,uploads/audio/wh-questions/what-example.mp3
+,Wh-Questions,deep_dive,WH- Prepositions at the End,Intermediate,"Why prepositions go at the end of WH questions","Who do you live with?","In Portuguese, prepositions start ('Com quem...') but English puts them at the end.",
+,Wh-Questions,formula_table,WHEN - Asking About Time,Beginner,"When + be + subject? OR When + do/does + subject + verb?","When is your birthday?",,,"When asking about days and dates",
+```
 
-| Column           | Required | Description |
-|------------------|----------|-------------|
-| `sentence`       | no       | The sentence with `______` indicating the blank (defaults to "Complete: ______") |
-| `correct_answer` | no       | One correct answer, or multiple comma-separated (e.g. `go,goes,went`). Defaults to `answer` if empty |
-| `example1`       | no       | Example sentence showing correct usage (maps to `example` in card data) |
-| `image_url`      | no       | Optional image displayed at the TOP of the card (always above the sentence) |
-| `audio_url`      | no       | Optional audio player displayed at the TOP of the card (always above the sentence) |
+Header columns map to master columns: 1,2,4,5,6,8,16,20,21,22,24 — correct relative order ✓
 
-### image_mcq (Quiz — Image + Multiple Choice)
+### Quiz cards (multiple_choice, gap_fill)
 
-**Layout:** On desktop, image is on the left, options on the right (side by side).  
-**Layout:** On mobile, image is on top, options below (vertical stack).
+```
+id,set,type,title,level,question_text,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,image_url
+,Tenses,multiple_choice,Present Perfect,B1,"Which sentence uses Present Perfect correctly?","","She has visited London","She visited London","She visits London","She is visiting London",2,"Present Perfect uses 'have/has + past participle'",uploads/images/tenses/present-perfect-example.jpg
+,Phrasal Verbs,gap_fill,break up,B1,,"They decided to ______ after five years",,,,,,break up,,,
+```
 
-| Column           | Required | Description |
-|------------------|----------|-------------|
-| `image_url`      | no*      | Image URL (strongly recommended — card works without it but shows a placeholder icon) |
-| `question_text`  | no       | The question to display (defaults to "Select the correct answer:") |
-| `opt1`           | no*      | Answer option 1 — at least one option required total (max 4: `opt1` to `opt4`) |
-| `opt2`           | no*      | Answer option 2 |
-| `opt3`           | no       | Answer option 3 |
-| `opt4`           | no       | Answer option 4 |
-| `correct_answer` | no       | Zero-based index of the correct option (0, 1, 2, or 3). Defaults to 0 if empty or invalid |
-| `explanation`    | no       | Text shown after answering explaining why it's correct |
+Header columns map to master columns: 1,2,4,5,6,7,9,10,11,12,13,14,15,22 — correct relative order ✓
 
-### image_description (Image Card)
+### Full mixed example (all types, full 27-column header)
 
-Front shows the image (or a placeholder). Back shows the description.
+```
+id,set,set_id,type,title,level,question_text,definition,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,example1,example2,example3,example4,usage1,tip,image_url,description,audio_url,prompt,transcript,front_fields
+,Phrasal Verbs,,usage_cases,break down,A1,,"To stop functioning (machine) or lose control emotionally",,,,,,,,,,"The car broke down on the highway",,,,,"When talking about machines or emotions","Use 'break down' for both machines and people",,,,,,
+,Phrasal Verbs,,gap_fill,break up,B1,,,"They decided to ______ after five years",,,,,,"break up",,,,,,,,,,,uploads/audio/phrasal-verbs/break-up.mp3,,,
+,Wh-Questions,,image_mcq,WHERE - Location,B1,"Which question word fits this image?",,,,,,"WHAT","WHEN","WHERE","WHO",2,"The image shows a map - we use WHERE for places",,,,,,,,,,uploads/images/wh-questions/where-map.jpg,,,,
+,Wh-Questions,,image_description,WHAT vs WHICH,A2,,,,,,,,,,,,,,,,,,,,uploads/images/wh-questions/what-vs-which.jpg,"WHAT = open, unlimited. WHICH = limited choices.",,,,
+,Wh-Questions,,audio_listening,WH- Questions Quiz,A2,,,,,,,,,,,"what,when,where,who,which,why,how",,,,,,,,,,uploads/audio/wh-questions/wh-quiz.mp3,,"Listen to each question and identify the WH-word",
+```
 
-| Column       | Required | Description |
-|--------------|----------|-------------|
-| `image_url`  | no*      | Image URL (strongly recommended — shows a 🖼️ placeholder if missing) |
-| `description`| no       | Description text shown on the back of the card (falls back to `definition`, then "No description") |
+### Image Description card
 
-### audio_listening (Audio Card)
+```
+id,set,type,title,level,image_url,description
+,Wh-Questions,image_description,WHAT - Asking for Information,A1,uploads/images/wh-questions/what-intro.jpg,"In English, we use WHAT to ask for general information."
+,Tenses,image_description,Present Simple Routine,B1,uploads/images/tenses/simple-present-routine.png,"The image shows a daily routine. Present Simple is used for habits, routines, and general truths. 'I wake up at 7 AM every day.'"
+```
 
-**Two modes:**
-1. **Descriptive mode** (no `correct_answer`, no `prompt`): Just plays audio, back shows the transcript/notes.
-2. **Interactive/Q&A mode** (with `correct_answer` and/or `prompt`): Shows a text input field. User types an answer and flips to check.
+### Audio Listening card
 
-| Column           | Required | Description |
-|------------------|----------|-------------|
-| `audio_url`      | yes*     | Audio file URL (strongly recommended — shows a 🎧 placeholder if missing) |
-| `prompt`         | no       | Optional prompt/question text shown below the audio player |
-| `correct_answer` | no       | Comma-separated accepted answers (e.g. `go,goes,went`). Leave empty for descriptive-only mode |
-| `transcript`     | no       | Full transcript or notes shown on the back of the card |
+```
+id,set,type,title,level,correct_answer,audio_url,prompt,transcript
+,Wh-Questions,audio_listening,WHAT - Listening Practice,A2,What is your name?,uploads/audio/wh-questions/what-is-your-name.mp3,"Listen and type what you hear:","What is your name?"
+,Modals,audio_listening,CAN - Pronunciation,B1,I can swim,uploads/audio/modal-verbs/can-swim.mp3,"Listen and complete:",I can swim
+,Modals,audio_listening,Can or Can't - Listening,B1,"can,can't",uploads/audio/modal-verbs/can-cant-listening.mp3,,"I can speak English but I can't speak Japanese."
+```
 
 ---
 
@@ -179,14 +204,9 @@ Use the **relative path** from the website root, starting with `uploads/`:
 | Image      | `image_url`   | `uploads/images/wh-questions/what-is-this.jpg` |
 | Audio      | `audio_url`   | `uploads/audio/modal-verbs/can-ability.mp3` |
 
-You can also use **full URLs** (from external sites or CDNs):
+You can also use **full URLs** (from external sites or CDNs).
 
-| Media type | Example value |
-|------------|---------------|
-| Image      | `https://example.com/images/sunset.jpg` |
-| Audio      | `https://example.com/audio/lesson1.mp3` |
-
-### Naming Convention (REQUIRED — follow this exactly)
+### Naming Convention
 
 Every file name MUST follow this pattern:
 
@@ -204,17 +224,10 @@ Every file name MUST follow this pattern:
 
 ```
 ✅ uploads/images/wh-questions/what-is-your-name.jpg
-✅ uploads/images/wh-questions/where-is-the-bathroom.png
-✅ uploads/images/modal-verbs/can-ability-example.webp
 ✅ uploads/audio/modal-verbs/could-polite-request.mp3
-✅ uploads/audio/tenses/present-continuous-now.mp3
 ✅ uploads/images/tenses/simple-present-routine.png
-✅ uploads/audio/wh-questions/how-old-are-you.mp3
-
-❌ uploads/images/what is your name.jpg           (spaces not allowed)
-❌ uploads/images/What_Is_Your_Name.JPG            (uppercase not allowed)
-❌ uploads/audio/can.mp3                           (too generic, missing topic folder)
 ❌ uploads/images/IMG_2024_001.jpg                 (non-descriptive name)
+❌ uploads/images/my image.jpg                      (spaces not allowed)
 ```
 
 ### Accepted File Formats
@@ -222,107 +235,18 @@ Every file name MUST follow this pattern:
 | Media type | Allowed formats |
 |------------|----------------|
 | **Images** | `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp` |
-| **Audio**  | `.mp3`, `.wav`, `.ogg`, `.m4a` (MPEG-4 audio) |
+| **Audio**  | `.mp3`, `.wav`, `.ogg`, `.m4a` |
 
 ---
-
-## Complete CSV Column Reference
-
-| # | Column           | Used by types | Description |
-|---|------------------|---------------|-------------|
-| 1 | `id`             | ALL           | Leave empty for new cards, set to existing ID to update |
-| 2 | `set`            | ALL           | Card set name (auto-created if missing) |
-| 3 | `set_id`         | ALL           | Numeric set ID (secondary to `set`) |
-| 4 | `type`           | ALL           | One of: `usage_cases`, `deep_dive`, `formula_table`, `multiple_choice`, `gap_fill`, `image_mcq`, `image_description`, `audio_listening` |
-| 5 | `title`          | ALL           | Main subject of the card |
-| 6 | `level`          | ALL           | `A1`, `A2`, `B1`, `B2`, `C1`, `C2` (or Beginner/Intermediate/Advanced) |
-| 7 | `question_text`  | multiple_choice, image_mcq | The question shown to the student |
-| 8 | `definition`     | usage_cases, deep_dive, formula_table | Main explanation/definition |
-| 9 | `sentence`       | gap_fill       | Sentence with `______` blank |
-| 10 | `opt1`           | multiple_choice, image_mcq | Option 1 |
-| 11 | `opt2`           | multiple_choice, image_mcq | Option 2 |
-| 12 | `opt3`           | multiple_choice, image_mcq | Option 3 (optional) |
-| 13 | `opt4`           | multiple_choice, image_mcq | Option 4 (optional) |
-| 14 | `correct_answer` | multiple_choice, image_mcq, gap_fill, audio_listening | Index for MCQ/image_mcq, comma-separated answers for gap_fill/audio_listening |
-| 15 | `explanation`    | multiple_choice, image_mcq | Why the correct answer is right |
-| 16 | `example1`       | usage_cases, deep_dive, formula_table, gap_fill | First example (max 4 per card: example1–example4) |
-| 17 | `example2`       | usage_cases, deep_dive, formula_table | Second example |
-| 18 | `example3`       | usage_cases, deep_dive, formula_table | Third example |
-| 19 | `example4`       | usage_cases, deep_dive, formula_table | Fourth example |
-| 20 | `usage1`         | usage_cases   | Usage context description |
-| 21 | `tip`            | usage_cases, deep_dive, formula_table | Extra tip or memory aid |
-| 22 | `image_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, image_mcq, image_description | Path like `uploads/images/<topic>/<name>.jpg` OR full URL |
-| 23 | `description`    | image_description | Text shown on the back of image cards |
-| 24 | `audio_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, audio_listening | Path like `uploads/audio/<topic>/<name>.mp3` OR full URL |
-| 25 | `prompt`         | audio_listening | Question/prompt shown below the audio player |
-| 26 | `transcript`     | audio_listening | Full transcript or notes shown on the back |
-| 27 | `front_fields`   | text types (usage_cases, deep_dive, formula_table) | Comma-separated list of fields to display on the front of the card (e.g. `title,image_url`). Defaults to `title` if empty. |
-
----
-
-## Example CSV Rows
-
-### Basic text cards
-
-```
-id,set,type,title,level,definition,example1,usage1,tip,image_url,audio_url
-,Wh-Questions,usage_cases,WHAT - Asking for Information,Beginner,"How to use WHAT in questions?","What is your name?","Names & Identity","In Portuguese 'Qual é seu nome?' but English uses 'What is your name?'",uploads/images/wh-questions/what-intro.jpg,uploads/audio/wh-questions/what-example.mp3
-,Wh-Questions,deep_dive,WH- Prepositions at the End,Intermediate,"Why prepositions go at the end of WH questions","Who do you live with?","In Portuguese, prepositions start ('Com quem...') but English puts them at the end.",
-,Wh-Questions,formula_table,WHEN - Asking About Time,Beginner,"When + be + subject? OR When + do/does + subject + verb?","When is your birthday?",,,"When asking about days and dates",
-```
-
-### Quiz cards
-
-```
-id,set,type,title,level,question_text,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,image_url
-,Tenses,multiple_choice,Present Perfect,B1,"Which sentence uses Present Perfect correctly?","","She has visited London","She visited London","She visits London","She is visiting London",2,"Present Perfect uses 'have/has + past participle'",uploads/images/tenses/present-perfect-example.jpg
-,Phrasal Verbs,gap_fill,break up,B1,,"They decided to ______ after five years",,,,,,break up,,,uploads/images/phrasal-verbs/break-up.jpg
-```
-
-### Image MCQ card
-
-```
-id,set,type,title,level,question_text,opt1,opt2,opt3,opt4,correct_answer,explanation,image_url
-,Modals,image_mcq,Can or Could?,B1,"What does this picture show?","Ability","Permission","Possibility","Request",0,"The image shows someone swimming - this is ability.",uploads/images/modal-verbs/can-swimming.jpg
-,Wh-Questions,image_mcq,Which question word?,A2,"Look at the picture and choose the correct question word","WHAT","WHEN","WHERE","WHO",2,"The image shows a map/location - use WHERE.",uploads/images/wh-questions/where-map.jpg
-```
-
-### Image Description card
-
-```
-id,set,type,title,level,description,image_url
-,Wh-Questions,image_description,WHAT - Asking for Information,A1,"In English, we use WHAT to ask for general information. Example: 'What is your name?' In Portuguese, you would say 'Qual é seu nome?' but in English, we never say 'Which is your name?'",uploads/images/wh-questions/what-intro.jpg
-,Tenses,image_description,Present Simple Routine,B1,"The image shows a daily routine. Present Simple is used for habits, routines, and general truths. 'I wake up at 7 AM every day.'",uploads/images/tenses/simple-present-routine.png
-```
-
-### Audio Listening card
-
-```
-id,set,type,title,level,prompt,correct_answer,transcript,audio_url
-,Wh-Questions,audio_listening,WHAT - Listening Practice,A2,"Listen and type what you hear:",What is your name?,"What is your name?","What is your name?",uploads/audio/wh-questions/what-is-your-name.mp3
-,Modals,audio_listening,CAN - Pronunciation,B1,"Listen and complete:","I can swim","I can swim",,uploads/audio/modal-verbs/can-swim.mp3
-,Modals,audio_listening,Can or Can't - Listening,B1,,"can,can't","I can speak English but I can't speak Japanese.",,uploads/audio/modal-verbs/can-cant-listening.mp3
-```
-
-### Full mixed example
-
-```
-id,set,type,title,level,question_text,definition,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,example1,usage1,tip,image_url,audio_url,description,prompt,transcript
-,Phrasal Verbs,usage_cases,break down,A1,,"To stop functioning (machine) or lose control emotionally",,,,,,,,,"The car broke down on the highway","When talking about machines or emotions","Use 'break down' for both machines and people",uploads/images/phrasal-verbs/break-down-car.jpg,,,,
-,Phrasal Verbs,gap_fill,break up,B1,,,"They decided to ______ after five years",,,,,"break up",,,,,,uploads/audio/phrasal-verbs/break-up.mp3,,
-,Wh-Questions,image_mcq,WHERE - Location,B1,"Which question word fits this image?","",,"WHAT","WHEN","WHERE","WHO",2,"The image shows a map - we use WHERE for places",,,,,,uploads/images/wh-questions/where-map.jpg,,,,
-,Wh-Questions,image_description,WHAT vs WHICH,A2,,,,,,,,,,,,,,,uploads/images/wh-questions/what-vs-which.jpg,,"WHAT = open, unlimited. WHICH = limited choices.",,
-,Wh-Questions,audio_listening,WH- Questions Quiz,A2,,,,,,,,"what,when,where,who,which,why,how",,,,,,,uploads/audio/wh-questions/wh-quiz.mp3,,"Listen to each question and identify the WH-word",
-```
 
 ## Important Notes
 
-- **Empty cells** are fine for unused fields — leave them blank
+- **Always use the full 27-column header** as shown in the Master Table. Leave unused cells empty.
 - The import automatically **creates any set name** that doesn't exist yet
 - Text fields support `\br` (backslash + br) for line breaks within a single cell
 - Max **4 options** per MCQ/image_mcq (`opt1`–`opt4`), max **4 examples** per text card (`example1`–`example4`)
 - The `correct_answer` for **gap_fill** and **audio_listening** accepts **comma-separated alternatives**: `go,goes,went`
-- For **image_mcq**, the `correct_answer` is a **zero-based index** (0, 1, 2, or 3)
-- For **audio_listening**, leave `correct_answer` AND `prompt` empty to make a **descriptive-only** card (no typing, just listen + read transcript)
-- Media files (`image_url`, `audio_url`) can be referenced as **relative paths** (`uploads/images/...`) or **full URLs** (`https://...`)
+- For **multiple_choice** and **image_mcq**, the `correct_answer` is a **zero-based index** (0, 1, 2, or 3). Defaults to 0 if empty.
+- For **audio_listening**, leave `correct_answer` AND `prompt` empty to make a **descriptive-only** card (just listen + read transcript)
+- Media files can be referenced as **relative paths** (`uploads/images/...`) or **full URLs** (`https://...`)
 - Import endpoint: `api/import_csv.php` (admin-only, via the admin panel)

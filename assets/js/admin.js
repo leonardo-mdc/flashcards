@@ -32,7 +32,15 @@
 
     function formatBreaks(text) {
         if (!text) return '';
-        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
+        let s = String(text);
+        s = s.replace(/\\\\/g, '\\');
+        s = s.replace(/\\br ?/g, '<br>');
+        s = s.replace(/\\b(.*?)\\b/g, '<b>$1</b>');
+        s = s.replace(/\\i(.*?)\\i/g, '<i>$1</i>');
+        s = s.replace(/\\u(.*?)\\u/g, '<u>$1</u>');
+        s = s.replace(/\\em(.*?)\\em/g, '<em>$1</em>');
+        s = s.replace(/\\strong(.*?)\\strong/g, '<strong>$1</strong>');
+        return s;
     }
 
     async function loadCardSets() {
@@ -391,7 +399,7 @@
                     </div>
                     <div class="flex flex-col justify-center md:w-1/2 gap-2">
                         <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
-                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     </div>
                 </div>
             `;
@@ -414,7 +422,7 @@
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
                     ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
-                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
                     <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
                 </div>
@@ -430,8 +438,8 @@
                     ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
                     ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-4xl mb-3">❓</div>
-                    <p class="text-lg mb-4 font-bold">${escapeHtml(contentData.question_text || 'Select the correct answer:')}</p>
-                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(contentData.question_text || 'Select the correct answer:'))}</p>
+                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
                 </div>
             `;
@@ -1382,6 +1390,156 @@
 
     document.getElementById('importCsvBtn')?.addEventListener('click', openImportModal);
 
+    /* ─── Export Modal ─── */
+
+    const exportModal = document.getElementById('exportModal');
+    const exportSetSelector = document.getElementById('exportSetSelector');
+    const exportTypeFilter = document.getElementById('exportTypeFilter');
+    const exportCardListContainer = document.getElementById('exportCardListContainer');
+    const exportSelectAll = document.getElementById('exportSelectAll');
+    const exportSelectedCount = document.getElementById('exportSelectedCount');
+    let exportAllCards = [];
+
+    function updateExportSelectedCount() {
+        const checked = exportCardListContainer.querySelectorAll('.export-card-checkbox:checked').length;
+        const total = exportCardListContainer.querySelectorAll('.export-card-checkbox').length;
+        exportSelectedCount.textContent = `${checked} of ${total} cards selected`;
+    }
+
+    function updateExportSelectAll() {
+        const checkboxes = exportCardListContainer.querySelectorAll('.export-card-checkbox');
+        const checked = exportCardListContainer.querySelectorAll('.export-card-checkbox:checked').length;
+        exportSelectAll.checked = checkboxes.length > 0 && checked === checkboxes.length;
+        exportSelectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+    }
+
+    function renderExportCardList() {
+        const setId = parseInt(exportSetSelector.value);
+        const typeFilter = exportTypeFilter.value.toLowerCase();
+
+        let filtered = exportAllCards;
+        if (setId > 0) {
+            filtered = filtered.filter(c => c.set_id === setId);
+        }
+        if (typeFilter) {
+            filtered = filtered.filter(c => c.pattern_type === typeFilter);
+        }
+
+        if (!filtered.length) {
+            exportCardListContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No cards match the selected filters</div>';
+            exportSelectedCount.textContent = '0 cards selected';
+            exportSelectAll.checked = false;
+            exportSelectAll.indeterminate = false;
+            return;
+        }
+
+        const typeColors = {
+            multiple_choice: '#dbeafe', gap_fill: '#fef3c7', image_mcq: '#e0e7ff',
+            image_description: '#d1fae5', audio_listening: '#fce7f3',
+            usage_cases: '#f3e8ff', deep_dive: '#ffe4e6', formula_table: '#e0f2fe'
+        };
+
+        let html = '';
+        filtered.forEach(card => {
+            const typeLabel = card.pattern_type === 'image_mcq' ? 'ImgMCQ'
+                : card.pattern_type === 'audio_listening' ? 'Audio'
+                : card.pattern_type === 'multiple_choice' ? 'MCQ'
+                : card.pattern_type === 'gap_fill' ? 'Gap'
+                : card.pattern_type === 'image_description' ? 'Image'
+                : card.pattern_type === 'deep_dive' ? 'Deep'
+                : card.pattern_type === 'formula_table' ? 'Formula'
+                : 'Text';
+            const color = typeColors[card.pattern_type] || '#f3f4f6';
+            html += `
+                <div class="export-card-item">
+                    <input type="checkbox" class="export-card-checkbox" value="${card.id}" checked>
+                    <div class="card-info">
+                        <div>
+                            <span class="font-medium text-sm">${escapeHtml(card.title || 'Untitled')}</span>
+                            <span class="card-set-name ml-1">${escapeHtml(card.set_name || '')}</span>
+                        </div>
+                        <span class="card-type-badge" style="background:${color}">${typeLabel}</span>
+                    </div>
+                </div>
+            `;
+        });
+        exportCardListContainer.innerHTML = html;
+
+        exportCardListContainer.querySelectorAll('.export-card-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateExportSelectedCount();
+                updateExportSelectAll();
+            });
+        });
+        updateExportSelectedCount();
+        updateExportSelectAll();
+    }
+
+    async function loadExportCards() {
+        exportCardListContainer.innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading cards...</div>';
+        try {
+            const response = await adminFetch(`admin_cards.php?action=get_cards&set_id=0&t=${Date.now()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (data.success) {
+                exportAllCards = data.cards;
+                renderExportCardList();
+            } else {
+                exportCardListContainer.innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
+            }
+        } catch (e) {
+            exportCardListContainer.innerHTML = '<div class="text-center text-red-500 py-8">Failed to load cards</div>';
+        }
+    }
+
+    function openExportModal() {
+        exportModal?.classList.remove('hidden');
+        exportSelectAll.checked = true;
+        exportSelectAll.indeterminate = false;
+        loadExportCards();
+    }
+
+    function closeExportModal() {
+        exportModal?.classList.add('hidden');
+    }
+
+    exportSetSelector?.addEventListener('change', renderExportCardList);
+    exportTypeFilter?.addEventListener('change', renderExportCardList);
+
+    exportSelectAll?.addEventListener('change', () => {
+        const checkboxes = exportCardListContainer.querySelectorAll('.export-card-checkbox');
+        checkboxes.forEach(cb => cb.checked = exportSelectAll.checked);
+        updateExportSelectedCount();
+    });
+
+    document.getElementById('exportBtn')?.addEventListener('click', openExportModal);
+    document.getElementById('closeExportBtn')?.addEventListener('click', closeExportModal);
+    document.getElementById('exportCancelBtn')?.addEventListener('click', closeExportModal);
+    exportModal?.addEventListener('click', (e) => {
+        if (e.target === exportModal) closeExportModal();
+    });
+
+    document.getElementById('exportExecuteBtn')?.addEventListener('click', () => {
+        const checked = exportCardListContainer.querySelectorAll('.export-card-checkbox:checked');
+        if (!checked.length) {
+            alert('No cards selected for export.');
+            return;
+        }
+        const cardIds = Array.from(checked).map(cb => cb.value).join(',');
+        const setId = exportSetSelector.value;
+        const type = exportTypeFilter.value;
+
+        let params = new URLSearchParams();
+        if (setId !== '0') params.set('set_id', setId);
+        if (type) params.set('type', type);
+        params.set('card_ids', cardIds);
+
+        window.location.href = 'api/export_csv.php?' + params.toString();
+    });
+
+    /* ─── End Export Modal ─── */
+
     async function loadCsvPreview(file) {
         importFileHandle = file;
         importFileName.textContent = file.name;
@@ -1630,7 +1788,7 @@
                     </div>
                     <div class="flex flex-col justify-center md:w-1/2 gap-2">
                         <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
-                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     </div>
                 </div>
             `;
@@ -1653,7 +1811,7 @@
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
                     ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
-                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
                     <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
                 </div>
@@ -1669,8 +1827,8 @@
                     ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
                     ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-4xl mb-3">❓</div>
-                    <p class="text-lg mb-4 font-bold">${escapeHtml(contentData.question_text || 'Select the correct answer:')}</p>
-                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${escapeHtml(opt)}</div>`).join('')}
+                    <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(contentData.question_text || 'Select the correct answer:'))}</p>
+                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
                 </div>
             `;
@@ -1690,7 +1848,7 @@
                     ${gapMediaHtml}
                     <div class="text-4xl mb-3">✏️</div>
                     <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(contentData.sentence || 'Complete: ______')}</p>
+                    <p class="text-base bg-gray-100 p-3 rounded-xl">${formatBreaks(escapeHtml(contentData.sentence || 'Complete: ______'))}</p>
                     <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
                     <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
                 </div>

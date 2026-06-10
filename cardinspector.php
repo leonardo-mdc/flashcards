@@ -229,7 +229,15 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
 
     function formatBreaks(text) {
         if (!text) return '';
-        return String(text).replace(/\\br/g, '<br>').replace(/\\br /g, '<br>');
+        let s = String(text);
+        s = s.replace(/\\\\/g, '\\');
+        s = s.replace(/\\br ?/g, '<br>');
+        s = s.replace(/\\b(.*?)\\b/g, '<b>$1</b>');
+        s = s.replace(/\\i(.*?)\\i/g, '<i>$1</i>');
+        s = s.replace(/\\u(.*?)\\u/g, '<u>$1</u>');
+        s = s.replace(/\\em(.*?)\\em/g, '<em>$1</em>');
+        s = s.replace(/\\strong(.*?)\\strong/g, '<strong>$1</strong>');
+        return s;
     }
 
     // ── Login ──────────────────────────────────────────────────
@@ -603,7 +611,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                     </div>
                     <div class="flex flex-col justify-center md:w-1/2 gap-2">
                         <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
-                        ${options.map((opt, i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${escapeHtml(opt)}</div>`).join('')}
+                        ${options.map((opt, i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     </div>
                 </div>`;
         }
@@ -626,7 +634,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                 <div class="flex flex-col items-center justify-center min-h-[200px]">
                     <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
                     ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
-                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${escapeHtml(prompt)}</p>` : ''}
+                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
                     <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
                 </div>`;
@@ -642,8 +650,8 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                     ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
                     ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
                     <div class="text-4xl mb-3">❓</div>
-                    <p class="text-lg mb-4 font-bold">${escapeHtml(data.question_text || 'Select the correct answer:')}</p>
-                    ${options.map((opt, i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${escapeHtml(opt)}</div>`).join('')}
+                    <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(data.question_text || 'Select the correct answer:'))}</p>
+                    ${options.map((opt, i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
                     <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
                 </div>`;
         }
@@ -662,7 +670,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                     ${gapMediaHtml}
                     <div class="text-4xl mb-3">✏️</div>
                     <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(data.sentence || 'Complete: ______')}</p>
+                    <p class="text-base bg-gray-100 p-3 rounded-xl">${formatBreaks(escapeHtml(data.sentence || 'Complete: ______'))}</p>
                     <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
                     <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
                 </div>`;
@@ -695,7 +703,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
                 <div class="text-center">
                     <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
                     <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
+                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${formatBreaks(escapeHtml(options[correctIdx] || 'Correct Answer'))}</p>
                     </div>
                     <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(data.explanation || 'Explanation would appear here.'))}</p>
                 </div>`;

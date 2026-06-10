@@ -114,7 +114,11 @@ if ($isAjax && isset($_GET['action'])) {
             exit;
         } elseif ($action === 'get_cards') {
             $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
-            echo json_encode(['success' => true, 'cards' => Card::getBySet($setId)]);
+            if ($setId === 0) {
+                echo json_encode(['success' => true, 'cards' => Card::getAll()]);
+            } else {
+                echo json_encode(['success' => true, 'cards' => Card::getBySet($setId)]);
+            }
         } elseif ($action === 'get_sets') {
             echo json_encode(['success' => true, 'sets' => CardSet::getAll()]);
         } elseif ($action === 'get_card') {
@@ -291,7 +295,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </select>
                     <button id="manageSetsBtn" class="btn btn-secondary text-sm">⚙️ Manage</button>
                     <button id="importCsvBtn" class="btn btn-secondary text-sm">📥 Import</button>
-                    <a href="api/export_csv.php" class="btn btn-secondary text-sm">📤 Export</a>
+                    <button id="exportBtn" class="btn btn-secondary text-sm">📤 Export</button>
                     <div class="flex gap-2">
                         <button id="saveCardBtn" class="btn btn-success">💾 SAVE</button>
                         <button id="revertCardBtn" class="btn btn-warning">↺ REVERT</button>
@@ -591,6 +595,54 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="modal-overlay hidden">
+        <div class="export-modal-content">
+            <div class="export-header">
+                <h2 class="text-xl marker-underline">📤 Export Cards</h2>
+                <button id="closeExportBtn" class="text-gray-500 text-xl font-bold">&times;</button>
+            </div>
+            <div class="export-filters">
+                <div class="flex gap-3 items-center flex-wrap">
+                    <label class="text-sm font-bold">Card Set:</label>
+                    <select id="exportSetSelector" class="form-select" style="width:220px;">
+                        <option value="0">All Sets</option>
+                        <?php foreach ($cardSets as $set): ?>
+                            <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label class="text-sm font-bold">Card Type:</label>
+                    <select id="exportTypeFilter" class="form-select" style="width:160px;">
+                        <option value="">All Types</option>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="gap_fill">Gap Fill</option>
+                        <option value="image_mcq">Image MCQ</option>
+                        <option value="image_description">Image Description</option>
+                        <option value="audio_listening">Audio Listening</option>
+                        <option value="usage_cases">Usage Cases</option>
+                        <option value="deep_dive">Deep Dive</option>
+                        <option value="formula_table">Formula Table</option>
+                    </select>
+                </div>
+            </div>
+            <div class="export-card-list">
+                <div class="export-select-all-bar">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" id="exportSelectAll" checked>
+                        <span>Select All</span>
+                    </label>
+                    <span id="exportSelectedCount" class="text-sm text-gray-500">0 cards selected</span>
+                </div>
+                <div id="exportCardListContainer" class="export-cards-container">
+                    <div class="text-center text-gray-500 py-8">Loading cards...</div>
+                </div>
+            </div>
+            <div class="export-actions">
+                <button id="exportCancelBtn" class="btn btn-secondary">Cancel</button>
+                <button id="exportExecuteBtn" class="btn btn-success">📤 Export Selected</button>
             </div>
         </div>
     </div>

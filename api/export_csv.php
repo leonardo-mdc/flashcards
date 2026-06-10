@@ -15,12 +15,39 @@ require_once __DIR__ . '/../src/CardSet.php';
 require_once __DIR__ . '/../src/Card.php';
 
 $pdo = Database::getConnection();
-$stmt = $pdo->query("
-    SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name
+
+$setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 0;
+$type  = $_GET['type'] ?? '';
+$cardIds = $_GET['card_ids'] ?? '';
+
+$sql = "SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name
     FROM cards c
     LEFT JOIN card_sets s ON c.set_id = s.id
-    ORDER BY s.name, c.id
-");
+    WHERE 1=1";
+$params = [];
+
+if ($setId > 0) {
+    $sql .= " AND c.set_id = ?";
+    $params[] = $setId;
+}
+if ($type !== '') {
+    $sql .= " AND c.pattern_type = ?";
+    $params[] = $type;
+}
+if ($cardIds !== '') {
+    $ids = array_map('intval', explode(',', $cardIds));
+    $ids = array_filter($ids, fn($v) => $v > 0);
+    if (!empty($ids)) {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql .= " AND c.id IN ($placeholders)";
+        $params = array_merge($params, $ids);
+    }
+}
+
+$sql .= " ORDER BY s.name, c.id";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $cards = $stmt->fetchAll();
 
 header('Content-Type: text/csv; charset=utf-8');

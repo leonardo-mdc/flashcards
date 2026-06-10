@@ -60,6 +60,22 @@ class Card
         return $cards;
     }
 
+    public static function getAll(): array
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT c.id, c.set_id, c.title, c.pattern_type, c.level, c.question_text, c.content_data, s.name AS set_name FROM cards c LEFT JOIN card_sets s ON c.set_id = s.id ORDER BY s.name, c.id");
+        $cards = $stmt->fetchAll();
+        foreach ($cards as &$card) {
+            if (!empty($card['content_data'])) {
+                $decoded = json_decode($card['content_data'], true);
+                $card['content_data'] = $decoded ?: [];
+            } else {
+                $card['content_data'] = [];
+            }
+        }
+        return $cards;
+    }
+
     public static function getBySet(int $setId): array
     {
         $pdo = Database::getConnection();

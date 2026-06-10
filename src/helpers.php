@@ -9,7 +9,15 @@ function escapeHtml($str): string
 function formatBreaks($text): string
 {
     if ($text === null) return '';
-    return str_replace(['\\br', '\\br '], '<br>', (string) $text);
+    $s = (string) $text;
+    $s = preg_replace('/\\\\\\\\/', '\\', $s);
+    $s = preg_replace('/\\\\br ?/', '<br>', $s);
+    $s = preg_replace('/\\\\b(.*?)\\\\b/s', '<b>$1</b>', $s);
+    $s = preg_replace('/\\\\i(.*?)\\\\i/s', '<i>$1</i>', $s);
+    $s = preg_replace('/\\\\u(.*?)\\\\u/s', '<u>$1</u>', $s);
+    $s = preg_replace('/\\\\em(.*?)\\\\em/s', '<em>$1</em>', $s);
+    $s = preg_replace('/\\\\strong(.*?)\\\\strong/s', '<strong>$1</strong>', $s);
+    return $s;
 }
 
 function assetVersion(string $path): string
