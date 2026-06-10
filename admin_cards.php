@@ -636,7 +636,10 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         <div id="subtab-users-list" class="sub-tab-content active">
             <div class="users-2col-grid">
                 <div class="whiteboard-card">
-                    <h2 class="text-lg marker-underline mb-3">👥 Users</h2>
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg marker-underline">👥 Users</h2>
+                        <button id="userListNewBtn" class="btn btn-primary btn-xs">➕ New</button>
+                    </div>
                     <div id="userListContainer" class="card-list">
                         <div class="text-center text-gray-500 py-4">Loading users...</div>
                     </div>

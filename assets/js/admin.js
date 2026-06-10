@@ -897,8 +897,74 @@
     }
 
     // ─── Users Sub-tab ──────────────────────────────────────────────
+    function renderNewUserForm() {
+        const panel = T('userEditPanel');
+        fetchJSON('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With':'XMLHttpRequest' } }).then(setsRes => {
+            const allSets = setsRes.success ? setsRes.sets : [];
+            let setCbs = allSets.map(s => `<label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="new-user-set-cb" value="${s.id}"> ${esc(s.name)}</label>`).join('');
+            if (!allSets.length) setCbs = '<div class="text-sm text-gray-400">No sets available</div>';
+            panel.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg marker-underline">➕ New User</h2>
+                    <div class="flex gap-2">
+                        <button id="createUserSaveBtn" class="btn btn-success btn-xs">💾 Save</button>
+                        <button id="createUserCancelBtn" class="btn btn-secondary btn-xs">✕ Cancel</button>
+                    </div>
+                </div>
+                <label class="block font-bold mb-1">Username:</label>
+                <input type="text" id="newUserUsername" class="form-input" placeholder="Enter username" maxlength="30">
+                <label class="block font-bold mb-1">Full Name:</label>
+                <input type="text" id="newUserFullName" class="form-input" placeholder="Enter full name">
+                <label class="block font-bold mb-1">Password:</label>
+                <input type="password" id="newUserPassword" class="form-input" placeholder="Min 6 characters">
+                <label class="block font-bold mb-1">Level:</label>
+                <select id="newUserLevel" class="form-select">
+                    <option value="Beginner">🔰 Beginner</option>
+                    <option value="Intermediate">📚 Intermediate</option>
+                    <option value="Advanced">🎓 Advanced</option>
+                </select>
+                <label class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="newUserIsAdmin">
+                    <span class="font-bold">Admin privileges</span>
+                </label>
+                <div class="mt-2 mb-2">
+                    <label class="block font-bold mb-1">📚 Card Set Access:</label>
+                    <p class="text-xs text-gray-500 mb-2">Leave all unchecked = show all sets</p>
+                    <div class="space-y-1">${setCbs}</div>
+                </div>
+            `;
+            T('createUserSaveBtn').addEventListener('click', async () => {
+                const username = T('newUserUsername').value.trim();
+                const fullName = T('newUserFullName').value.trim();
+                const password = T('newUserPassword').value;
+                const level = T('newUserLevel').value;
+                const isAdmin = T('newUserIsAdmin').checked;
+                if (!username) { toast('Username required', 'warning'); return; }
+                if (!password || password.length < 6) { toast('Password min 6 chars', 'warning'); return; }
+                const res = await fetchJSON('admin_cards.php?action=create_user', {
+                    method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+                    body: JSON.stringify({ username, full_name: fullName, password, english_level: level, is_admin: isAdmin })
+                });
+                if (res.success) {
+                    const setIds = Array.from(document.querySelectorAll('.new-user-set-cb:checked')).map(cb => parseInt(cb.value));
+                    await fetchJSON('admin_cards.php?action=set_user_sets', {
+                        method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+                        body: JSON.stringify({ user_id: res.user.id, set_ids: setIds })
+                    });
+                    toast('✅ User created', 'success');
+                    loadUsers();
+                    openUserEditor({ id: res.user.id, username, fullname: fullName, level, admin: isAdmin ? 'true' : 'false' });
+                } else toast('❌ ' + (res.error || 'Error'), 'error');
+            });
+            T('createUserCancelBtn').addEventListener('click', () => {
+                panel.innerHTML = '<div class="text-gray-400 text-center py-8">Select a user from the list</div>';
+            });
+        });
+    }
+
     function initUsersSubTab() {
         usersSubInitialized = true;
+        T('userListNewBtn').addEventListener('click', renderNewUserForm);
         loadUsers();
     }
 
@@ -1036,43 +1102,7 @@
             loadUsers();
         });
 
-        T('createUserBtn').addEventListener('click', () => {
-            panel.innerHTML = `
-                <h2 class="text-lg marker-underline mb-3">➕ New User</h2>
-                <label class="block font-bold mb-1">Username:</label>
-                <input type="text" id="newUserUsername" class="form-input" placeholder="Enter username" maxlength="30">
-                <label class="block font-bold mb-1">Full Name:</label>
-                <input type="text" id="newUserFullName" class="form-input" placeholder="Enter full name">
-                <label class="block font-bold mb-1">Password:</label>
-                <input type="password" id="newUserPassword" class="form-input" placeholder="Min 6 characters">
-                <label class="block font-bold mb-1">Level:</label>
-                <select id="newUserLevel" class="form-select">
-                    <option value="Beginner">🔰 Beginner</option>
-                    <option value="Intermediate">📚 Intermediate</option>
-                    <option value="Advanced">🎓 Advanced</option>
-                </select>
-                <label class="flex items-center gap-2 mt-2 mb-3">
-                    <input type="checkbox" id="newUserIsAdmin">
-                    <span class="font-bold">Admin privileges</span>
-                </label>
-                <button id="createUserSaveBtn" class="btn btn-success w-full">➕ Create User</button>
-            `;
-            T('createUserSaveBtn').addEventListener('click', async () => {
-                const username = T('newUserUsername').value.trim();
-                const fullName = T('newUserFullName').value.trim();
-                const password = T('newUserPassword').value;
-                const level = T('newUserLevel').value;
-                const isAdmin = T('newUserIsAdmin').checked;
-                if (!username) { toast('Username required', 'warning'); return; }
-                if (!password || password.length < 6) { toast('Password min 6 chars', 'warning'); return; }
-                const res = await fetchJSON('admin_cards.php?action=create_user', {
-                    method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
-                    body: JSON.stringify({ username, full_name: fullName, password, english_level: level, is_admin: isAdmin })
-                });
-                if (res.success) { toast('✅ User created', 'success'); loadUsers(); openUserEditor({ id: res.user.id, username, fullname: fullName, level, admin: isAdmin ? 'true' : 'false' }); }
-                else toast('❌ ' + (res.error || 'Error'), 'error');
-            });
-        });
+        T('createUserBtn').addEventListener('click', renderNewUserForm);
 
         T('deleteUserBtn').addEventListener('click', async () => {
             if (!confirm('Delete this user?')) return;
