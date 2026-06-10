@@ -1,1095 +1,1156 @@
 (function () {
-    let currentCards = [];
-    let currentEditingCard = null;
-    let selectedCardId = null;
-    let currentSetId = null;
+    const CSRF = window.FLASHCARD_ADMIN?.csrfToken || '';
+    const T = (id) => document.getElementById(id);
 
-    const csrfToken = window.FLASHCARD_ADMIN?.csrfToken || '';
-
-    function adminFetch(url, options = {}) {
-        const headers = new Headers(options.headers || {});
-        if (csrfToken) headers.set('X-CSRF-Token', csrfToken);
-        return window.fetch(url, { ...options, headers });
+    // ─── Helpers ────────────────────────────────────────────────────
+    function esc(str) { if (!str) return ''; const m = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }; return String(str).replace(/[&<>"']/g, c => m[c]); }
+    function fmtBreaks(t) { if (!t) return ''; let s = String(t); s = s.replace(/\\\\/g, '\\').replace(/\\br ?/g, '<br>'); s = s.replace(/\\b(.*?)\\b/g,'<b>$1</b>').replace(/\\i(.*?)\\i/g,'<i>$1</i>').replace(/\\u(.*?)\\u/g,'<u>$1</u>').replace(/\\em(.*?)\\em/g,'<em>$1</em>').replace(/\\strong(.*?)\\strong/g,'<strong>$1</strong>'); return s; }
+    function fetchJSON(url, opts = {}) {
+        const h = new Headers(opts.headers || {}); if (CSRF) h.set('X-CSRF-Token', CSRF);
+        if (!(opts.body instanceof FormData)) h.set('Content-Type', 'application/json');
+        return window.fetch(url, { ...opts, headers: h }).then(r => r.json());
+    }
+    function toast(msg, type = 'info') {
+        const el = T('toast'); if (!el) return;
+        const colors = { success:'#16a34a', error:'#dc2626', warning:'#d97706', info:'#2563eb' };
+        el.style.background = colors[type] || colors.info;
+        el.textContent = msg; el.style.display = 'block';
+        clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 3000);
     }
 
-    const setSelector = document.getElementById('setSelector');
-    const cardListContainer = document.getElementById('cardListContainer');
-    const editCardId = document.getElementById('editCardId');
-    const editTitle = document.getElementById('editTitle');
-    const editPatternType = document.getElementById('editPatternType');
-    const editLevel = document.getElementById('editLevel');
-    const editSetId = document.getElementById('editSetId');
-    const editFieldsContainer = document.getElementById('editFieldsContainer');
-    const frontPreviewContent = document.getElementById('frontPreviewContent');
-    const backPreviewContent = document.getElementById('backPreviewContent');
-    const cardSearchInput = document.getElementById('cardSearchInput');
+    // ─── Unified Card Field Config ──────────────────────────────────
+    const CFC = {};
 
-    function escapeHtml(str) {
-        if (!str) return '';
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-        return String(str).replace(/[&<>"']/g, m => map[m]);
-    }
+    function registerType(type, cfg) { CFC[type] = cfg; }
 
-    function formatBreaks(text) {
-        if (!text) return '';
-        let s = String(text);
-        s = s.replace(/\\\\/g, '\\');
-        s = s.replace(/\\br ?/g, '<br>');
-        s = s.replace(/\\b(.*?)\\b/g, '<b>$1</b>');
-        s = s.replace(/\\i(.*?)\\i/g, '<i>$1</i>');
-        s = s.replace(/\\u(.*?)\\u/g, '<u>$1</u>');
-        s = s.replace(/\\em(.*?)\\em/g, '<em>$1</em>');
-        s = s.replace(/\\strong(.*?)\\strong/g, '<strong>$1</strong>');
-        return s;
-    }
-
-    async function loadCardSets() {
-        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const data = await response.json();
-        if (data.success && data.sets) {
-            const currentVal = setSelector.value;
-            setSelector.innerHTML = '<option value="">-- Choose Card Set --</option>';
-            data.sets.forEach(set => {
-                setSelector.innerHTML += `<option value="${set.id}">${escapeHtml(set.name)}</option>`;
-            });
-            if (currentVal) setSelector.value = currentVal;
-        }
-    }
-
-    async function loadCards(setId) {
-        if (!setId) {
-            cardListContainer.innerHTML = '<div class="text-center text-gray-500 py-8">Select a card set to load cards</div>';
-            return;
-        }
-        currentSetId = setId;
-        if (cardSearchInput) { cardSearchInput.value = ''; }
-        cardSearchTerm = '';
-
-        const levels = [];
-        if (document.getElementById('levelBeginner').checked) levels.push('Beginner');
-        if (document.getElementById('levelIntermediate').checked) levels.push('Intermediate');
-        if (document.getElementById('levelAdvanced').checked) levels.push('Advanced');
-
-        cardListContainer.innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading cards...</div>';
-
-        const response = await adminFetch(`admin_cards.php?action=get_cards&set_id=${setId}&t=${Date.now()}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const data = await response.json();
-        if (data.success) {
-            currentCards = data.cards;
-            renderCardList(levels);
-        } else {
-            cardListContainer.innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
-        }
-    }
-
-    let cardSearchTerm = '';
-
-    function renderCardList(levelFilter = []) {
-        let filteredCards = currentCards;
-        if (levelFilter.length > 0) {
-            filteredCards = currentCards.filter(card => levelFilter.includes(card.level));
-        }
-        if (cardSearchTerm) {
-            const term = cardSearchTerm.toLowerCase();
-            filteredCards = filteredCards.filter(card => (card.title || '').toLowerCase().includes(term));
-        }
-
-        if (!filteredCards.length) {
-            cardListContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No cards matching filter in this set</div>';
-            return;
-        }
-
+    function renderFields(containerId, type, contentData) {
+        const cfg = CFC[type];
+        if (!cfg) { T(containerId).innerHTML = '<div class="text-sm text-gray-500">No fields for this type</div>'; return; }
+        const vals = cfg.fromContentData ? cfg.fromContentData(contentData || {}) : (contentData || {});
         let html = '';
-        filteredCards.forEach(card => {
-            const isSelected = (selectedCardId === card.id);
-            let typeLabel = '';
-            let typeClass = '';
-            if (card.pattern_type === 'multiple_choice' || card.pattern_type === 'image_mcq') {
-                typeLabel = card.pattern_type === 'image_mcq' ? 'ImgMCQ' : 'MCQ';
-                typeClass = 'mcq';
-            } else if (card.pattern_type === 'gap_fill' || card.pattern_type === 'audio_listening') {
-                typeLabel = card.pattern_type === 'audio_listening' ? 'Audio' : 'Gap';
-                typeClass = 'gap';
-            } else if (card.pattern_type === 'image_description') {
-                typeLabel = 'Image';
-                typeClass = 'image';
+        cfg.fields.forEach(f => {
+            const v = vals[f.key] !== undefined ? vals[f.key] : (f.default || '');
+            const h = f.help ? `<div class="help-text">${f.help}</div>` : '';
+            if (f.type === 'textarea') {
+                html += `<div><label class="block font-bold mb-1">${f.label}</label><textarea id="${containerId}_${f.key}" class="form-textarea" rows="${f.rows || 3}" placeholder="${f.placeholder || ''}">${esc(v)}</textarea>${h}</div>`;
+            } else if (f.type === 'csv') {
+                html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
             } else {
-                typeLabel = 'Text';
-                typeClass = 'text';
+                html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
             }
-            html += `
-                <div class="card-item ${isSelected ? 'selected' : ''}" data-id="${card.id}">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold">${escapeHtml(card.title || 'Untitled')}</span>
-                        <span class="card-type ${typeClass}">${typeLabel}</span>
-                    </div>
-                    <div class="text-sm text-gray-500 mt-1">${escapeHtml(card.level || 'Beginner')}</div>
-                    <div class="text-xs text-gray-400">ID: ${card.id}</div>
-                </div>
-            `;
         });
-        cardListContainer.innerHTML = html;
-
-        document.querySelectorAll('.card-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const id = parseInt(el.dataset.id);
-                const card = currentCards.find(c => c.id === id);
-                if (card) loadCardIntoEditor(card);
-                document.querySelectorAll('.card-item').forEach(i => i.classList.remove('selected'));
-                el.classList.add('selected');
-                selectedCardId = id;
+        // front_fields for text types
+        if (cfg.frontFields) {
+            const ff = Array.isArray(contentData?.front_fields) ? contentData.front_fields : cfg.defaultFrontFields;
+            let ffHtml = '<div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200"><label class="block font-bold mb-1 text-xs">Show on front:</label>';
+            cfg.frontFields.forEach(fk => {
+                const fLabel = cfg.fields.find(f => f.key === fk)?.label || fk;
+                ffHtml += `<label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" class="ff-cb" data-key="${fk}" ${ff.includes(fk) ? 'checked' : ''}> ${fLabel}</label>`;
             });
-        });
-    }
-
-    function loadCardIntoEditor(card) {
-        currentEditingCard = card;
-        editCardId.value = card.id;
-        editTitle.value = card.title || '';
-        editPatternType.value = card.pattern_type || 'usage_cases';
-        editLevel.value = card.level || 'Beginner';
-        if (editSetId) editSetId.value = card.set_id || 1;
-
-        let contentData = card.content_data || {};
-        renderEditFields(card.pattern_type || 'usage_cases', contentData);
-        updatePreviews();
-    }
-
-    function renderEditFields(patternType, contentData) {
-        let html = '';
-
-        if (patternType === 'multiple_choice') {
-            const options = (contentData.options || ['Option A', 'Option B', 'Option C']).join(', ');
-            const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : 1;
-            html = `
-                <div class="mt-2">
-                    <label class="block font-bold mb-1">Image URL (optional):</label>
-                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Audio URL (optional):</label>
-                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Question Text:</label>
-                    <input type="text" id="editQuestionText" class="form-input" value="${escapeHtml(contentData.question_text || '')}" placeholder="What is the question?">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Options (comma separated):</label>
-                    <input type="text" id="editOptions" class="form-input" value="${escapeHtml(options)}" placeholder="Option A, Option B, Option C">
-                    <div class="help-text">Example: Go, Goes, Going, Went</div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-bold mb-1">Correct Index (0,1,2...):</label>
-                        <input type="number" id="editCorrectIndex" class="form-input" value="${correctIdx}" min="0">
-                    </div>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Explanation (optional):</label>
-                    <textarea id="editExplanation" class="form-textarea" rows="3" placeholder="Explain why this is correct...\brUse \br for line breaks">${escapeHtml(contentData.explanation || '')}</textarea>
-                </div>
-            `;
-        } else if (patternType === 'gap_fill') {
-            const correctAnswers = (contentData.correct_answers || ['answer']).join(', ');
-            html = `
-                <div class="mt-2">
-                    <label class="block font-bold mb-1">Image URL (optional):</label>
-                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Audio URL (optional):</label>
-                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Sentence with ______ (blank):</label>
-                    <textarea id="editSentence" class="form-textarea" rows="3" placeholder="They ______ to school every day.\brI ______ (study) more for the test.">${escapeHtml(contentData.sentence || '')}</textarea>
-                    <div class="help-text">Use ______ to indicate the blank space</div>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Correct Answer(s) (comma separated):</label>
-                    <input type="text" id="editCorrectAnswers" class="form-input" value="${escapeHtml(correctAnswers)}" placeholder="go, goes">
-                    <div class="help-text">Multiple possible answers: go, goes, went</div>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Example Sentence (optional):</label>
-                    <textarea id="editExample" class="form-textarea" rows="2" placeholder="Example showing correct usage\brUse \br for line breaks">${escapeHtml(contentData.example || '')}</textarea>
-                </div>
-            `;
-        } else if (patternType === 'image_description') {
-            html = `
-                <div class="mt-2">
-                    <label class="block font-bold mb-1">Image URL:</label>
-                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Description:</label>
-                    <textarea id="editDescription" class="form-textarea" rows="5" placeholder="Enter the image description...\brUse \br for line breaks">${escapeHtml(contentData.description || '')}</textarea>
-                </div>
-            `;
-        } else if (patternType === 'image_mcq') {
-            const options = (contentData.options || ['Option A', 'Option B', 'Option C']).join(', ');
-            const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : 1;
-            html = `
-                <div class="mt-2">
-                    <label class="block font-bold mb-1">Image URL:</label>
-                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Question Text:</label>
-                    <input type="text" id="editQuestionText" class="form-input" value="${escapeHtml(contentData.question_text || '')}" placeholder="What is the question?">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Options (comma separated):</label>
-                    <input type="text" id="editOptions" class="form-input" value="${escapeHtml(options)}" placeholder="Option A, Option B, Option C">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-bold mb-1">Correct Index (0,1,2...):</label>
-                        <input type="number" id="editCorrectIndex" class="form-input" value="${correctIdx}" min="0">
-                    </div>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Explanation (optional):</label>
-                    <textarea id="editExplanation" class="form-textarea" rows="3" placeholder="Explain why this is correct...\brUse \br for line breaks">${escapeHtml(contentData.explanation || '')}</textarea>
-                </div>
-            `;
-        } else if (patternType === 'audio_listening') {
-            html = `
-                <div class="mt-2">
-                    <label class="block font-bold mb-1">Audio URL:</label>
-                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Prompt (what to listen for):</label>
-                    <textarea id="editPrompt" class="form-textarea" rows="2" placeholder="Listen to the audio and type what you hear...">${escapeHtml(contentData.prompt || '')}</textarea>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Transcript / Correct Answer(s) (comma separated):</label>
-                    <input type="text" id="editCorrectAnswers" class="form-input" value="${escapeHtml((contentData.correct_answers || contentData.transcript || contentData.notes || '').split(',').map(s => s.trim()).join(', '))}" placeholder="answer1, answer2">
-                    <div class="help-text">For Q&A: comma-separated accepted answers. Leave empty for descriptive-only.</div>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Notes / Full Transcript:</label>
-                    <textarea id="editNotes" class="form-textarea" rows="3" placeholder="Full transcript or notes for the audio...\brUse \br for line breaks">${escapeHtml(contentData.notes || contentData.transcript || '')}</textarea>
-                </div>
-            `;
-        } else {
-            const ex1 = contentData.example1a || contentData.example || '';
-            const ex2 = contentData.example && contentData.example !== contentData.example1a ? contentData.example : '';
-            html = `
-                <div class="mt-2">
-                    <label class="block font-bold mb-1">Image URL (optional):</label>
-                    <input type="text" id="editImageUrl" class="form-input" value="${escapeHtml(contentData.image_url || '')}" placeholder="https://example.com/image.jpg">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Audio URL (optional):</label>
-                    <input type="text" id="editAudioUrl" class="form-input" value="${escapeHtml(contentData.audio_url || '')}" placeholder="https://example.com/audio.mp3">
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Definition / Description:</label>
-                    <textarea id="editDefinition" class="form-textarea" rows="5" placeholder="Enter the definition or description...\brUse \br to create line breaks">${escapeHtml(contentData.definition || contentData.usage1 || '')}</textarea>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Usage / Context:</label>
-                    <textarea id="editUsage" class="form-textarea" rows="2" placeholder="When/why to use this...\brUse \br for line breaks">${escapeHtml(contentData.usage1 || '')}</textarea>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Example 1:</label>
-                    <textarea id="editExample" class="form-textarea" rows="2" placeholder="First example...\brUse \br for line breaks">${escapeHtml(ex1)}</textarea>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Example 2 (optional):</label>
-                    <textarea id="editExample2" class="form-textarea" rows="2" placeholder="Second example...\brUse \br for line breaks">${escapeHtml(ex2)}</textarea>
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">Tip (optional):</label>
-                    <textarea id="editTip" class="form-textarea" rows="2" placeholder="Helpful tip...\brUse \br for line breaks">${escapeHtml(contentData.tip || '')}</textarea>
-                </div>
-                <div class="mt-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                    <label class="block font-bold mb-1 text-xs">Show on front:</label>
-                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffDefinition" ${(contentData.front_fields || ['definition']).includes('definition') ? 'checked' : ''}> Definition</label>
-                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffUsage1" ${(contentData.front_fields || []).includes('usage1') ? 'checked' : ''}> Usage</label>
-                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="ffExamples" ${(contentData.front_fields || []).includes('examples') ? 'checked' : ''}> Examples</label>
-                    <label class="inline-flex items-center gap-1 text-xs"><input type="checkbox" id="ffTip" ${(contentData.front_fields || []).includes('tip') ? 'checked' : ''}> Tip</label>
-                </div>
-            `;
+            ffHtml += '</div>';
+            html += ffHtml;
         }
-
-        editFieldsContainer.innerHTML = html;
+        T(containerId).innerHTML = html;
     }
 
-    function getCurrentContentData() {
-        const patternType = editPatternType.value;
-        const contentData = {};
-
-        if (patternType === 'multiple_choice') {
-            const optionsInput = document.getElementById('editOptions');
-            const options = optionsInput ? optionsInput.value.split(',').map(s => s.trim()) : ['Option A', 'Option B', 'Option C'];
-            const correctIdx = document.getElementById('editCorrectIndex');
-            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
-            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
-            contentData.options = options;
-            contentData.correct_index = correctIdx ? parseInt(correctIdx.value) : 1;
-            contentData.question_text = document.getElementById('editQuestionText')?.value || '';
-            contentData.explanation = document.getElementById('editExplanation')?.value || '';
-        } else if (patternType === 'gap_fill') {
-            const answersInput = document.getElementById('editCorrectAnswers');
-            contentData.sentence = document.getElementById('editSentence')?.value || '';
-            contentData.correct_answers = answersInput ? answersInput.value.split(',').map(s => s.trim()) : ['answer'];
-            contentData.example = document.getElementById('editExample')?.value || '';
-            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
-            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
-        } else if (patternType === 'image_description') {
-            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
-            contentData.description = document.getElementById('editDescription')?.value || '';
-        } else if (patternType === 'image_mcq') {
-            const optionsInput = document.getElementById('editOptions');
-            const options = optionsInput ? optionsInput.value.split(',').map(s => s.trim()) : ['Option A', 'Option B', 'Option C'];
-            const correctIdx = document.getElementById('editCorrectIndex');
-            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
-            contentData.options = options;
-            contentData.correct_index = correctIdx ? parseInt(correctIdx.value) : 1;
-            contentData.question_text = document.getElementById('editQuestionText')?.value || '';
-            contentData.explanation = document.getElementById('editExplanation')?.value || '';
-        } else if (patternType === 'audio_listening') {
-            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
-            contentData.prompt = document.getElementById('editPrompt')?.value || '';
-            const answersInput = document.getElementById('editCorrectAnswers');
-            contentData.correct_answers = answersInput ? answersInput.value.split(',').map(s => s.trim()).filter(s => s) : [];
-            contentData.notes = document.getElementById('editNotes')?.value || '';
-            contentData.transcript = contentData.notes;
-        } else {
-            contentData.image_url = document.getElementById('editImageUrl')?.value || '';
-            contentData.audio_url = document.getElementById('editAudioUrl')?.value || '';
-            contentData.definition = document.getElementById('editDefinition')?.value || '';
-            contentData.usage1 = document.getElementById('editUsage')?.value || '';
-            contentData.example1a = document.getElementById('editExample')?.value || '';
-            contentData.example = document.getElementById('editExample2')?.value || '';
-            contentData.tip = document.getElementById('editTip')?.value || '';
+    function collectFields(containerId, type) {
+        const cfg = CFC[type];
+        if (!cfg) return {};
+        const dom = {};
+        cfg.fields.forEach(f => {
+            const el = T(`${containerId}_${f.key}`);
+            if (f.type === 'csv') {
+                dom[f.key] = el ? el.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+            } else {
+                dom[f.key] = el ? el.value : '';
+            }
+        });
+        if (cfg.frontFields) {
             const ff = [];
-            if (document.getElementById('ffDefinition')?.checked) ff.push('definition');
-            if (document.getElementById('ffUsage1')?.checked) ff.push('usage1');
-            if (document.getElementById('ffExamples')?.checked) ff.push('examples');
-            if (document.getElementById('ffTip')?.checked) ff.push('tip');
-            contentData.front_fields = ff;
+            document.querySelectorAll(`#${containerId} .ff-cb:checked`).forEach(cb => ff.push(cb.dataset.key));
+            dom.front_fields = ff;
         }
-
-        return contentData;
+        return cfg.toContentData ? cfg.toContentData(dom) : dom;
     }
 
-    function updatePreviews() {
-        const patternType = editPatternType.value;
-        const title = editTitle.value || 'Flashcard';
-        const contentData = getCurrentContentData();
-
-        let frontHtml = '';
-        if (patternType === 'image_mcq') {
-            const imageUrl = contentData.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            frontHtml = `
-                <div class="flex flex-col md:flex-row gap-3 h-full min-h-[200px]">
-                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
-                        ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-32 object-contain">` : `<div class="text-5xl text-gray-300">🖼️</div>`}
-                    </div>
-                    <div class="flex flex-col justify-center md:w-1/2 gap-2">
-                        <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
-                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
-                    </div>
-                </div>
-            `;
-        } else if (patternType === 'image_description') {
-            const imageUrl = contentData.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
-            frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="text-xl font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</div>
-                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-5xl mb-2">🖼️</div>`}
-                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
-                </div>
-            `;
-        } else if (patternType === 'audio_listening') {
-            const audioUrl = contentData.audio_url || '';
-            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
-            const prompt = contentData.prompt || '';
-            const isInteractive = !!(prompt || (contentData.correct_answers && contentData.correct_answers.length));
-            frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
-                    ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
-                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
-                    ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
-                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
-                </div>
-            `;
-        } else if (patternType === 'multiple_choice') {
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            const mcImageUrl = contentData.image_url || '';
-            const mcAudioUrl = contentData.audio_url || '';
-            const mcHasImage = mcImageUrl && (mcImageUrl.startsWith('http://') || mcImageUrl.startsWith('https://') || mcImageUrl.startsWith('uploads/'));
-            const mcHasAudio = mcAudioUrl && (mcAudioUrl.startsWith('http://') || mcAudioUrl.startsWith('https://') || mcAudioUrl.startsWith('uploads/'));
-            frontHtml = `
-                <div class="text-center">
-                    ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
-                    ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                    <div class="text-4xl mb-3">❓</div>
-                    <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(contentData.question_text || 'Select the correct answer:'))}</p>
-                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
-                    <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
-                </div>
-            `;
-        } else if (patternType === 'gap_fill') {
-            const gapImageUrl = contentData.image_url || '';
-            const gapAudioUrl = contentData.audio_url || '';
-            const gapHasImage = gapImageUrl && (gapImageUrl.startsWith('http://') || gapImageUrl.startsWith('https://') || gapImageUrl.startsWith('uploads/'));
-            const gapHasAudio = gapAudioUrl && (gapAudioUrl.startsWith('http://') || gapAudioUrl.startsWith('https://') || gapAudioUrl.startsWith('uploads/'));
-            const gapMediaHtml = (gapHasImage || gapHasAudio) ? `
-                <div class="w-full flex justify-center mb-2">
-                    ${gapHasImage ? `<img src="${escapeHtml(gapImageUrl)}" class="max-h-32 object-contain rounded-lg">` : ''}
-                    ${gapHasAudio ? `<div class="text-sm">🔊 Audio file provided</div>` : ''}
-                </div>
-            ` : '';
-            frontHtml = `
-                <div class="text-center">
-                    ${gapMediaHtml}
-                    <div class="text-4xl mb-3">✏️</div>
-                    <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-3 rounded-xl">${escapeHtml(contentData.sentence || 'Complete: ______')}</p>
-                    <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
-                    <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
-                </div>
-            `;
-        } else {
-            const genImageUrl = contentData.image_url || '';
-            const genAudioUrl = contentData.audio_url || '';
-            const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
-            const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
-            const defaultFront = patternType === 'deep_dive' ? [] : ['definition'];
-            const frontFields = Array.isArray(contentData.front_fields) ? contentData.front_fields : defaultFront;
-            const frontParts = [];
-            if (frontFields.includes('definition') && contentData.definition) frontParts.push(`<div class="text-base text-center">${formatBreaks(escapeHtml(contentData.definition))}</div>`);
-            if (frontFields.includes('usage1') && contentData.usage1) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">${formatBreaks(escapeHtml(contentData.usage1))}</div>`);
-            if (frontFields.includes('tip') && contentData.tip) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${formatBreaks(escapeHtml(contentData.tip))}</div>`);
-            frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
-                    ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                    <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
-                    ${frontParts.join('')}
-                    <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
-                </div>
-            `;
+    // ─── Register all 8 types ──────────────────────────────────────
+    function initFieldConfig() {
+        const textFields = [
+            { key:'definition',  label:'Definition / Description', type:'textarea', rows:5, placeholder:'Enter definition...' },
+            { key:'usage1',      label:'Usage / Context',         type:'textarea', rows:2, placeholder:'When/why to use...' },
+            { key:'examples',    label:'Examples (one per line)', type:'textarea', rows:3, placeholder:'Example 1\nExample 2\nExample 3\nExample 4' },
+            { key:'tip',         label:'Tip (optional)',          type:'textarea', rows:2, placeholder:'Helpful tip...' },
+            { key:'image_url',   label:'Image URL (optional)',    type:'text',     placeholder:'https://...' },
+            { key:'audio_url',   label:'Audio URL (optional)',    type:'text',     placeholder:'https://...' },
+        ];
+        function textFromContentData(cd) {
+            const ex = cd.examples || [];
+            return { definition: cd.definition || '', usage1: cd.usage1 || '', examples: ex.join('\n'), tip: cd.tip || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
         }
-
-        let backHtml = '';
-        if (patternType === 'image_mcq') {
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            const correctIdx = contentData.correct_index || 1;
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
-                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
-                    </div>
-                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
-                </div>
-            `;
-        } else if (patternType === 'image_description') {
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
-                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.description || 'Description would appear here.'))}</p>
-                    </div>
-                </div>
-            `;
-        } else if (patternType === 'audio_listening') {
-            const transcript = contentData.transcript || contentData.notes || '';
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-2xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
-                    ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}
-                </div>
-            `;
-        } else if (patternType === 'multiple_choice') {
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            const correctIdx = contentData.correct_index || 1;
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
-                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
-                    </div>
-                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
-                </div>
-            `;
-        } else if (patternType === 'gap_fill') {
-            const answers = contentData.correct_answers || ['answer'];
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3>
-                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300">
-                        <p class="text-xl font-bold">${escapeHtml(answers.join(' / '))}</p>
-                    </div>
-                    ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
-                </div>
-            `;
-        } else {
-            const exList = contentData.examples || [];
-            const exHtml = exList.length
-                ? exList.map((ex, i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${formatBreaks(escapeHtml(ex))}</p>`).join('')
-                : (contentData.example1a ? `<p class="text-md text-gray-600">📝 Example: ${formatBreaks(escapeHtml(contentData.example1a))}</p>` : '');
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
-                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.definition || 'Definition would appear here.'))}</p>
-                    </div>
-                    ${contentData.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${formatBreaks(escapeHtml(contentData.usage1))}</p>` : ''}
-                    ${exHtml ? `<div class="mt-2">${exHtml}</div>` : ''}
-                    ${contentData.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${formatBreaks(escapeHtml(contentData.tip))}</p></div>` : ''}
-                </div>
-            `;
+        function textToContentData(dom) {
+            const exLines = dom.examples.split('\n').map(s => s.trim()).filter(Boolean);
+            const cd = { definition: dom.definition, usage1: dom.usage1, tip: dom.tip, image_url: dom.image_url, audio_url: dom.audio_url };
+            if (exLines.length) { cd.examples = exLines; cd.example1a = exLines[0]; }
+            return cd;
         }
-
-        frontPreviewContent.innerHTML = frontHtml;
-        backPreviewContent.innerHTML = backHtml;
-    }
-
-    async function saveCard() {
-        const patternType = editPatternType.value;
-        const contentData = getCurrentContentData();
-
-        const cardData = {
-            id: parseInt(editCardId.value) || 0,
-            set_id: editSetId ? parseInt(editSetId.value) : (parseInt(setSelector.value) || 1),
-            title: editTitle.value,
-            pattern_type: patternType,
-            level: editLevel.value,
-            question_text: (patternType === 'multiple_choice' || patternType === 'image_mcq') ? contentData.question_text : '',
-            content_data: contentData
-        };
-
-        const response = await adminFetch('admin_cards.php?action=save_card', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify(cardData)
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('Card saved successfully!');
-            if (setSelector.value) loadCards(setSelector.value);
-            if (result.id && (!editCardId.value || editCardId.value == 0)) {
-                editCardId.value = result.id;
-            }
-        } else {
-            alert('Error saving card');
-        }
-    }
-
-    async function deleteCard() {
-        const cardId = parseInt(editCardId.value);
-        if (!cardId) {
-            alert('No card selected to delete');
-            return;
-        }
-        if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
-            const response = await adminFetch(`admin_cards.php?action=delete_card&card_id=${cardId}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        ['usage_cases','deep_dive','formula_table'].forEach(t => {
+            const isUsage = t === 'usage_cases';
+            const fields = isUsage ? textFields : textFields.filter(f => f.key !== 'usage1');
+            registerType(t, {
+                fields,
+                frontFields: ['definition','usage1','examples','tip'],
+                defaultFrontFields: t === 'deep_dive' ? [] : ['definition'],
+                fromContentData: textFromContentData,
+                toContentData: textToContentData,
             });
-            const result = await response.json();
-            if (result.success) {
-                alert('Card deleted successfully!');
-                newCard();
-                if (setSelector.value) loadCards(setSelector.value);
-            } else {
-                alert('Error deleting card');
-            }
+        });
+
+        registerType('multiple_choice', {
+            fields: [
+                { key:'image_url',     label:'Image URL (optional)',  type:'text', placeholder:'https://...' },
+                { key:'audio_url',     label:'Audio URL (optional)',  type:'text', placeholder:'https://...' },
+                { key:'question_text', label:'Question Text',         type:'textarea', rows:2, placeholder:'What is the question?' },
+                { key:'options',       label:'Options (comma separated)', type:'csv', default:['Option A','Option B','Option C'], placeholder:'Option A, Option B, Option C', help:'The first option has index 0' },
+                { key:'correct_index', label:'Correct Index (0, 1, 2...)', type:'text', default:'0', placeholder:'0' },
+                { key:'explanation',   label:'Explanation (optional)', type:'textarea', rows:3, placeholder:'Why this is correct...' },
+            ],
+            fromContentData(cd) { return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: Array.isArray(cd.options) ? cd.options.join(', ') : '', correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' }; },
+            toContentData(dom) { return { image_url: dom.image_url, audio_url: dom.audio_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
+        });
+
+        registerType('image_mcq', {
+            fields: [
+                { key:'image_url',     label:'Image URL',             type:'text', placeholder:'https://...' },
+                { key:'question_text', label:'Question Text',         type:'textarea', rows:2, placeholder:'What is the question?' },
+                { key:'options',       label:'Options (comma separated)', type:'csv', default:['Option A','Option B','Option C'], placeholder:'Option A, Option B, Option C' },
+                { key:'correct_index', label:'Correct Index (0, 1, 2...)', type:'text', default:'0', placeholder:'0' },
+                { key:'explanation',   label:'Explanation (optional)', type:'textarea', rows:3, placeholder:'Why this is correct...' },
+            ],
+            fromContentData(cd) { return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: Array.isArray(cd.options) ? cd.options.join(', ') : '', correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' }; },
+            toContentData(dom) { return { image_url: dom.image_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
+        });
+
+        registerType('gap_fill', {
+            fields: [
+                { key:'sentence',        label:'Sentence with ______', type:'textarea', rows:3, placeholder:'They ______ to school every day.' },
+                { key:'correct_answers', label:'Correct Answer(s)',    type:'csv', default:['answer'], placeholder:'go, goes, went', help:'Comma separated — all accepted answers' },
+                { key:'example',         label:'Example Sentence',      type:'textarea', rows:2, placeholder:'They go to school every day.' },
+                { key:'image_url',       label:'Image URL (optional)', type:'text', placeholder:'https://...' },
+                { key:'audio_url',       label:'Audio URL (optional)', type:'text', placeholder:'https://...' },
+            ],
+            fromContentData(cd) { return { sentence: cd.sentence || '', correct_answers: Array.isArray(cd.correct_answers) ? cd.correct_answers.join(', ') : '', example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' }; },
+            toContentData(dom) { return { sentence: dom.sentence, correct_answers: dom.correct_answers, example: dom.example, image_url: dom.image_url, audio_url: dom.audio_url }; },
+        });
+
+        registerType('image_description', {
+            fields: [
+                { key:'image_url',   label:'Image URL',            type:'text', placeholder:'https://...' },
+                { key:'description', label:'Description',          type:'textarea', rows:5, placeholder:'Enter description...' },
+            ],
+            fromContentData(cd) { return { image_url: cd.image_url || '', description: cd.description || '' }; },
+            toContentData(dom) { return { image_url: dom.image_url, description: dom.description }; },
+        });
+
+        registerType('audio_listening', {
+            fields: [
+                { key:'audio_url',       label:'Audio URL',              type:'text', placeholder:'https://...' },
+                { key:'prompt',          label:'Prompt (what to listen)', type:'textarea', rows:2, placeholder:'Listen and type what you hear...' },
+                { key:'correct_answers', label:'Correct Answer(s)',       type:'csv', default:[], placeholder:'answer1, answer2', help:'Comma separated accepted answers' },
+                { key:'transcript',      label:'Notes / Full Transcript', type:'textarea', rows:3, placeholder:'Full transcript...' },
+            ],
+            fromContentData(cd) { return { audio_url: cd.audio_url || '', prompt: cd.prompt || '', correct_answers: Array.isArray(cd.correct_answers) ? cd.correct_answers.join(', ') : '', transcript: cd.transcript || cd.notes || '' }; },
+            toContentData(dom) { return { audio_url: dom.audio_url, prompt: dom.prompt, correct_answers: dom.correct_answers, transcript: dom.transcript, notes: dom.transcript }; },
+        });
+    }
+
+    // ─── Preview Rendering ──────────────────────────────────────────
+    function renderPreview(frontEl, backEl, type, title, contentData) {
+        const cd = contentData || {};
+        const isURL = (u) => u && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('uploads/'));
+        const hasImg = isURL(cd.image_url);
+        const hasAud = isURL(cd.audio_url);
+
+        let front = '';
+        let back = '';
+        const t = esc(title || 'Flashcard');
+
+        if (type === 'image_mcq') {
+            const opts = cd.options || ['Option A','Option B','Option C'];
+            front = `<div class="flex flex-col md:flex-row gap-3 min-h-[200px]"><div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain">` : '<div class="text-5xl text-gray-300">🖼️</div>'}</div><div class="flex flex-col justify-center md:w-1/2 gap-2"><p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>${opts.map((o,i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}</div></div>`;
+            const ci = cd.correct_index || 0;
+            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${esc(opts[ci] || 'Correct')}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
+        } else if (type === 'image_description') {
+            front = `<div class="flex flex-col items-center justify-center min-h-[200px]"><div class="text-xl font-bold marker-underline mb-3">🖼️ ${t}</div>${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : '<div class="text-5xl mb-2">🖼️</div>'}<p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p></div>`;
+            back = `<div class="text-center"><h3 class="text-2xl text-blue-700 marker-underline mb-3">${t}</h3><div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.description || ''))}</p></div></div>`;
+        } else if (type === 'audio_listening') {
+            const int = !!(cd.prompt || (Array.isArray(cd.correct_answers) && cd.correct_answers.length));
+            front = `<div class="flex flex-col items-center justify-center min-h-[200px]"><div class="text-xl font-bold marker-underline mb-3">🎧 ${t}</div>${hasAud ? '<div class="text-sm mb-2">🔊 Audio file provided</div>' : '<div class="text-5xl mb-2">🎧</div>'}${cd.prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${fmtBreaks(esc(cd.prompt))}</p>` : ''}${int ? '<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>' : ''}<p class="text-xs text-gray-400 mt-2">👆 Tap to flip${int ? ' after answering' : ''}</p></div>`;
+            const tr = cd.transcript || cd.notes || '';
+            back = `<div class="text-center"><h3 class="text-2xl text-green-700 marker-underline mb-3">${t}</h3>${tr ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300"><p class="text-lg">${fmtBreaks(esc(tr))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}</div>`;
+        } else if (type === 'multiple_choice') {
+            const opts = cd.options || ['Option A','Option B','Option C'];
+            front = `<div class="text-center">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-4xl mb-3">❓</div><p class="text-lg mb-4 font-bold">${fmtBreaks(esc(cd.question_text || 'Select the correct answer:'))}</p>${opts.map((o,i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}<p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip</p></div>`;
+            const ci = cd.correct_index || 0;
+            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${esc(opts[ci] || 'Correct')}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
+        } else if (type === 'gap_fill') {
+            const gapMedia = (hasImg || hasAud) ? `<div class="w-full flex justify-center mb-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg">` : ''}${hasAud ? '<div class="text-sm">🔊 Audio</div>' : ''}</div>` : '';
+            front = `<div class="text-center">${gapMedia}<div class="text-4xl mb-3">✏️</div><p class="text-lg mb-4 font-bold">Complete the sentence:</p><p class="text-base bg-gray-100 p-3 rounded-xl">${fmtBreaks(esc(cd.sentence || 'Complete: ______'))}</p><input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6"><p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p></div>`;
+            const ans = Array.isArray(cd.correct_answers) ? cd.correct_answers : [cd.correct_answers || 'answer'];
+            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300"><p class="text-xl font-bold">${esc(ans.join(' / '))}</p></div>${cd.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${fmtBreaks(esc(cd.example))}</p>` : ''}</div>`;
+        } else {
+            const exList = cd.examples || [];
+            const exHtml = exList.length ? exList.map((ex,i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${fmtBreaks(esc(ex))}</p>`).join('') : '';
+            const defFront = type === 'deep_dive' ? [] : ['definition'];
+            const ff = Array.isArray(cd.front_fields) ? cd.front_fields : defFront;
+            const parts = [];
+            if (ff.includes('definition') && cd.definition) parts.push(`<div class="text-base text-center">${fmtBreaks(esc(cd.definition))}</div>`);
+            if (ff.includes('usage1') && cd.usage1) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">${fmtBreaks(esc(cd.usage1))}</div>`);
+            if (ff.includes('tip') && cd.tip) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${fmtBreaks(esc(cd.tip))}</div>`);
+            front = `<div class="flex flex-col items-center justify-center min-h-[200px]">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-2xl text-center font-bold mb-2">${t}</div>${parts.join('')}<p class="text-xs text-gray-400 mt-4">👆 Tap to flip</p></div>`;
+            back = `<div class="text-center"><h3 class="text-2xl text-blue-700 marker-underline mb-3">${t}</h3><div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.definition || ''))}</p></div>${cd.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${fmtBreaks(esc(cd.usage1))}</p>` : ''}${exHtml}${cd.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${fmtBreaks(esc(cd.tip))}</p></div>` : ''}</div>`;
+        }
+
+        T(frontEl).innerHTML = front;
+        T(backEl).innerHTML = back;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  TAB SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+    function initTabs() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = T('tab-' + btn.dataset.tab);
+                if (tab) tab.classList.add('active');
+                if (btn.dataset.tab === 'editor' && !editorInitialized) initEditor();
+                if (btn.dataset.tab === 'import' && !importInitialized) initImport();
+                if (btn.dataset.tab === 'export' && !exportInitialized) initExport();
+                if (btn.dataset.tab === 'users' && !usersInitialized) initUsersAndSets();
+            });
+        });
+        document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const parent = btn.closest('.sub-tab-bar').parentElement;
+                parent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+                parent.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const st = T('subtab-' + btn.dataset.subtab);
+                if (st) st.classList.add('active');
+                if (btn.dataset.subtab === 'users-list' && !usersSubInitialized) initUsersSubTab();
+                if (btn.dataset.subtab === 'sets-list' && !setsSubInitialized) initSetsSubTab();
+            });
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  TAB 1: CARD EDITOR
+    // ═══════════════════════════════════════════════════════════════
+    let editorInitialized = false;
+    let editorCards = [];
+    let editorSelectedCardId = null;
+    let editorEditingCard = null;
+
+    function initEditor() {
+        editorInitialized = true;
+        // Filters
+        T('editorSetFilter').addEventListener('change', loadEditorCards);
+        T('editorTypeFilter').addEventListener('change', loadEditorCards);
+        T('editorSearch').addEventListener('input', loadEditorCards);
+        [T('editorFilterBeginner'), T('editorFilterIntermediate'), T('editorFilterAdvanced')].forEach(cb => cb.addEventListener('change', loadEditorCards));
+        T('editorNewCardBtn').addEventListener('click', editorNewCard);
+        T('editorSaveBtn').addEventListener('click', editorSaveCard);
+        T('editRevertBtn').addEventListener('click', editorRevertCard);
+        T('editDeleteBtn').addEventListener('click', editorDeleteCard);
+        T('editorSelectAll').addEventListener('change', editorToggleSelectAll);
+        T('editorBulkDeleteBtn').addEventListener('click', editorBulkDelete);
+        T('editPatternType').addEventListener('change', editorOnTypeChange);
+        T('editTitle').addEventListener('input', editorUpdatePreview);
+        loadEditorCards();
+    }
+
+    async function loadEditorCards() {
+        const setId = T('editorSetFilter').value;
+        let url = 'admin_cards.php?action=get_cards&t=' + Date.now();
+        if (setId) url += `&set_id=${setId}`;
+        else url += '&set_id=0';
+        T('editorCardList').innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading...</div>';
+        const data = await fetchJSON(url, { headers: { 'X-Requested-With':'XMLHttpRequest' } });
+        if (data.success) {
+            editorCards = data.cards;
+            renderEditorCardList();
+        } else {
+            T('editorCardList').innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
         }
     }
 
-    function newCard() {
-        editCardId.value = '0';
-        editTitle.value = '';
-        editPatternType.value = 'usage_cases';
-        editLevel.value = 'Beginner';
-        if (editSetId) editSetId.value = setSelector.value || '1';
-        renderEditFields('usage_cases', {});
-        updatePreviews();
-        selectedCardId = null;
+    function getEditorCardFilter() {
+        const typeFilter = T('editorTypeFilter').value;
+        const search = T('editorSearch').value.toLowerCase();
+        const levels = [];
+        if (T('editorFilterBeginner').checked) levels.push('Beginner');
+        if (T('editorFilterIntermediate').checked) levels.push('Intermediate');
+        if (T('editorFilterAdvanced').checked) levels.push('Advanced');
+        return { typeFilter, search, levels };
+    }
+
+    function renderEditorCardList() {
+        const f = getEditorCardFilter();
+        const typeColors = { multiple_choice:'#fef3c7', gap_fill:'#dcfce7', image_mcq:'#e0e7ff', image_description:'#d1fae5', audio_listening:'#fce7f3', usage_cases:'#f3e8ff', deep_dive:'#ffe4e6', formula_table:'#e0f2fe' };
+        const typeLabels = { multiple_choice:'MCQ', gap_fill:'Gap', image_mcq:'ImgMCQ', image_description:'Img', audio_listening:'Audio', usage_cases:'Text', deep_dive:'Deep', formula_table:'Formula' };
+
+        let cards = editorCards.filter(c => {
+            if (f.typeFilter && c.pattern_type !== f.typeFilter) return false;
+            if (f.search && !(c.title || '').toLowerCase().includes(f.search)) return false;
+            if (f.levels.length && !f.levels.includes(c.level)) return false;
+            return true;
+        });
+
+        T('editorCardCount').textContent = cards.length + ' cards';
+
+        const allChecked = T('editorSelectAll');
+        const checkedCbs = [];
+        let html = '';
+        cards.forEach(card => {
+            const sel = editorSelectedCardId === card.id ? ' selected' : '';
+            const typeLabel = typeLabels[card.pattern_type] || 'Text';
+            const color = typeColors[card.pattern_type] || '#f3f4f6';
+            html += `<div class="card-item${sel}" data-id="${card.id}">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" class="editor-card-cb" value="${card.id}" onclick="event.stopPropagation()">
+                    <div class="flex-1 cursor-pointer" onclick="window._selectEditorCard(${card.id})">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm">${esc(card.title || 'Untitled')}</span>
+                            <span class="card-type" style="background:${color}">${typeLabel}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">${esc(card.level || 'Beginner')} · ID: ${card.id}</div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        if (!cards.length) html = '<div class="text-center text-gray-500 py-8">No cards match filters</div>';
+        T('editorCardList').innerHTML = html;
+
+        // Attach checkboxes
+        document.querySelectorAll('.editor-card-cb').forEach(cb => {
+            cb.addEventListener('change', updateEditorBulkDeleteBtn);
+        });
+        allChecked.checked = cards.length > 0 && document.querySelectorAll('.editor-card-cb:not(:checked)').length === 0;
+
+        // Expose select function globally for inline onclick
+        window._selectEditorCard = (id) => {
+            const card = editorCards.find(c => c.id === id);
+            if (card) editorLoadCard(card);
+            document.querySelectorAll('.card-item').forEach(i => i.classList.toggle('selected', parseInt(i.dataset.id) === id));
+            editorSelectedCardId = id;
+        };
+    }
+
+    function updateEditorBulkDeleteBtn() {
+        const checked = document.querySelectorAll('.editor-card-cb:checked').length;
+        const btn = T('editorBulkDeleteBtn');
+        T('editorSelectedCount').textContent = checked;
+        btn.classList.toggle('hidden', checked === 0);
+    }
+
+    function editorToggleSelectAll() {
+        const checked = T('editorSelectAll').checked;
+        document.querySelectorAll('.editor-card-cb').forEach(cb => cb.checked = checked);
+        updateEditorBulkDeleteBtn();
+    }
+
+    async function editorBulkDelete() {
+        const ids = Array.from(document.querySelectorAll('.editor-card-cb:checked')).map(cb => parseInt(cb.value));
+        if (!ids.length) return;
+        if (!confirm(`Delete ${ids.length} card(s)? This cannot be undone.`)) return;
+        const data = await fetchJSON('admin_cards.php?action=delete_cards_bulk', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+            body: JSON.stringify({ card_ids: ids })
+        });
+        if (data.success) {
+            toast(`✅ Deleted ${data.deleted} card(s)`, 'success');
+            loadEditorCards();
+            editorNewCard();
+        } else {
+            toast('❌ ' + (data.error || 'Delete failed'), 'error');
+        }
+    }
+
+    function editorNewCard() {
+        editorSelectedCardId = null;
+        editorEditingCard = null;
+        T('editCardId').value = '0';
+        T('editTitle').value = '';
+        T('editPatternType').value = 'usage_cases';
+        T('editLevel').value = 'Beginner';
+        T('editSetId').value = T('editorSetFilter').value || '1';
+        renderFields('editFieldsContainer', 'usage_cases', {});
+        editorUpdatePreview();
         document.querySelectorAll('.card-item').forEach(i => i.classList.remove('selected'));
     }
 
-    function revertCard() {
-        if (selectedCardId && currentEditingCard) {
-            loadCardIntoEditor(currentEditingCard);
+    function editorLoadCard(card) {
+        editorEditingCard = card;
+        T('editCardId').value = card.id;
+        T('editTitle').value = card.title || '';
+        T('editPatternType').value = card.pattern_type || 'usage_cases';
+        T('editLevel').value = card.level || 'Beginner';
+        T('editSetId').value = card.set_id || 1;
+        renderFields('editFieldsContainer', card.pattern_type || 'usage_cases', card.content_data || {});
+        editorUpdatePreview();
+    }
+
+    function editorRevertCard() {
+        if (editorEditingCard) editorLoadCard(editorEditingCard);
+        else editorNewCard();
+    }
+
+    function editorOnTypeChange() {
+        const type = T('editPatternType').value;
+        const current = collectFields('editFieldsContainer', type);
+        renderFields('editFieldsContainer', type, current);
+        editorUpdatePreview();
+    }
+
+    function editorUpdatePreview() {
+        const type = T('editPatternType').value;
+        const title = T('editTitle').value || 'Flashcard';
+        const cd = collectFields('editFieldsContainer', type);
+        renderPreview('frontPreviewContent', 'backPreviewContent', type, title, cd);
+    }
+
+    async function editorSaveCard() {
+        const type = T('editPatternType').value;
+        const cd = collectFields('editFieldsContainer', type);
+        const data = {
+            id: parseInt(T('editCardId').value) || 0,
+            set_id: parseInt(T('editSetId').value) || 1,
+            title: T('editTitle').value,
+            pattern_type: type,
+            level: T('editLevel').value,
+            question_text: (type === 'multiple_choice' || type === 'image_mcq') ? cd.question_text : '',
+            content_data: cd,
+        };
+        const res = await fetchJSON('admin_cards.php?action=save_card', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+            body: JSON.stringify(data)
+        });
+        if (res.success) {
+            toast('✅ Card saved!', 'success');
+            loadEditorCards();
+            if (res.id && (!T('editCardId').value || T('editCardId').value == '0')) T('editCardId').value = res.id;
         } else {
-            newCard();
+            toast('❌ ' + (res.error || 'Error saving card'), 'error');
         }
     }
 
-    const cardEditorSection = document.getElementById('cardEditorSection');
-    const userManagementSection = document.getElementById('userManagementSection');
-    const userListContainer = document.getElementById('userListContainer');
-
-    function showCardEditor() {
-        if (cardEditorSection) cardEditorSection.classList.remove('hidden');
-        if (userManagementSection) userManagementSection.classList.add('hidden');
+    async function editorDeleteCard() {
+        const id = parseInt(T('editCardId').value);
+        if (!id) { toast('No card selected', 'warning'); return; }
+        if (!confirm('Delete this card?')) return;
+        const res = await fetchJSON(`admin_cards.php?action=delete_card&card_id=${id}`, {
+            headers: { 'X-Requested-With':'XMLHttpRequest' }
+        });
+        if (res.success) {
+            toast('🗑 Deleted', 'success');
+            editorNewCard();
+            loadEditorCards();
+        } else {
+            toast('❌ ' + (res.error || 'Error'), 'error');
+        }
     }
 
-    function showUserManagement() {
-        if (cardEditorSection) cardEditorSection.classList.add('hidden');
-        if (userManagementSection) userManagementSection.classList.remove('hidden');
+    // ═══════════════════════════════════════════════════════════════
+    //  TAB 2: IMPORT
+    // ═══════════════════════════════════════════════════════════════
+    let importInitialized = false;
+    let importRows = [];
+    let importHeader = [];
+    let importSelectedIdx = -1;
+    let importFileHandle = null;
+
+    function initImport() {
+        importInitialized = true;
+        const dz = T('importDropZone');
+        const fi = T('importFileInput');
+        dz.addEventListener('click', () => fi.click());
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => {
+            e.preventDefault(); dz.classList.remove('dragover');
+            if (e.dataTransfer.files.length && e.dataTransfer.files[0].name.endsWith('.csv')) loadImportPreview(e.dataTransfer.files[0]);
+            else toast('Please drop a .csv file', 'warning');
+        });
+        fi.addEventListener('change', e => { if (e.target.files.length) loadImportPreview(e.target.files[0]); });
+        T('importChangeFileBtn').addEventListener('click', () => fi.click());
+        T('importApplyCardBtn').addEventListener('click', importApplyRow);
+        T('importApplyAllBtn').addEventListener('click', importApplyAll);
+        T('importDeleteCardBtn').addEventListener('click', importDeleteRow);
+        T('importExecuteBtn').addEventListener('click', importExecute);
+        T('importCreateSetBtn').addEventListener('click', importCreateSet);
+        T('importApplySetAll').addEventListener('change', importApplySetAllToggle);
+        T('importSetSelector').addEventListener('change', importSetSelectorChange);
+        T('importEditType').addEventListener('change', () => {
+            if (importSelectedIdx >= 0) {
+                renderImportEditorFields(importSelectedIdx);
+                importRenderPreview();
+            }
+        });
+        T('importEditTitle').addEventListener('input', importRenderPreview);
+        T('importEditLevel').addEventListener('change', importRenderPreview);
+    }
+
+    async function loadImportPreview(file) {
+        importFileHandle = file;
+        T('importFileName').textContent = file.name;
+        const fd = new FormData(); fd.append('csv', file);
+        T('importPreviewBody').innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="loader"></div> Parsing...</td></tr>';
+        const res = await fetchJSON('admin_cards.php?action=preview_csv&t=' + Date.now(), {
+            method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }
+        });
+        if (!res.success) { toast('❌ ' + (res.error || 'Failed to parse'), 'error'); return; }
+
+        importHeader = res.header || [];
+        importRows = (res.rows || []).map(row => {
+            let level = (row.level || 'Beginner').trim();
+            const lm = { 'beginner':'Beginner','a1':'Beginner','a2':'Beginner','intermediate':'Intermediate','b1':'Intermediate','b2':'Intermediate','advanced':'Advanced','c1':'Advanced','c2':'Advanced' };
+            level = lm[level.toLowerCase()] || level;
+            let type = (row.type || 'usage_cases').trim().toLowerCase();
+            if (!['usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_mcq','image_description','audio_listening'].includes(type)) type = 'usage_cases';
+            // Merge content_data JSON into row
+            let cd = row.content_data;
+            if (typeof cd === 'string' && cd) { try { cd = JSON.parse(cd); } catch(e) { cd = null; } }
+            if (cd && typeof cd === 'object') {
+                for (const k of Object.keys(cd)) {
+                    const v = cd[k];
+                    if (v != null && !row[k]) {
+                        if (Array.isArray(v)) { if (k === 'options' || k === 'correct_answers') row[k] = v.join(', '); }
+                        else if (typeof v === 'string') row[k] = v;
+                    }
+                }
+                if (cd.definition && !row.definition) row.definition = cd.definition;
+                if (cd.question_text && !row.question_text) row.question_text = cd.question_text;
+                if (cd.sentence && !row.sentence) row.sentence = cd.sentence;
+                if (cd.example && !row.example1) row.example1 = cd.example;
+                if (cd.usage1 && !row.usage1) row.usage1 = cd.usage1;
+                if (cd.tip && !row.tip) row.tip = cd.tip;
+                if (cd.explanation && !row.explanation) row.explanation = cd.explanation;
+                if (cd.image_url && !row.image_url) row.image_url = cd.image_url;
+                if (cd.audio_url && !row.audio_url) row.audio_url = cd.audio_url;
+                if (cd.description && !row.description) row.description = cd.description;
+                if (cd.prompt && !row.prompt) row.prompt = cd.prompt;
+                if (cd.transcript && !row.transcript) row.transcript = cd.transcript;
+                if (cd.correct_index !== undefined && row.correct_answer === undefined) row.correct_answer = String(cd.correct_index);
+                if (Array.isArray(cd.options) && !row.opt1) cd.options.forEach((o,i) => { if (i<4) row['opt'+(i+1)]=o; });
+                if (Array.isArray(cd.correct_answers) && !row.correct_answer) row.correct_answer = cd.correct_answers.join(',');
+            }
+            return { ...row, _setName: (row.set || '').trim(), _checked: true, type, level };
+        });
+        T('importRowCount').textContent = `(${res.total} rows)`;
+        renderImportPreview();
+        T('importStepFile').classList.add('hidden');
+        T('importStepPreview').classList.remove('hidden');
+    }
+
+    function renderImportPreview() {
+        const labels = { usage_cases:'📘 Usage', deep_dive:'🧠 Deep', formula_table:'📐 Formula', multiple_choice:'❓ MCQ', gap_fill:'✏️ Gap', image_mcq:'🖼️ ImgMCQ', image_description:'🖼️ Img', audio_listening:'🎧 Audio' };
+        const selAll = T('importSelectAll');
+        let html = '';
+        importRows.forEach((row, i) => {
+            const sel = i === importSelectedIdx ? ' selected' : '';
+            const s = row.type || 'usage_cases';
+            html += `<tr class="${sel}" data-idx="${i}">
+                <td><input type="checkbox" class="import-row-cb" data-idx="${i}" ${row._checked ? 'checked' : ''}></td>
+                <td class="text-gray-400 text-xs">${i+1}</td>
+                <td>${esc(row._setName || '')}</td>
+                <td><span class="card-type ${s === 'multiple_choice'||s==='image_mcq'?'mcq':s==='gap_fill'?'gap':'text'}">${labels[s]||s}</span></td>
+                <td class="import-row-title">${esc(row.title || 'Untitled')}</td>
+                <td><span class="text-xs bg-gray-100 px-2 py-0.5 rounded">${esc(row.level || 'Beginner')}</span></td>
+            </tr>`;
+        });
+        T('importPreviewBody').innerHTML = html;
+
+        T('importPreviewBody').querySelectorAll('tr').forEach(tr => {
+            tr.addEventListener('click', e => { if (e.target.type === 'checkbox') return; selectImportRow(parseInt(tr.dataset.idx)); });
+        });
+        T('importPreviewBody').querySelectorAll('.import-row-cb').forEach(cb => {
+            cb.addEventListener('change', e => {
+                const i = parseInt(e.target.dataset.idx);
+                if (importRows[i]) importRows[i]._checked = e.target.checked;
+                selAll.checked = importRows.every(r => r._checked);
+            });
+        });
+        selAll.onchange = () => { const c = selAll.checked; importRows.forEach(r => r._checked = c); document.querySelectorAll('.import-row-cb').forEach(cb => cb.checked = c); };
+
+        if (importRows.length && importSelectedIdx < 0) selectImportRow(0);
+    }
+
+    function selectImportRow(idx) {
+        if (idx < 0 || idx >= importRows.length) return;
+        importSelectedIdx = idx;
+        const row = importRows[idx];
+        T('importEditTitle').value = row.title || '';
+        T('importEditType').value = row.type || 'usage_cases';
+        T('importEditLevel').value = row.level || 'Beginner';
+        T('importPreviewSection').classList.remove('hidden');
+        // Match set name to dropdown
+        const sName = row._setName || '';
+        const setSel = T('importEditSetId');
+        let matched = '';
+        for (let i = 0; i < setSel.options.length; i++) { if (setSel.options[i].text === sName) { matched = setSel.options[i].value; break; } }
+        setSel.value = matched || '';
+        renderImportEditorFields(idx);
+        importRenderPreview();
+        document.querySelectorAll('#importPreviewBody tr').forEach(tr => tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx));
+    }
+
+    function renderImportEditorFields(idx) {
+        const row = importRows[idx];
+        const type = T('importEditType').value || row.type || 'usage_cases';
+        // Build content_data-like object from row
+        const cd = {};
+        const cfg = CFC[type];
+        if (cfg) {
+            const vals = cfg.fromContentData ? cfg.fromContentData(row) : {};
+            // Merge from raw CSV fields too
+            cfg.fields.forEach(f => {
+                if (row[f.key] !== undefined && row[f.key] !== '') vals[f.key] = row[f.key];
+            });
+            renderFields('importDynamicFields', type, vals);
+        } else {
+            T('importDynamicFields').innerHTML = '<div class="text-sm text-gray-500">No fields</div>';
+        }
+        // Attach listeners for preview
+        T('importDynamicFields').querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', importRenderPreview);
+            el.addEventListener('change', importRenderPreview);
+        });
+    }
+
+    function importApplyRow() {
+        if (importSelectedIdx < 0) return;
+        updateImportRow(importSelectedIdx);
+        renderImportPreview();
+        selectImportRow(importSelectedIdx);
+    }
+
+    function importApplyAll() {
+        for (let i = 0; i < importRows.length; i++) updateImportRow(i);
+        renderImportPreview();
+        if (importSelectedIdx >= 0) selectImportRow(importSelectedIdx);
+        toast('Applied to all rows', 'success');
+    }
+
+    function updateImportRow(idx) {
+        if (idx < 0 || idx >= importRows.length) return;
+        const row = importRows[idx];
+        row.title = T('importEditTitle').value;
+        row.type = T('importEditType').value;
+        row.level = T('importEditLevel').value;
+        const setId = T('importEditSetId').value;
+        const sName = setId ? (T('importEditSetId').options[T('importEditSetId').selectedIndex]?.text || '') : '';
+        row._setName = sName;
+        row.set_id = setId;
+        // Collect dynamic fields
+        const cd = collectFields('importDynamicFields', row.type);
+        Object.keys(cd).forEach(k => { row[k] = Array.isArray(cd[k]) ? cd[k].join(', ') : cd[k]; });
+    }
+
+    function importDeleteRow() {
+        if (importSelectedIdx < 0) { toast('Select a row first', 'warning'); return; }
+        if (!confirm('Remove this row?')) return;
+        importRows.splice(importSelectedIdx, 1);
+        importSelectedIdx = -1;
+        renderImportPreview();
+        if (importRows.length) selectImportRow(0);
+    }
+
+    function importRenderPreview() {
+        const idx = importSelectedIdx;
+        if (idx < 0 || idx >= importRows.length) { T('importPreviewSection')?.classList.add('hidden'); return; }
+        T('importPreviewSection').classList.remove('hidden');
+        const row = importRows[idx];
+        const title = T('importEditTitle').value || row.title || 'Untitled';
+        const type = T('importEditType').value || row.type || 'usage_cases';
+        // Collect content data from editor fields (same as editor preview)
+        const cd = collectFields('importDynamicFields', type);
+        renderPreview('importFrontPreview', 'importBackPreview', type, title, cd);
+    }
+
+    function importApplySetAllToggle() {
+        if (T('importApplySetAll').checked && T('importSetSelector').value) {
+            const sName = T('importSetSelector').options[T('importSetSelector').selectedIndex]?.text || '';
+            importRows.forEach(r => { r._setName = sName; r.set_id = T('importSetSelector').value; });
+            renderImportPreview();
+        }
+    }
+
+    function importSetSelectorChange() {
+        if (T('importApplySetAll').checked && T('importSetSelector').value) {
+            const sName = T('importSetSelector').options[T('importSetSelector').selectedIndex]?.text || '';
+            importRows.forEach(r => { r._setName = sName; r.set_id = T('importSetSelector').value; });
+            renderImportPreview();
+        }
+    }
+
+    async function importCreateSet() {
+        const name = T('importNewSetName').value.trim();
+        if (!name) { toast('Enter a set name', 'warning'); return; }
+        const res = await fetchJSON('admin_cards.php?action=create_set', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+            body: JSON.stringify({ name })
+        });
+        if (res.success) {
+            toast(`✅ "${name}" created`, 'success');
+            T('importNewSetName').value = '';
+            await refreshSetSelectors();
+            if (res.id && T('importSetSelector')) T('importSetSelector').value = String(res.id);
+        } else {
+            toast('❌ ' + (res.error || 'Error'), 'error');
+        }
+    }
+
+    async function importExecute() {
+        // ── FIX: Auto-save current editor row before import ──
+        if (importSelectedIdx >= 0) updateImportRow(importSelectedIdx);
+
+        const checked = importRows.filter(r => r._checked);
+        if (!checked.length) { toast('Select at least one row', 'warning'); return; }
+        if (!confirm(`Import ${checked.length} card(s)?`)) return;
+
+        const cols = ['id','set','set_id','type','title','level','question_text','definition','sentence','opt1','opt2','opt3','opt4','correct_answer','explanation','example1','example2','example3','example4','usage1','tip','image_url','description','audio_url','prompt','transcript','front_fields'];
+        const csvRows = [cols.join(',')];
+        checked.forEach(row => {
+            const vals = cols.map(col => {
+                if (col === 'set') return row._setName || '';
+                if (col === 'set_id') return row.set_id || '';
+                if (col === 'type') return row.type || 'usage_cases';
+                if (col === 'level') return row.level || 'Beginner';
+                let v = row[col] !== undefined ? String(row[col]) : '';
+                if (v.includes(',') || v.includes('"') || v.includes('\n')) v = '"' + v.replace(/"/g, '""') + '"';
+                return v;
+            });
+            csvRows.push(vals.join(','));
+        });
+
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+        const fd = new FormData();
+        fd.append('csv', blob, (importFileHandle ? importFileHandle.name : 'import.csv'));
+        try {
+            const res = await fetchJSON('api/import_csv.php', { method: 'POST', body: fd });
+            if (res.success) {
+                let msg = `✅ Imported ${res.imported} cards.`;
+                if (res.errors.length) msg += `\n⚠️ ${res.errors.length} errors:\n` + res.errors.slice(0,10).join('\n');
+                if (res.errors.length > 10) msg += `\n...and ${res.errors.length-10} more`;
+                toast(msg.split('\n')[0], res.errors.length ? 'warning' : 'success');
+                if (res.errors.length) alert(msg);
+                // Reset import UI
+                T('importStepFile').classList.remove('hidden');
+                T('importStepPreview').classList.add('hidden');
+                importRows = []; importSelectedIdx = -1; importFileHandle = null;
+                await refreshSetSelectors();
+            } else {
+                toast('❌ ' + (res.error || 'Import failed'), 'error');
+            }
+        } catch (e) { toast('❌ Network error', 'error'); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  TAB 3: EXPORT
+    // ═══════════════════════════════════════════════════════════════
+    let exportInitialized = false;
+    let exportCards = [];
+
+    function initExport() {
+        exportInitialized = true;
+        T('exportSetFilter').addEventListener('change', renderExportList);
+        T('exportTypeFilter').addEventListener('change', renderExportList);
+        T('exportSelectAll').addEventListener('change', () => {
+            document.querySelectorAll('.export-card-cb').forEach(cb => cb.checked = T('exportSelectAll').checked);
+            updateExportCount();
+        });
+        T('exportExecuteBtn').addEventListener('click', exportExecute);
+        loadExportCards();
+    }
+
+    async function loadExportCards() {
+        T('exportCardListContainer').innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading...</div>';
+        const res = await fetchJSON('admin_cards.php?action=get_cards&set_id=0&t=' + Date.now(), {
+            headers: { 'X-Requested-With':'XMLHttpRequest' }
+        });
+        if (res.success) {
+            exportCards = res.cards;
+            renderExportList();
+        } else {
+            T('exportCardListContainer').innerHTML = '<div class="text-center text-red-500 py-8">Error</div>';
+        }
+    }
+
+    function renderExportList() {
+        const setId = parseInt(T('exportSetFilter').value);
+        const typeFilter = T('exportTypeFilter').value;
+        const typeColors = { multiple_choice:'#fef3c7', gap_fill:'#dcfce7', image_mcq:'#e0e7ff', image_description:'#d1fae5', audio_listening:'#fce7f3', usage_cases:'#f3e8ff', deep_dive:'#ffe4e6', formula_table:'#e0f2fe' };
+        const typeLabels = { multiple_choice:'MCQ', gap_fill:'Gap', image_mcq:'ImgMCQ', image_description:'Img', audio_listening:'Audio', usage_cases:'Text', deep_dive:'Deep', formula_table:'Formula' };
+
+        let cards = exportCards.filter(c => {
+            if (setId > 0 && c.set_id !== setId) return false;
+            if (typeFilter && c.pattern_type !== typeFilter) return false;
+            return true;
+        });
+
+        if (!cards.length) {
+            T('exportCardListContainer').innerHTML = '<div class="text-center text-gray-500 py-8">No cards match filters</div>';
+            updateExportCount();
+            return;
+        }
+
+        let html = '';
+        cards.forEach(c => {
+            const tl = typeLabels[c.pattern_type] || 'Text';
+            const tc = typeColors[c.pattern_type] || '#f3f4f6';
+            html += `<div class="export-card-item">
+                <input type="checkbox" class="export-card-cb" value="${c.id}" checked>
+                <div class="card-info flex-1 flex justify-between items-center">
+                    <div><span class="font-medium text-sm">${esc(c.title || 'Untitled')}</span><span class="text-xs text-gray-500 ml-2">${esc(c.set_name || '')}</span></div>
+                    <span class="card-type-badge" style="background:${tc}">${tl}</span>
+                </div>
+            </div>`;
+        });
+        T('exportCardListContainer').innerHTML = html;
+        document.querySelectorAll('.export-card-cb').forEach(cb => cb.addEventListener('change', updateExportCount));
+        updateExportCount();
+    }
+
+    function updateExportCount() {
+        const checked = document.querySelectorAll('.export-card-cb:checked').length;
+        const total = document.querySelectorAll('.export-card-cb').length;
+        T('exportSelectedCount').textContent = `${checked} of ${total} cards selected`;
+        T('exportSelectAll').checked = total > 0 && checked === total;
+    }
+
+    function exportExecute() {
+        const ids = Array.from(document.querySelectorAll('.export-card-cb:checked')).map(cb => cb.value);
+        if (!ids.length) { toast('Select cards to export', 'warning'); return; }
+        const setId = T('exportSetFilter').value;
+        const type = T('exportTypeFilter').value;
+        let p = new URLSearchParams();
+        if (setId !== '0') p.set('set_id', setId);
+        if (type) p.set('type', type);
+        p.set('card_ids', ids.join(','));
+        window.location.href = 'api/export_csv.php?' + p.toString();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  TAB 4: USERS & SETS
+    // ═══════════════════════════════════════════════════════════════
+    let usersInitialized = false;
+    let usersSubInitialized = false;
+    let setsSubInitialized = false;
+    let cachedUsers = [];
+    let cachedSets = [];
+
+    function initUsersAndSets() {
+        usersInitialized = true;
+    }
+
+    // ─── Users Sub-tab ──────────────────────────────────────────────
+    function initUsersSubTab() {
+        usersSubInitialized = true;
         loadUsers();
     }
 
     async function loadUsers() {
-        if (!userListContainer) return;
-        userListContainer.innerHTML = '<div class="text-center py-4"><div class="loader"></div> Loading users...</div>';
-
-        const response = await adminFetch('admin_cards.php?action=get_users&t=' + Date.now(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        T('userListContainer').innerHTML = '<div class="text-center py-4"><div class="loader"></div> Loading...</div>';
+        const res = await fetchJSON('admin_cards.php?action=get_users&t=' + Date.now(), {
+            headers: { 'X-Requested-With':'XMLHttpRequest' }
         });
-        const data = await response.json();
-        if (data.success && data.users) {
-            renderUsers(data.users);
+        if (res.success && res.users) {
+            cachedUsers = res.users;
+            renderUsers(res.users);
         } else {
-            userListContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading users</div>';
+            T('userListContainer').innerHTML = '<div class="text-center text-red-500 py-4">Error</div>';
         }
     }
 
     function renderUsers(users) {
-        if (!users.length) {
-            userListContainer.innerHTML = '<div class="text-center text-gray-500 py-4">No users found</div>';
-            return;
-        }
-
-        let html = '<table class="w-full" style="border-collapse:collapse;">';
-        html += '<tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Name</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Progress</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Level</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
-        users.forEach(user => {
+        if (!users.length) { T('userListContainer').innerHTML = '<div class="text-center text-gray-500 py-4">No users</div>'; return; }
+        let html = '<table class="w-full" style="border-collapse:collapse;"><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Username</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Name</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Role</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Level</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Progress</th><th style="text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th></tr>';
+        users.forEach(u => {
             html += `<tr>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.full_name || user.username)}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.username)}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">Student</span>'}</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${user.progress || 0}%</td>
-                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(user.english_level || 'Beginner')}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${esc(u.username)}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${esc(u.full_name || '')}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${u.is_admin ? '<span class="card-type mcq">Admin</span>' : '<span class="card-type text">Student</span>'}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${esc(u.english_level || 'Beginner')}</td>
+                <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${u.progress || 0}%</td>
                 <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
-                    <button class="edit-user-btn btn btn-primary text-xs" data-id="${user.id}" data-username="${escapeHtml(user.username)}" data-fullname="${escapeHtml(user.full_name || '')}" data-level="${escapeHtml(user.english_level || 'Beginner')}" data-admin="${user.is_admin}" style="padding:4px 10px;font-size:0.7rem;">✏️ Edit</button>
-                    <button class="reset-user-btn btn btn-warning text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🔄 Reset</button>
-                    <button class="delete-user-btn btn btn-danger text-xs" data-id="${user.id}" style="padding:4px 10px;font-size:0.7rem;">🗑 Delete</button>
+                    <button class="user-edit-btn btn btn-primary text-xs" data-id="${u.id}" data-username="${esc(u.username)}" data-fullname="${esc(u.full_name||'')}" data-level="${esc(u.english_level||'Beginner')}" data-admin="${u.is_admin}" style="padding:4px 10px;">✏️ Edit</button>
+                    <button class="user-reset-btn btn btn-warning text-xs" data-id="${u.id}" style="padding:4px 10px;">🔄 Reset</button>
+                    <button class="user-del-btn btn btn-danger text-xs" data-id="${u.id}" style="padding:4px 10px;">🗑 Delete</button>
                 </td>
             </tr>`;
         });
         html += '</table>';
+        T('userListContainer').innerHTML = html;
 
-        userListContainer.innerHTML = html;
-
-        document.querySelectorAll('.edit-user-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                openEditUserModal(btn.dataset);
+        // Edit button
+        document.querySelectorAll('.user-edit-btn').forEach(b => {
+            b.addEventListener('click', () => openUserEditor(b.dataset));
+        });
+        // Delete button
+        document.querySelectorAll('.user-del-btn').forEach(b => {
+            b.addEventListener('click', async () => {
+                if (!confirm('Delete user?')) return;
+                const res = await fetchJSON(`admin_cards.php?action=delete_user&user_id=${b.dataset.id}`, {
+                    headers: { 'X-Requested-With':'XMLHttpRequest' }
+                });
+                if (res.success) { toast('🗑 User deleted', 'success'); loadUsers(); }
+                else toast('❌ ' + (res.error || 'Error'), 'error');
             });
         });
-
-        document.querySelectorAll('.delete-user-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const userId = parseInt(btn.dataset.id);
-                if (confirm('Delete this user? This action cannot be undone.')) {
-                    const response = await adminFetch(`admin_cards.php?action=delete_user&user_id=${userId}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        loadUsers();
-                    } else {
-                        alert(result.error || 'Error deleting user');
-                    }
-                }
-            });
-        });
-
-        document.querySelectorAll('.reset-user-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const userId = parseInt(btn.dataset.id);
-                if (confirm('Reset all progress for this user? This will clear review history and progress.')) {
-                    const response = await adminFetch(`admin_cards.php?action=reset_user_progress&user_id=${userId}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        alert('Progress reset successfully');
-                        loadUsers();
-                    } else {
-                        alert(result.error || 'Error resetting progress');
-                    }
-                }
+        // Reset progress button
+        document.querySelectorAll('.user-reset-btn').forEach(b => {
+            b.addEventListener('click', async () => {
+                if (!confirm('Reset all progress for this user?')) return;
+                const res = await fetchJSON(`admin_cards.php?action=reset_user_progress&user_id=${b.dataset.id}`, {
+                    headers: { 'X-Requested-With':'XMLHttpRequest' }
+                });
+                if (res.success) { toast('Progress reset', 'success'); loadUsers(); }
+                else toast('❌ Error', 'error');
             });
         });
     }
 
-    function openEditUserModal(data) {
-        const existing = document.getElementById('editUserModal');
-        if (existing) existing.remove();
+    async function openUserEditor(data) {
+        const panel = T('userEditPanel');
+        const uid = parseInt(data.id);
 
-        const modal = document.createElement('div');
-        modal.id = 'editUserModal';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
-        modal.innerHTML = `
-            <div class="whiteboard-card" style="max-width:500px;width:90%;padding:24px;max-height:80vh;overflow-y:auto;">
-                <h3 class="text-lg marker-underline mb-3">✏️ Edit User</h3>
-                <div class="flex gap-2 mb-3">
-                    <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
-                    <button id="cancelEditUserBtn" class="btn btn-secondary flex-1">Cancel</button>
-                </div>
-                <input type="hidden" id="editUserId" value="${data.id}">
-                <label class="block font-bold mb-1">Username:</label>
-                <input type="text" id="editUserUsername" class="form-input" value="${data.username}" maxlength="30" autofocus>
-                <label class="block font-bold mb-1">Full Name:</label>
-                <input type="text" id="editUserFullName" class="form-input" value="${data.fullname}">
-                <label class="block font-bold mb-1">Level:</label>
-                <select id="editUserLevel" class="form-select w-full p-2 border-2 rounded-xl mb-3 bg-white">
-                    <option value="Beginner" ${data.level === 'Beginner' ? 'selected' : ''}>🔰 Beginner</option>
-                    <option value="Intermediate" ${data.level === 'Intermediate' ? 'selected' : ''}>📚 Intermediate</option>
-                    <option value="Advanced" ${data.level === 'Advanced' ? 'selected' : ''}>🎓 Advanced</option>
-                </select>
-                <label class="block font-bold mb-1">New Password:</label>
-                <input type="password" id="editUserPassword" class="form-input" placeholder="Leave empty to keep current">
-                <label class="block font-bold mb-1">Confirm Password:</label>
-                <input type="password" id="editUserPasswordConfirm" class="form-input" placeholder="Repeat new password">
-                <label class="flex items-center gap-2 my-2">
-                    <input type="checkbox" id="editUserIsAdmin" value="1" ${data.admin === 'true' || data.admin === '1' ? 'checked' : ''}>
-                    <span class="font-bold">Admin privileges</span>
-                </label>
-                <div class="mt-3 mb-2">
-                    <label class="block font-bold mb-1">📚 Visible Card Sets:</label>
-                    <p class="text-xs text-gray-500 mb-2">Leave all unchecked to show all sets</p>
-                    <div id="userSetAccessContainer" class="space-y-1">
-                        <div class="text-sm text-gray-400">Loading sets...</div>
-                    </div>
-                </div>
-                <p id="editUserError" class="text-red-600 text-center mt-2 hidden"></p>
+        // Fetch sets and user set access
+        const [setsRes, accessRes] = await Promise.all([
+            fetchJSON('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With':'XMLHttpRequest' } }),
+            fetchJSON(`admin_cards.php?action=get_user_sets&user_id=${uid}&t=${Date.now()}`, { headers: { 'X-Requested-With':'XMLHttpRequest' } })
+        ]);
+        const allSets = setsRes.success ? setsRes.sets : [];
+        const userSetIds = accessRes.success ? accessRes.set_ids : [];
+
+        let setCbs = allSets.map(s => `<label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="user-set-cb" value="${s.id}" ${userSetIds.includes(s.id) ? 'checked' : ''}> ${esc(s.name)}</label>`).join('');
+        if (!allSets.length) setCbs = '<div class="text-sm text-gray-400">No sets available</div>';
+
+        panel.innerHTML = `
+            <h2 class="text-lg marker-underline mb-3">✏️ Edit User</h2>
+            <input type="hidden" id="editUserId" value="${uid}">
+            <label class="block font-bold mb-1">Username:</label>
+            <input type="text" id="editUserUsername" class="form-input" value="${esc(data.username)}" maxlength="30">
+            <label class="block font-bold mb-1">Full Name:</label>
+            <input type="text" id="editUserFullName" class="form-input" value="${esc(data.fullname)}">
+            <label class="block font-bold mb-1">Level:</label>
+            <select id="editUserLevel" class="form-select">
+                <option value="Beginner" ${data.level==='Beginner'?'selected':''}>🔰 Beginner</option>
+                <option value="Intermediate" ${data.level==='Intermediate'?'selected':''}>📚 Intermediate</option>
+                <option value="Advanced" ${data.level==='Advanced'?'selected':''}>🎓 Advanced</option>
+            </select>
+            <label class="block font-bold mb-1">New Password:</label>
+            <input type="password" id="editUserPassword" class="form-input" placeholder="Leave empty to keep current">
+            <label class="flex items-center gap-2 my-2">
+                <input type="checkbox" id="editUserIsAdmin" ${data.admin === 'true' || data.admin === '1' ? 'checked' : ''}>
+                <span class="font-bold">Admin privileges</span>
+            </label>
+            <div class="mt-2 mb-2">
+                <label class="block font-bold mb-1">📚 Card Set Access:</label>
+                <p class="text-xs text-gray-500 mb-2">Leave all unchecked = show all sets</p>
+                <div class="space-y-1">${setCbs}</div>
+            </div>
+            <div class="flex gap-2 mt-3">
+                <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
+                <button id="createUserBtn" class="btn btn-primary flex-1">➕ New User</button>
             </div>
         `;
-        document.body.appendChild(modal);
 
-        // Load card sets and user's current access
-        (async () => {
-            const [setsRes, accessRes] = await Promise.all([
-                adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-                adminFetch(`admin_cards.php?action=get_user_sets&user_id=${data.id}&t=${Date.now()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            ]);
-            const setsData = await setsRes.json();
-            const accessData = await accessRes.json();
-            const allSets = setsData.success ? setsData.sets : [];
-            const userSetIds = accessData.success ? accessData.set_ids : [];
-            const container = document.getElementById('userSetAccessContainer');
-            if (allSets.length === 0) {
-                container.innerHTML = '<div class="text-sm text-gray-400">No card sets available</div>';
-            } else {
-                container.innerHTML = allSets.map(set => `
-                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" class="user-set-checkbox" value="${set.id}" ${userSetIds.includes(set.id) ? 'checked' : ''}>
-                        ${escapeHtml(set.name)}
-                    </label>
-                `).join('');
-            }
-        })();
-
-        document.getElementById('cancelEditUserBtn').addEventListener('click', () => modal.remove());
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-
-        document.getElementById('saveEditUserBtn').addEventListener('click', async () => {
-            const id = parseInt(document.getElementById('editUserId').value);
-            const username = document.getElementById('editUserUsername').value.trim();
-            const fullName = document.getElementById('editUserFullName').value.trim();
-            const englishLevel = document.getElementById('editUserLevel').value;
-            const isAdmin = document.getElementById('editUserIsAdmin').checked;
-            const pwd = document.getElementById('editUserPassword').value;
-            const pwdConfirm = document.getElementById('editUserPasswordConfirm').value;
-
-            if (!username) { alert('Username is required'); return; }
-
-            let password = null;
-            if (pwd || pwdConfirm) {
-                if (pwd !== pwdConfirm) {
-                    alert('Passwords do not match');
-                    document.getElementById('editUserPassword').value = '';
-                    document.getElementById('editUserPasswordConfirm').value = '';
-                    return;
-                }
-                password = pwd;
-            }
-
-            const body = { id, username, full_name: fullName, english_level: englishLevel, is_admin: isAdmin };
-            if (password) body.password = password;
-
-            const response = await adminFetch('admin_cards.php?action=update_user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        T('saveEditUserBtn').addEventListener('click', async () => {
+            const id = parseInt(T('editUserId').value);
+            const username = T('editUserUsername').value.trim();
+            const fullName = T('editUserFullName').value.trim();
+            const level = T('editUserLevel').value;
+            const isAdmin = T('editUserIsAdmin').checked;
+            const pwd = T('editUserPassword').value;
+            if (!username) { toast('Username required', 'warning'); return; }
+            const body = { id, username, full_name: fullName, english_level: level, is_admin: isAdmin };
+            if (pwd) body.password = pwd;
+            const res = await fetchJSON('admin_cards.php?action=update_user', {
+                method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
                 body: JSON.stringify(body)
             });
-            const result = await response.json();
-            if (!result.success) { alert(result.error || 'Error saving user'); return; }
-
-            const checkedSets = [...document.querySelectorAll('.user-set-checkbox:checked')].map(cb => parseInt(cb.value));
-            await adminFetch('admin_cards.php?action=set_user_sets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ user_id: id, set_ids: checkedSets })
+            if (!res.success) { toast('❌ ' + (res.error || 'Error'), 'error'); return; }
+            // Save set access
+            const setIds = Array.from(document.querySelectorAll('.user-set-cb:checked')).map(cb => parseInt(cb.value));
+            await fetchJSON('admin_cards.php?action=set_user_sets', {
+                method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+                body: JSON.stringify({ user_id: id, set_ids: setIds })
             });
-
-            modal.remove();
+            toast('✅ User saved', 'success');
             loadUsers();
         });
-    }
 
-    async function createUser() {
-        const username = document.getElementById('newUserUsername')?.value.trim();
-        const fullName = document.getElementById('newUserFullName')?.value.trim();
-        const password = document.getElementById('newUserPassword')?.value;
-        const englishLevel = document.getElementById('newUserLevel')?.value || 'Beginner';
-        const isAdmin = document.getElementById('newUserIsAdmin')?.checked || false;
-
-        if (!username) { alert('Username is required'); return; }
-        if (!password || password.length < 6) { alert('Password must be at least 6 characters'); return; }
-
-        const response = await adminFetch('admin_cards.php?action=create_user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ username, full_name: fullName, password, english_level: englishLevel, is_admin: isAdmin })
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('User created successfully!');
-            document.getElementById('newUserUsername').value = '';
-            document.getElementById('newUserFullName').value = '';
-            document.getElementById('newUserPassword').value = '';
-            document.getElementById('newUserLevel').value = 'Beginner';
-            document.getElementById('newUserIsAdmin').checked = false;
-            loadUsers();
-        } else {
-            alert(result.error || 'Error creating user');
-        }
-    }
-
-    setSelector.addEventListener('change', () => {
-        if (setSelector.value) {
-            loadCards(setSelector.value);
-            newCard();
-        } else {
-            cardListContainer.innerHTML = '<div class="text-center text-gray-500 py-8">Select a card set to load cards</div>';
-        }
-    });
-
-    editPatternType.addEventListener('change', () => {
-        const currentContent = getCurrentContentData();
-        renderEditFields(editPatternType.value, currentContent);
-        updatePreviews();
-    });
-
-    editTitle.addEventListener('input', () => updatePreviews());
-
-    document.getElementById('saveCardBtn').addEventListener('click', saveCard);
-    document.getElementById('revertCardBtn').addEventListener('click', revertCard);
-    document.getElementById('newCardBtn').addEventListener('click', newCard);
-    document.getElementById('deleteCardBtn').addEventListener('click', deleteCard);
-    document.getElementById('filterCardsBtn').addEventListener('click', () => {
-        if (setSelector.value) loadCards(setSelector.value);
-    });
-
-    if (cardSearchInput) {
-        cardSearchInput.addEventListener('input', () => {
-            cardSearchTerm = cardSearchInput.value;
-            const levels = [];
-            if (document.getElementById('levelBeginner').checked) levels.push('Beginner');
-            if (document.getElementById('levelIntermediate').checked) levels.push('Intermediate');
-            if (document.getElementById('levelAdvanced').checked) levels.push('Advanced');
-            renderCardList(levels);
+        T('createUserBtn').addEventListener('click', () => {
+            panel.innerHTML = `
+                <h2 class="text-lg marker-underline mb-3">➕ New User</h2>
+                <label class="block font-bold mb-1">Username:</label>
+                <input type="text" id="newUserUsername" class="form-input" placeholder="Enter username" maxlength="30">
+                <label class="block font-bold mb-1">Full Name:</label>
+                <input type="text" id="newUserFullName" class="form-input" placeholder="Enter full name">
+                <label class="block font-bold mb-1">Password:</label>
+                <input type="password" id="newUserPassword" class="form-input" placeholder="Min 6 characters">
+                <label class="block font-bold mb-1">Level:</label>
+                <select id="newUserLevel" class="form-select">
+                    <option value="Beginner">🔰 Beginner</option>
+                    <option value="Intermediate">📚 Intermediate</option>
+                    <option value="Advanced">🎓 Advanced</option>
+                </select>
+                <label class="flex items-center gap-2 mt-2 mb-3">
+                    <input type="checkbox" id="newUserIsAdmin">
+                    <span class="font-bold">Admin privileges</span>
+                </label>
+                <button id="createUserSaveBtn" class="btn btn-success w-full">➕ Create User</button>
+            `;
+            T('createUserSaveBtn').addEventListener('click', async () => {
+                const username = T('newUserUsername').value.trim();
+                const fullName = T('newUserFullName').value.trim();
+                const password = T('newUserPassword').value;
+                const level = T('newUserLevel').value;
+                const isAdmin = T('newUserIsAdmin').checked;
+                if (!username) { toast('Username required', 'warning'); return; }
+                if (!password || password.length < 6) { toast('Password min 6 chars', 'warning'); return; }
+                const res = await fetchJSON('admin_cards.php?action=create_user', {
+                    method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+                    body: JSON.stringify({ username, full_name: fullName, password, english_level: level, is_admin: isAdmin })
+                });
+                if (res.success) { toast('✅ User created', 'success'); loadUsers(); openUserEditor({ id: res.user.id, username, fullname: fullName, level, admin: isAdmin ? 'true' : 'false' }); }
+                else toast('❌ ' + (res.error || 'Error'), 'error');
+            });
         });
     }
 
-    setInterval(() => {
-        if (document.activeElement && (document.activeElement.classList?.contains('form-input') ||
-            document.activeElement.classList?.contains('form-textarea'))) {
-            updatePreviews();
-        }
-    }, 500);
-
-    document.getElementById('toggleUsersBtn')?.addEventListener('click', showUserManagement);
-    document.getElementById('backToCardsBtn')?.addEventListener('click', showCardEditor);
-    document.getElementById('createUserBtn')?.addEventListener('click', createUser);
-
-    // --- Manage Sets ---
-    const manageSetsModal = document.getElementById('manageSetsModal');
-    const setListContainer = document.getElementById('setListContainer');
-    const toastEl = document.getElementById('manageSetsToast');
-
-    let toastTimeout;
-
-    function showToast(message, type = 'info') {
-        if (!toastEl) return;
-        const colors = { success: '#16a34a', error: '#dc2626', warning: '#d97706', info: '#2563eb' };
-        toastEl.style.background = colors[type];
-        toastEl.style.color = 'white';
-        toastEl.textContent = message;
-        toastEl.style.display = 'block';
-        clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => { toastEl.style.display = 'none'; }, 3000);
-    }
-
-    let cachedStudents = null;
-    let cachedSets = null;
-
-    async function getStudents() {
-        if (cachedStudents) return cachedStudents;
-        const res = await adminFetch('admin_cards.php?action=get_students&t=' + Date.now(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const data = await res.json();
-        cachedStudents = data.success ? data.students : [];
-        return cachedStudents;
+    // ─── Card Sets Sub-tab ──────────────────────────────────────────
+    function initSetsSubTab() {
+        setsSubInitialized = true;
+        T('setsSearchInput').addEventListener('input', () => { if (cachedSets.length) renderSetsList(cachedSets); });
+        T('addSetBtn').addEventListener('click', addSet);
+        T('newSetNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') T('addSetBtn').click(); });
+        fetchSets();
     }
 
     async function fetchSets() {
-        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        const res = await fetchJSON('admin_cards.php?action=get_sets&t=' + Date.now(), {
+            headers: { 'X-Requested-With':'XMLHttpRequest' }
         });
-        const data = await response.json();
-        if (!data.success || !data.sets) {
-            if (setListContainer) setListContainer.innerHTML = '<div class="text-center text-red-500 py-4">Error loading sets</div>';
-            return;
+        if (res.success && res.sets) {
+            cachedSets = res.sets;
+            renderSetsList(res.sets);
+            refreshSetSelectors(res.sets);
         }
-        cachedSets = data.sets;
-        renderSetsList(data.sets);
-        refreshSetSelectors(data.sets);
     }
 
     function renderSetsList(sets) {
-        if (!setListContainer) return;
-        const searchVal = document.getElementById('setsSearchInput')?.value.toLowerCase() || '';
-        const filtered = searchVal ? sets.filter(s => s.name.toLowerCase().includes(searchVal)) : sets;
+        const search = (T('setsSearchInput').value || '').toLowerCase();
+        const filtered = search ? sets.filter(s => s.name.toLowerCase().includes(search)) : sets;
 
         let html = '';
         filtered.forEach(set => {
-            const count = set.card_count !== undefined ? parseInt(set.card_count) : 0;
+            const cnt = set.card_count !== undefined ? parseInt(set.card_count) : 0;
             const excl = set.exclusive_to || '';
             const names = excl.split(',').map(s => s.trim()).filter(Boolean);
-            let chipHtml;
-            if (names.length) {
-                const shown = names.slice(0, 3);
-                const remainder = names.length - shown.length;
-                chipHtml = shown.map(u => `<span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full mr-1 mb-0.5">🔒 ${escapeHtml(u)}</span>`).join('');
-                if (remainder > 0) chipHtml += `<span class="text-xs text-gray-400 mr-1">+${remainder} more</span>`;
-            } else {
-                chipHtml = '<span class="text-xs text-gray-400">🌐 Public</span>';
-            }
-            html += `
-                <div class="set-item mb-2 p-2.5 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-colors" data-id="${set.id}">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="set-name-display font-bold text-sm flex-1 cursor-text" contenteditable="true">${escapeHtml(set.name)}</span>
-                        <span class="text-xs text-gray-400 font-mono">${count} card${count !== 1 ? 's' : ''}</span>
-                        <div class="flex gap-1">
-                            <button class="delete-set-btn btn btn-danger text-xs" style="padding:2px 6px;font-size:0.65rem;">🗑</button>
-                        </div>
+            let chips = names.length ? names.slice(0,3).map(u => `<span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full mr-1 mb-0.5">🔒 ${esc(u)}</span>`).join('') + (names.length > 3 ? `<span class="text-xs text-gray-400">+${names.length-3} more</span>` : '') : '<span class="text-xs text-gray-400">🌐 Public</span>';
+            html += `<div class="set-item mb-2 p-2.5 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-colors" data-id="${set.id}">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="set-name-display font-bold text-sm flex-1 cursor-text" contenteditable="true">${esc(set.name)}</span>
+                    <span class="text-xs text-gray-400 font-mono">${cnt} card${cnt !== 1 ? 's' : ''}</span>
+                    <button class="delete-set-btn btn btn-danger text-xs" style="padding:2px 6px;">🗑</button>
+                </div>
+                <div class="mt-1 flex items-center gap-2 flex-wrap">
+                    <div class="exclusive-chips">${chips}</div>
+                    <button class="toggle-exclusive-btn text-xs text-blue-500 hover:text-blue-700" style="background:none;border:none;cursor:pointer;">✏️ access</button>
+                </div>
+                <div class="exclusive-editor hidden mt-1.5 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <label class="text-xs text-gray-500 block mb-1">🎯 Select students who can see this set:</label>
+                    <div class="exclusive-select-wrap"></div>
+                    <div class="flex gap-2 mt-1">
+                        <button class="save-exclusive-btn btn btn-success text-xs">💾 Save</button>
+                        <button class="cancel-exclusive-btn btn btn-secondary text-xs">✕ Cancel</button>
                     </div>
-                    <div class="mt-1 flex items-center gap-2 flex-wrap">
-                        <div class="exclusive-chips">${chipHtml}</div>
-                        <button class="toggle-exclusive-btn text-xs text-blue-500 hover:text-blue-700" style="background:none;border:none;cursor:pointer;">✏️ access</button>
-                    </div>
-                    <div class="exclusive-editor hidden mt-1.5 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                        <label class="text-xs text-gray-500 block mb-1">🎯 Select students who can see this set (leave empty = public):</label>
-                        <div class="exclusive-select-wrap"></div>
-                        <div class="flex gap-2 mt-1">
-                            <button class="save-exclusive-btn btn btn-success text-xs" style="padding:2px 8px;">💾 Save access</button>
-                            <button class="cancel-exclusive-btn btn btn-secondary text-xs" style="padding:2px 8px;">✕ Cancel</button>
-                        </div>
-                    </div>
-                </div>`;
+                </div>
+            </div>`;
         });
-        if (!filtered.length) {
-            html = '<div class="text-center text-gray-400 py-4">' + (searchVal ? 'No sets match your search' : 'No sets yet. Add one above!') + '</div>';
-        }
-        setListContainer.innerHTML = html;
+        if (!filtered.length) html = '<div class="text-center text-gray-400 py-4">' + (search ? 'No matches' : 'No sets yet') + '</div>';
+        T('setListContainer').innerHTML = html;
 
-        setListContainer.querySelectorAll('.set-name-display').forEach(el => {
+        // Inline rename
+        document.querySelectorAll('.set-name-display').forEach(el => {
             el.addEventListener('blur', () => saveSetName(el));
-            el.addEventListener('keydown', (e) => {
+            el.addEventListener('keydown', e => {
                 if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
-                if (e.key === 'Escape') { el.textContent = el.dataset.origName || el.textContent; el.blur(); }
+                if (e.key === 'Escape') { el.textContent = el.dataset.orig; el.blur(); }
             });
-            el.dataset.origName = el.textContent;
+            el.dataset.orig = el.textContent;
         });
 
-        setListContainer.querySelectorAll('.delete-set-btn').forEach(btn => {
+        // Delete set
+        document.querySelectorAll('.delete-set-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const item = btn.closest('.set-item');
                 const id = parseInt(item.dataset.id);
                 const name = item.querySelector('.set-name-display').textContent.trim();
-                if (!confirm(`Delete "${name}"? Cards will become orphaned.`)) return;
-                const response = await adminFetch(`admin_cards.php?action=delete_set&set_id=${id}`, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                if (!confirm(`Delete "${name}"?`)) return;
+                const res = await fetchJSON(`admin_cards.php?action=delete_set&set_id=${id}`, {
+                    headers: { 'X-Requested-With':'XMLHttpRequest' }
                 });
-                const result = await response.json();
-                if (result.success) {
-                    showToast(`✅ "${name}" deleted`, 'success');
-                    fetchSets();
-                } else {
-                    showToast('❌ ' + (result.error || 'Error deleting set'), 'error');
-                }
+                if (res.success) { toast(`✅ "${name}" deleted`, 'success'); fetchSets(); }
+                else toast('❌ ' + (res.error || 'Error'), 'error');
             });
         });
 
-        setListContainer.querySelectorAll('.toggle-exclusive-btn').forEach(btn => {
+        // Toggle exclusive editor
+        document.querySelectorAll('.toggle-exclusive-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const item = btn.closest('.set-item');
-                const editor = item.querySelector('.exclusive-editor');
-                const isHidden = editor.classList.contains('hidden');
-                editor.classList.toggle('hidden', !isHidden);
-                btn.textContent = isHidden ? '✕ close' : '✏️ access';
-                if (isHidden) {
-                    const wrap = editor.querySelector('.exclusive-select-wrap');
-                    const students = await getStudents();
-                    const set = cachedSets?.find(s => s.id == item.dataset.id);
+                const ed = item.querySelector('.exclusive-editor');
+                const hidden = ed.classList.contains('hidden');
+                ed.classList.toggle('hidden', !hidden);
+                btn.textContent = hidden ? '✕ close' : '✏️ access';
+                if (hidden) {
+                    const wrap = ed.querySelector('.exclusive-select-wrap');
+                    const sRes = await fetchJSON('admin_cards.php?action=get_students&t=' + Date.now(), {
+                        headers: { 'X-Requested-With':'XMLHttpRequest' }
+                    });
+                    const students = sRes.success ? sRes.students : [];
+                    const set = cachedSets.find(s => s.id == item.dataset.id);
                     const excl = (set?.exclusive_to || '').split(',').map(s => s.trim()).filter(Boolean);
                     let opts = '';
-                    students.forEach(s => {
-                        const sel = excl.includes(s.username) ? 'selected' : '';
-                        opts += `<option value="${escapeHtml(s.username)}" ${sel}>${escapeHtml(s.full_name || s.username)}</option>`;
-                    });
+                    students.forEach(s => { const sel = excl.includes(s.username) ? 'selected' : ''; opts += `<option value="${esc(s.username)}" ${sel}>${esc(s.full_name || s.username)}</option>`; });
                     wrap.innerHTML = `<select class="exclusive-select text-xs w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;">${opts}</select>`;
                 }
             });
         });
 
-        setListContainer.querySelectorAll('.save-exclusive-btn').forEach(btn => {
+        // Save exclusive access
+        document.querySelectorAll('.save-exclusive-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const item = btn.closest('.set-item');
                 const id = parseInt(item.dataset.id);
-                const select = item.querySelector('.exclusive-select');
-                const exclusiveTo = select ? Array.from(select.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
+                const sel = item.querySelector('.exclusive-select');
+                const exclusiveTo = sel ? Array.from(sel.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
                 const name = item.querySelector('.set-name-display').textContent.trim();
-                const response = await adminFetch('admin_cards.php?action=update_set', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                const res = await fetchJSON('admin_cards.php?action=update_set', {
+                    method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
                     body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
                 });
-                const result = await response.json();
-                if (result.success) {
-                    showToast('✅ Access updated', 'success');
-                    item.querySelector('.exclusive-editor').classList.add('hidden');
-                    item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access';
-                    fetchSets();
-                } else {
-                    showToast('❌ ' + (result.error || 'Error saving access'), 'error');
-                }
+                if (res.success) { toast('✅ Access saved', 'success'); item.querySelector('.exclusive-editor').classList.add('hidden'); item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access'; fetchSets(); }
+                else toast('❌ ' + (res.error || 'Error'), 'error');
             });
         });
 
-        setListContainer.querySelectorAll('.cancel-exclusive-btn').forEach(btn => {
+        // Cancel exclusive
+        document.querySelectorAll('.cancel-exclusive-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const item = btn.closest('.set-item');
                 item.querySelector('.exclusive-editor').classList.add('hidden');
@@ -1102,1104 +1163,57 @@
         const item = el.closest('.set-item');
         const id = parseInt(item.dataset.id);
         const name = el.textContent.trim();
-        if (!name) { el.textContent = el.dataset.origName || ''; showToast('Name cannot be empty', 'error'); return; }
-        if (name === el.dataset.origName) return;
-        const set = cachedSets?.find(s => s.id == id);
+        if (!name) { el.textContent = el.dataset.orig || ''; toast('Name required', 'warning'); return; }
+        if (name === el.dataset.orig) return;
+        const set = cachedSets.find(s => s.id == id);
         const exclusiveTo = set?.exclusive_to || '';
-        const response = await adminFetch('admin_cards.php?action=update_set', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        const res = await fetchJSON('admin_cards.php?action=update_set', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
             body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
         });
-        const result = await response.json();
-        if (result.success) {
-            el.dataset.origName = name;
-            showToast('✅ Renamed', 'success');
-            fetchSets();
-        } else {
-            el.textContent = el.dataset.origName || name;
-            showToast('❌ ' + (result.error || 'Error renaming set'), 'error');
-        }
+        if (res.success) { el.dataset.orig = name; toast('✅ Renamed', 'success'); fetchSets(); }
+        else { el.textContent = el.dataset.orig || name; toast('❌ Error', 'error'); }
     }
 
-    function refreshSetSelectors(sets) {
-        const setSel = document.getElementById('setSelector');
-        const editSel = document.getElementById('editSetId');
-        const importSel = document.getElementById('importSetSelector');
-        const importEditSel = document.getElementById('importEditSetId');
-
-        const curSet = setSel?.value;
-        const curEdit = editSel?.value;
-        const curImport = importSel?.value;
-        const curImportEdit = importEditSel?.value;
-
-        const build = (placeholder) => {
-            let h = placeholder ? `<option value="">${placeholder}</option>` : '';
-            sets.forEach(s => { h += `<option value="${s.id}">${escapeHtml(s.name)}</option>`; });
-            return h;
-        };
-
-        if (setSel) { setSel.innerHTML = build('-- Choose Card Set --'); if (curSet) setSel.value = curSet; }
-        if (editSel) { editSel.innerHTML = build(''); if (curEdit) editSel.value = curEdit; }
-        if (importSel) { importSel.innerHTML = build('-- Select Set --'); if (curImport) importSel.value = curImport; }
-        if (importEditSel) { importEditSel.innerHTML = editSel ? editSel.innerHTML : build(''); if (curImportEdit) importEditSel.value = curImportEdit; }
-    }
-
-    async function refreshSets() {
-        const response = await adminFetch('admin_cards.php?action=get_sets&t=' + Date.now(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const data = await response.json();
-        if (data.success && data.sets) refreshSetSelectors(data.sets);
-    }
-
-    let newSetExclusiveSelectHtml = '';
-
-    async function loadNewSetExclusiveSelect() {
-        const students = await getStudents();
-        let opts = '';
-        students.forEach(s => {
-            opts += `<option value="${escapeHtml(s.username)}">${escapeHtml(s.full_name || s.username)}</option>`;
-        });
-        newSetExclusiveSelectHtml = `
-            <div class="mt-1 mb-2">
-                <label class="text-xs text-gray-500">🎯 Exclusivity (optional):</label>
-                <select id="newSetExclusiveSelect" class="text-xs w-full" multiple size="3" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;margin-top:2px;">
-                    <option value="">— Public (all students) —</option>
-                    ${opts}
-                </select>
-            </div>`;
-        const container = document.getElementById('newSetExclusiveContainer');
-        if (container) container.innerHTML = newSetExclusiveSelectHtml;
-    }
-
-    document.getElementById('setsSearchInput')?.addEventListener('input', () => {
-        if (cachedSets) renderSetsList(cachedSets);
-    });
-
-    document.getElementById('manageSetsBtn')?.addEventListener('click', () => {
-        manageSetsModal.classList.remove('hidden');
-        loadNewSetExclusiveSelect();
-        fetchSets();
-    });
-
-    document.getElementById('closeSetsModalBtn')?.addEventListener('click', () => {
-        manageSetsModal.classList.add('hidden');
-    });
-
-    manageSetsModal?.addEventListener('click', (e) => {
-        if (e.target === manageSetsModal) manageSetsModal.classList.add('hidden');
-    });
-
-    document.getElementById('addSetBtn')?.addEventListener('click', async () => {
-        const input = document.getElementById('newSetNameInput');
+    async function addSet() {
+        const input = T('newSetNameInput');
         const name = input.value.trim();
-        if (!name) { showToast('Enter a name for the new set', 'warning'); return; }
-        const exclSelect = document.getElementById('newSetExclusiveSelect');
-        const exclusiveTo = exclSelect ? Array.from(exclSelect.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
-        const response = await adminFetch('admin_cards.php?action=create_set', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ name, exclusive_to: exclusiveTo })
-        });
-        const result = await response.json();
-        if (result.success) {
-            input.value = '';
-            showToast(`✅ "${name}" created`, 'success');
-            fetchSets();
-        } else {
-            showToast('❌ ' + (result.error || 'Error creating set'), 'error');
-        }
-    });
-
-    document.getElementById('newSetNameInput')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') document.getElementById('addSetBtn').click();
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
-        if (e.key === 's' || e.key === 'S') saveCard();
-        if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newCard(); }
-        if (e.key === 'd' || e.key === 'D') deleteCard();
-        if (e.key === 'r' || e.key === 'R') revertCard();
-        if (e.key === '?' || e.key === 'H' || e.key === 'h') {
-            alert('Shortcuts: S=Save  N=New  D=Delete  R=Revert  ?=Help');
-        }
-    });
-
-    // --- Import CSV with Preview/Checkout Modal ---
-    let importRows = [];
-    let importHeader = [];
-    let importSelectedIdx = -1;
-    let importFileHandle = null;
-
-    const importModal = document.getElementById('importModal');
-    const importStepFile = document.getElementById('importStepFile');
-    const importStepPreview = document.getElementById('importStepPreview');
-    const importDropZone = document.getElementById('importDropZone');
-    const importFileInput = document.getElementById('importFileInput');
-    const importFileName = document.getElementById('importFileName');
-    const importRowCount = document.getElementById('importRowCount');
-    const importPreviewBody = document.getElementById('importPreviewBody');
-    const importSetSelector = document.getElementById('importSetSelector');
-    const importApplySetAll = document.getElementById('importApplySetAll');
-    const importNewSetName = document.getElementById('importNewSetName');
-    const importEditTitle = document.getElementById('importEditTitle');
-    const importEditSetId = document.getElementById('importEditSetId');
-    const importEditStyle = document.getElementById('importEditStyle');
-    const importEditLevel = document.getElementById('importEditLevel');
-    const importDynamicFields = document.getElementById('importDynamicFields');
-
-    function getImportField(id) { return document.getElementById(id)?.value || ''; }
-    function setImportField(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
-
-    function renderImportEditorFields(type, row) {
-        const r = row || {};
-        const cd = {};
-        let contentData = r.content_data;
-        if (typeof contentData === 'string' && contentData) {
-            try { contentData = JSON.parse(contentData); } catch (e) { contentData = {}; }
-        }
-        if (contentData && typeof contentData === 'object') Object.assign(cd, contentData);
-
-        const val = (...fields) => { for (const f of fields) { const v = r[f] || cd[f]; if (v != null && v !== '') return escapeHtml(v); } return ''; };
-        let html = '';
-
-        if (type === 'multiple_choice' || type === 'image_mcq') {
-            const opts = cd.options;
-            const optStr = Array.isArray(opts) && opts.length ? opts.join(', ') : (r.opt1 ? [r.opt1, r.opt2, r.opt3, r.opt4].filter(Boolean).join(', ') : '');
-            const corrIdx = cd.correct_index !== undefined ? cd.correct_index : (r.correct_answer || '1');
-            html = `
-                ${type === 'image_mcq' ? `<div><label class="field-label">Image URL</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>` : ''}
-                <div><label class="field-label">Question Text</label><textarea id="importEditQuestionText" class="form-textarea" rows="2">${val('question_text')}</textarea></div>
-                <div><label class="field-label">Options (comma separated)</label><input type="text" id="importEditOptions" class="form-input" value="${escapeHtml(optStr)}"></div>
-                <div><label class="field-label">Correct Index (0, 1, 2...)</label><input type="number" id="importEditCorrectIndex" class="form-input" value="${corrIdx}" min="0"></div>
-                <div><label class="field-label">Explanation</label><textarea id="importEditExplanation" class="form-textarea" rows="2">${val('explanation')}</textarea></div>
-                ${type === 'multiple_choice' ? `<div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div><div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>` : ''}
-            `;
-        } else if (type === 'gap_fill') {
-            const answers = cd.correct_answers || [];
-            const ansStr = Array.isArray(answers) ? answers.join(', ') : (r.correct_answer || '');
-            html = `
-                <div><label class="field-label">Sentence with ______</label><textarea id="importEditSentence" class="form-textarea" rows="3">${val('sentence')}</textarea></div>
-                <div><label class="field-label">Correct Answer(s) (comma separated)</label><input type="text" id="importEditCorrectAnswers" class="form-input" value="${escapeHtml(ansStr)}"></div>
-                <div><label class="field-label">Example Sentence</label><textarea id="importEditExample" class="form-textarea" rows="2">${val('example', 'example1', 'example')}</textarea></div>
-                <div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
-                <div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
-            `;
-        } else if (type === 'image_description') {
-            html = `
-                <div><label class="field-label">Image URL</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
-                <div><label class="field-label">Description</label><textarea id="importEditDescription" class="form-textarea" rows="5">${val('description')}</textarea></div>
-            `;
-        } else if (type === 'audio_listening') {
-            html = `
-                <div><label class="field-label">Audio URL</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
-                <div><label class="field-label">Prompt</label><textarea id="importEditPrompt" class="form-textarea" rows="2">${val('prompt')}</textarea></div>
-                <div><label class="field-label">Correct Answer(s) (comma separated)</label><input type="text" id="importEditCorrectAnswers" class="form-input" value="${escapeHtml(r.correct_answer || (cd.correct_answers || []).join(', ') || '')}"></div>
-                <div><label class="field-label">Notes / Transcript</label><textarea id="importEditTranscript" class="form-textarea" rows="3">${val('transcript')}</textarea></div>
-            `;
-        } else {
-            // Text types: usage_cases, deep_dive, formula_table
-            const exArr = cd.examples || [];
-            const ex1 = exArr[0] || cd.example1a || r.example1 || cd.example || '';
-            const ex2 = exArr[1] || (cd.example && cd.example !== cd.example1a ? cd.example : '');
-            const defFront = type === 'deep_dive' ? [] : ['definition'];
-            const ff = Array.isArray(cd.front_fields) ? cd.front_fields : defFront;
-            html = `
-                <div><label class="field-label">Definition / Description</label><textarea id="importEditDefinition" class="form-textarea" rows="5">${val('definition')}</textarea></div>
-                <div><label class="field-label">Usage / Context</label><textarea id="importEditUsage" class="form-textarea" rows="2">${escapeHtml(r.usage1 || cd.usage1 || '')}</textarea></div>
-                <div><label class="field-label">Example 1</label><textarea id="importEditExample" class="form-textarea" rows="2">${escapeHtml(ex1)}</textarea></div>
-                <div><label class="field-label">Example 2 (optional)</label><textarea id="importEditExample2" class="form-textarea" rows="2">${escapeHtml(ex2)}</textarea></div>
-                <div><label class="field-label">Tip</label><textarea id="importEditTip" class="form-textarea" rows="2">${val('tip')}</textarea></div>
-                <div><label class="field-label">Image URL (optional)</label><input type="text" id="importEditImageUrl" class="form-input" value="${val('image_url')}"></div>
-                <div><label class="field-label">Audio URL (optional)</label><input type="text" id="importEditAudioUrl" class="form-input" value="${val('audio_url')}"></div>
-                <div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                    <label class="field-label mb-1">Show on front:</label>
-                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="importFfDefinition" ${ff.includes('definition') ? 'checked' : ''}> Definition</label>
-                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="importFfUsage1" ${ff.includes('usage1') ? 'checked' : ''}> Usage</label>
-                    <label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" id="importFfExamples" ${ff.includes('examples') ? 'checked' : ''}> Examples</label>
-                    <label class="inline-flex items-center gap-1 text-xs"><input type="checkbox" id="importFfTip" ${ff.includes('tip') ? 'checked' : ''}> Tip</label>
-                </div>
-            `;
-        }
-        importDynamicFields.innerHTML = html;
-
-        // Attach input listeners on new fields to update preview
-        importDynamicFields.querySelectorAll('input, textarea, select').forEach(el => {
-            el.addEventListener('input', renderImportCardPreview);
-            el.addEventListener('change', renderImportCardPreview);
-        });
-    }
-
-    function openImportModal() {
-        importModal.classList.remove('hidden');
-        importStepFile.classList.remove('hidden');
-        importStepPreview.classList.add('hidden');
-        importRows = [];
-        importHeader = [];
-        importSelectedIdx = -1;
-        importFileHandle = null;
-        importFileName.textContent = '';
-        importRowCount.textContent = '';
-        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
-        importDynamicFields.innerHTML = '';
-        document.getElementById('importPreviewSection')?.classList.add('hidden');
-    }
-
-    function closeImportModal() {
-        importModal.classList.add('hidden');
-    }
-
-    importDropZone.addEventListener('click', () => importFileInput.click());
-
-    importDropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        importDropZone.classList.add('dragover');
-    });
-    importDropZone.addEventListener('dragleave', () => {
-        importDropZone.classList.remove('dragover');
-    });
-    importDropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        importDropZone.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && files[0].name.endsWith('.csv')) {
-            loadCsvPreview(files[0]);
-        } else {
-            alert('Please drop a .csv file');
-        }
-    });
-
-    importFileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            loadCsvPreview(e.target.files[0]);
-        }
-    });
-
-    document.getElementById('importChangeFileBtn')?.addEventListener('click', () => {
-        importFileInput.click();
-    });
-
-    document.getElementById('importCancelBtn')?.addEventListener('click', closeImportModal);
-    document.getElementById('closeImportBtn')?.addEventListener('click', closeImportModal);
-    importModal?.addEventListener('click', (e) => {
-        if (e.target === importModal) closeImportModal();
-    });
-
-    document.getElementById('importCsvBtn')?.addEventListener('click', openImportModal);
-
-    /* ─── Export Modal ─── */
-
-    const exportModal = document.getElementById('exportModal');
-    const exportSetSelector = document.getElementById('exportSetSelector');
-    const exportTypeFilter = document.getElementById('exportTypeFilter');
-    const exportCardListContainer = document.getElementById('exportCardListContainer');
-    const exportSelectAll = document.getElementById('exportSelectAll');
-    const exportSelectedCount = document.getElementById('exportSelectedCount');
-    let exportAllCards = [];
-
-    function updateExportSelectedCount() {
-        const checked = exportCardListContainer.querySelectorAll('.export-card-checkbox:checked').length;
-        const total = exportCardListContainer.querySelectorAll('.export-card-checkbox').length;
-        exportSelectedCount.textContent = `${checked} of ${total} cards selected`;
-    }
-
-    function updateExportSelectAll() {
-        const checkboxes = exportCardListContainer.querySelectorAll('.export-card-checkbox');
-        const checked = exportCardListContainer.querySelectorAll('.export-card-checkbox:checked').length;
-        exportSelectAll.checked = checkboxes.length > 0 && checked === checkboxes.length;
-        exportSelectAll.indeterminate = checked > 0 && checked < checkboxes.length;
-    }
-
-    function renderExportCardList() {
-        const setId = parseInt(exportSetSelector.value);
-        const typeFilter = exportTypeFilter.value.toLowerCase();
-
-        let filtered = exportAllCards;
-        if (setId > 0) {
-            filtered = filtered.filter(c => c.set_id === setId);
-        }
-        if (typeFilter) {
-            filtered = filtered.filter(c => c.pattern_type === typeFilter);
-        }
-
-        if (!filtered.length) {
-            exportCardListContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No cards match the selected filters</div>';
-            exportSelectedCount.textContent = '0 cards selected';
-            exportSelectAll.checked = false;
-            exportSelectAll.indeterminate = false;
-            return;
-        }
-
-        const typeColors = {
-            multiple_choice: '#dbeafe', gap_fill: '#fef3c7', image_mcq: '#e0e7ff',
-            image_description: '#d1fae5', audio_listening: '#fce7f3',
-            usage_cases: '#f3e8ff', deep_dive: '#ffe4e6', formula_table: '#e0f2fe'
-        };
-
-        let html = '';
-        filtered.forEach(card => {
-            const typeLabel = card.pattern_type === 'image_mcq' ? 'ImgMCQ'
-                : card.pattern_type === 'audio_listening' ? 'Audio'
-                : card.pattern_type === 'multiple_choice' ? 'MCQ'
-                : card.pattern_type === 'gap_fill' ? 'Gap'
-                : card.pattern_type === 'image_description' ? 'Image'
-                : card.pattern_type === 'deep_dive' ? 'Deep'
-                : card.pattern_type === 'formula_table' ? 'Formula'
-                : 'Text';
-            const color = typeColors[card.pattern_type] || '#f3f4f6';
-            html += `
-                <div class="export-card-item">
-                    <input type="checkbox" class="export-card-checkbox" value="${card.id}" checked>
-                    <div class="card-info">
-                        <div>
-                            <span class="font-medium text-sm">${escapeHtml(card.title || 'Untitled')}</span>
-                            <span class="card-set-name ml-1">${escapeHtml(card.set_name || '')}</span>
-                        </div>
-                        <span class="card-type-badge" style="background:${color}">${typeLabel}</span>
-                    </div>
-                </div>
-            `;
-        });
-        exportCardListContainer.innerHTML = html;
-
-        exportCardListContainer.querySelectorAll('.export-card-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => {
-                updateExportSelectedCount();
-                updateExportSelectAll();
-            });
-        });
-        updateExportSelectedCount();
-        updateExportSelectAll();
-    }
-
-    async function loadExportCards() {
-        exportCardListContainer.innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading cards...</div>';
-        try {
-            const response = await adminFetch(`admin_cards.php?action=get_cards&set_id=0&t=${Date.now()}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const data = await response.json();
-            if (data.success) {
-                exportAllCards = data.cards;
-                renderExportCardList();
-            } else {
-                exportCardListContainer.innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
-            }
-        } catch (e) {
-            exportCardListContainer.innerHTML = '<div class="text-center text-red-500 py-8">Failed to load cards</div>';
-        }
-    }
-
-    function openExportModal() {
-        exportModal?.classList.remove('hidden');
-        exportSelectAll.checked = true;
-        exportSelectAll.indeterminate = false;
-        loadExportCards();
-    }
-
-    function closeExportModal() {
-        exportModal?.classList.add('hidden');
-    }
-
-    exportSetSelector?.addEventListener('change', renderExportCardList);
-    exportTypeFilter?.addEventListener('change', renderExportCardList);
-
-    exportSelectAll?.addEventListener('change', () => {
-        const checkboxes = exportCardListContainer.querySelectorAll('.export-card-checkbox');
-        checkboxes.forEach(cb => cb.checked = exportSelectAll.checked);
-        updateExportSelectedCount();
-    });
-
-    document.getElementById('exportBtn')?.addEventListener('click', openExportModal);
-    document.getElementById('closeExportBtn')?.addEventListener('click', closeExportModal);
-    document.getElementById('exportCancelBtn')?.addEventListener('click', closeExportModal);
-    exportModal?.addEventListener('click', (e) => {
-        if (e.target === exportModal) closeExportModal();
-    });
-
-    document.getElementById('exportExecuteBtn')?.addEventListener('click', () => {
-        const checked = exportCardListContainer.querySelectorAll('.export-card-checkbox:checked');
-        if (!checked.length) {
-            alert('No cards selected for export.');
-            return;
-        }
-        const cardIds = Array.from(checked).map(cb => cb.value).join(',');
-        const setId = exportSetSelector.value;
-        const type = exportTypeFilter.value;
-
-        let params = new URLSearchParams();
-        if (setId !== '0') params.set('set_id', setId);
-        if (type) params.set('type', type);
-        params.set('card_ids', cardIds);
-
-        window.location.href = 'api/export_csv.php?' + params.toString();
-    });
-
-    /* ─── End Export Modal ─── */
-
-    async function loadCsvPreview(file) {
-        importFileHandle = file;
-        importFileName.textContent = file.name;
-
-        const formData = new FormData();
-        formData.append('csv', file);
-
-        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
-
-        try {
-            const response = await adminFetch('admin_cards.php?action=preview_csv&t=' + Date.now(), {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const result = await response.json();
-
-            if (!result.success) {
-                alert('❌ ' + (result.error || 'Failed to parse CSV'));
-                return;
-            }
-
-            importHeader = result.header || [];
-            importRows = (result.rows || []).map(row => {
-                const levelMap = {
-                    'beginner': 'Beginner', 'a1': 'Beginner', 'a2': 'Beginner',
-                    'intermediate': 'Intermediate', 'b1': 'Intermediate', 'b2': 'Intermediate',
-                    'advanced': 'Advanced', 'c1': 'Advanced', 'c2': 'Advanced',
-                };
-                let level = (row.level || 'Beginner').trim();
-                level = levelMap[level.toLowerCase()] || level;
-                let type = (row.type || 'usage_cases').trim().toLowerCase();
-                const validTypes = ['usage_cases', 'deep_dive', 'formula_table', 'multiple_choice', 'gap_fill', 'image_mcq', 'image_description', 'audio_listening'];
-                if (!validTypes.includes(type)) type = 'usage_cases';
-                // Parse content_data JSON if present and merge into row fields
-                let contentData = row.content_data;
-                if (typeof contentData === 'string' && contentData) {
-                    try { contentData = JSON.parse(contentData); } catch (e) { contentData = null; }
-                }
-                if (contentData && typeof contentData === 'object') {
-                    for (const key of Object.keys(contentData)) {
-                        const val = contentData[key];
-                        if (val != null && !row[key] && row[key] !== '') {
-                            if (Array.isArray(val)) {
-                                if (key === 'options' || key === 'correct_answers') {
-                                    row[key] = val.join(', ');
-                                }
-                            } else if (typeof val === 'string') {
-                                row[key] = val;
-                            }
-                        }
-                    }
-                    // Map common content_data fields to CSV column names
-                    if (contentData.definition && !row.definition) row.definition = contentData.definition;
-                    if (contentData.question_text && !row.question_text) row.question_text = contentData.question_text;
-                    if (contentData.sentence && !row.sentence) row.sentence = contentData.sentence;
-                    if (contentData.example && !row.example1) row.example1 = contentData.example;
-                    if (contentData.usage1 && !row.usage1) row.usage1 = contentData.usage1;
-                    if (contentData.tip && !row.tip) row.tip = contentData.tip;
-                    if (contentData.explanation && !row.explanation) row.explanation = contentData.explanation;
-                    if (contentData.image_url && !row.image_url) row.image_url = contentData.image_url;
-                    if (contentData.audio_url && !row.audio_url) row.audio_url = contentData.audio_url;
-                    if (contentData.description && !row.description) row.description = contentData.description;
-                    if (contentData.prompt && !row.prompt) row.prompt = contentData.prompt;
-                    if (contentData.transcript && !row.transcript) row.transcript = contentData.transcript;
-                    if (contentData.correct_index !== undefined && row.correct_answer === undefined) row.correct_answer = String(contentData.correct_index);
-                    if (contentData.options && Array.isArray(contentData.options) && !row.opt1) {
-                        contentData.options.forEach((opt, i) => { if (i < 4) row['opt' + (i+1)] = opt; });
-                    }
-                    if (contentData.correct_answers && Array.isArray(contentData.correct_answers) && !row.correct_answer) {
-                        row.correct_answer = contentData.correct_answers.join(',');
-                    }
-                }
-                return {
-                    ...row,
-                    _setName: (row.set || '').trim(),
-                    _checked: true,
-                    type: type,
-                    level: level,
-                };
-            });
-
-            importRowCount.textContent = `(${result.total} rows)`;
-            renderImportPreview();
-            importStepFile.classList.add('hidden');
-            importStepPreview.classList.remove('hidden');
-
-        } catch (err) {
-            alert('❌ Network error during CSV preview');
-        }
-    }
-
-    function renderImportPreview() {
-        const styleLabels = {
-            usage_cases: '📘 Usage Cases',
-            deep_dive: '🧠 Deep Dive',
-            formula_table: '📐 Formula Table',
-            multiple_choice: '❓ MCQ',
-            gap_fill: '✏️ Gap Fill',
-            image_mcq: '🖼️ Image MCQ',
-            image_description: '🖼️ Image Desc',
-            audio_listening: '🎧 Audio Listening',
-        };
-
-        const selectAll = document.getElementById('importSelectAll');
-
-        let html = '';
-        importRows.forEach((row, idx) => {
-            const isSelected = idx === importSelectedIdx;
-            const style = row.type || 'usage_cases';
-            const title = row.title || 'Untitled';
-            const level = row.level || 'Beginner';
-            const setName = row._setName || '';
-            const preview = row.definition || row.question_text || row.sentence || '';
-            const previewTrim = preview.length > 60 ? preview.substring(0, 60) + '...' : preview;
-            const styleClass = style === 'multiple_choice' || style === 'image_mcq' ? 'mcq' : (style === 'gap_fill' ? 'gap' : 'text');
-
-            html += `<tr class="${isSelected ? 'selected' : ''}" data-idx="${idx}">
-                <td><input type="checkbox" class="import-row-checkbox" data-idx="${idx}" ${row._checked ? 'checked' : ''}></td>
-                <td class="text-gray-400 text-xs">${idx + 1}</td>
-                <td>${escapeHtml(setName)}</td>
-                <td><span class="card-type ${styleClass}">${styleLabels[style] || style}</span></td>
-                <td class="import-row-title">${escapeHtml(title)}</td>
-                <td><span class="text-xs bg-gray-100 px-2 py-0.5 rounded">${escapeHtml(level)}</span></td>
-            </tr>`;
-        });
-
-        importPreviewBody.innerHTML = html;
-
-        importPreviewBody.querySelectorAll('tr').forEach(tr => {
-            tr.addEventListener('click', (e) => {
-                if (e.target.type === 'checkbox') return;
-                const idx = parseInt(tr.dataset.idx);
-                selectImportRow(idx);
-            });
-        });
-
-        importPreviewBody.querySelectorAll('.import-row-checkbox').forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                const idx = parseInt(e.target.dataset.idx);
-                if (importRows[idx]) importRows[idx]._checked = e.target.checked;
-                if (selectAll) selectAll.checked = importRows.every(r => r._checked);
-            });
-        });
-
-        if (selectAll) {
-            selectAll.onchange = () => {
-                const checked = selectAll.checked;
-                importRows.forEach(row => { row._checked = checked; });
-                importPreviewBody.querySelectorAll('.import-row-checkbox').forEach(cb => { cb.checked = checked; });
-            };
-        }
-
-        if (importRows.length > 0 && importSelectedIdx < 0) {
-            selectImportRow(0);
-        }
-    }
-
-    function getImportContentData(row, overrideType) {
-        const type = overrideType || row.type || 'usage_cases';
-        const gf = getImportField;
-
-        if (type === 'multiple_choice' || type === 'image_mcq') {
-            const optsStr = gf('importEditOptions') || (row.opt1 ? [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean).join(', ') : '');
-            const parts = optsStr.split(',').map(s => s.trim()).filter(Boolean);
-            const options = parts.length >= 2 ? parts : ['Option A', 'Option B', 'Option C'];
-            return {
-                image_url: gf('importEditImageUrl') || row.image_url || '',
-                audio_url: gf('importEditAudioUrl') || row.audio_url || '',
-                options: options,
-                correct_index: parseInt(gf('importEditCorrectIndex') || row.correct_answer || '1'),
-                question_text: gf('importEditQuestionText') || row.question_text || 'Select the correct answer:',
-                explanation: gf('importEditExplanation') || row.explanation || '',
-            };
-        }
-        if (type === 'gap_fill') {
-            const ans = gf('importEditCorrectAnswers') || row.correct_answer || '';
-            const answers = ans ? ans.split(',').map(s => s.trim()).filter(Boolean) : ['answer'];
-            return {
-                sentence: gf('importEditSentence') || row.sentence || 'Complete: ______',
-                correct_answers: answers,
-                example: gf('importEditExample') || row.example1 || row.example || '',
-                image_url: gf('importEditImageUrl') || row.image_url || '',
-                audio_url: gf('importEditAudioUrl') || row.audio_url || '',
-            };
-        }
-        if (type === 'image_description') {
-            return {
-                image_url: gf('importEditImageUrl') || row.image_url || '',
-                description: gf('importEditDescription') || row.description || 'No description',
-            };
-        }
-        if (type === 'audio_listening') {
-            const ans = gf('importEditCorrectAnswers') || row.correct_answer || '';
-            const answers = ans ? ans.split(',').map(s => s.trim()).filter(Boolean) : [];
-            return {
-                audio_url: gf('importEditAudioUrl') || row.audio_url || '',
-                prompt: gf('importEditPrompt') || row.prompt || '',
-                correct_answers: answers,
-                notes: gf('importEditTranscript') || row.transcript || '',
-                transcript: gf('importEditTranscript') || row.transcript || '',
-            };
-        }
-        const ex1 = gf('importEditExample') || row.example1 || '';
-        const ex2 = gf('importEditExample2') || row.example2 || '';
-        const allExamples = [ex1, ex2].filter(Boolean);
-        const ff = [];
-        if (document.getElementById('importFfDefinition')?.checked) ff.push('definition');
-        if (document.getElementById('importFfUsage1')?.checked) ff.push('usage1');
-        if (document.getElementById('importFfExamples')?.checked) ff.push('examples');
-        if (document.getElementById('importFfTip')?.checked) ff.push('tip');
-        return {
-            image_url: gf('importEditImageUrl') || row.image_url || '',
-            audio_url: gf('importEditAudioUrl') || row.audio_url || '',
-            definition: gf('importEditDefinition') || row.definition || 'No definition',
-            usage1: gf('importEditUsage') || row.usage1 || '',
-            example1a: ex1,
-            examples: allExamples,
-            tip: gf('importEditTip') || row.tip || '',
-            front_fields: ff,
-        };
-    }
-
-    function renderImportCardPreview() {
-        const idx = importSelectedIdx;
-        if (idx < 0 || idx >= importRows.length) {
-            document.getElementById('importPreviewSection')?.classList.add('hidden');
-            return;
-        }
-        document.getElementById('importPreviewSection')?.classList.remove('hidden');
-        const row = importRows[idx];
-        const title = document.getElementById('importEditTitle')?.value || row.title || 'Untitled';
-        const type = document.getElementById('importEditStyle')?.value || row.type || 'usage_cases';
-        const level = document.getElementById('importEditLevel')?.value || row.level || 'Beginner';
-        const contentData = getImportContentData(row, type);
-
-        let frontHtml = '';
-        if (type === 'image_mcq') {
-            const imageUrl = contentData.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            frontHtml = `
-                <div class="flex flex-col md:flex-row gap-3 h-full min-h-[200px]">
-                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
-                        ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-32 object-contain">` : `<div class="text-5xl text-gray-300">🖼️</div>`}
-                    </div>
-                    <div class="flex flex-col justify-center md:w-1/2 gap-2">
-                        <p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>
-                        ${options.map((opt, idx) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
-                    </div>
-                </div>
-            `;
-        } else if (type === 'image_description') {
-            const imageUrl = contentData.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
-            frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="text-xl font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</div>
-                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-5xl mb-2">🖼️</div>`}
-                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip</p>
-                </div>
-            `;
-        } else if (type === 'audio_listening') {
-            const audioUrl = contentData.audio_url || '';
-            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
-            const prompt = contentData.prompt || '';
-            const isInteractive = !!(prompt || (contentData.correct_answers && contentData.correct_answers.length));
-            frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    <div class="text-xl font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</div>
-                    ${hasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : `<div class="text-5xl mb-2">🎧</div>`}
-                    ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
-                    ${isInteractive ? `<input type="text" placeholder="Type answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2" disabled>` : ''}
-                    <p class="text-xs text-gray-400 mt-2">👆 Tap card to flip${isInteractive ? ' after answering' : ''}</p>
-                </div>
-            `;
-        } else if (type === 'multiple_choice') {
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            const mcImageUrl = contentData.image_url || '';
-            const mcAudioUrl = contentData.audio_url || '';
-            const mcHasImage = mcImageUrl && (mcImageUrl.startsWith('http://') || mcImageUrl.startsWith('https://') || mcImageUrl.startsWith('uploads/'));
-            const mcHasAudio = mcAudioUrl && (mcAudioUrl.startsWith('http://') || mcAudioUrl.startsWith('https://') || mcAudioUrl.startsWith('uploads/'));
-            frontHtml = `
-                <div class="text-center">
-                    ${mcHasImage ? `<img src="${escapeHtml(mcImageUrl)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}
-                    ${mcHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                    <div class="text-4xl mb-3">❓</div>
-                    <p class="text-lg mb-4 font-bold">${formatBreaks(escapeHtml(contentData.question_text || 'Select the correct answer:'))}</p>
-                    ${options.map((opt, idx) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
-                    <p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip card</p>
-                </div>
-            `;
-        } else if (type === 'gap_fill') {
-            const gapImageUrl = contentData.image_url || '';
-            const gapAudioUrl = contentData.audio_url || '';
-            const gapHasImage = gapImageUrl && (gapImageUrl.startsWith('http://') || gapImageUrl.startsWith('https://') || gapImageUrl.startsWith('uploads/'));
-            const gapHasAudio = gapAudioUrl && (gapAudioUrl.startsWith('http://') || gapAudioUrl.startsWith('https://') || gapAudioUrl.startsWith('uploads/'));
-            const gapMediaHtml = (gapHasImage || gapHasAudio) ? `
-                <div class="w-full flex justify-center mb-2">
-                    ${gapHasImage ? `<img src="${escapeHtml(gapImageUrl)}" class="max-h-32 object-contain rounded-lg">` : ''}
-                    ${gapHasAudio ? `<div class="text-sm">🔊 Audio file provided</div>` : ''}
-                </div>
-            ` : '';
-            frontHtml = `
-                <div class="text-center">
-                    ${gapMediaHtml}
-                    <div class="text-4xl mb-3">✏️</div>
-                    <p class="text-lg mb-4 font-bold">Complete the sentence:</p>
-                    <p class="text-base bg-gray-100 p-3 rounded-xl">${formatBreaks(escapeHtml(contentData.sentence || 'Complete: ______'))}</p>
-                    <input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6">
-                    <p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p>
-                </div>
-            `;
-        } else {
-            const genImageUrl = contentData.image_url || '';
-            const genAudioUrl = contentData.audio_url || '';
-            const genHasImage = genImageUrl && (genImageUrl.startsWith('http://') || genImageUrl.startsWith('https://') || genImageUrl.startsWith('uploads/'));
-            const genHasAudio = genAudioUrl && (genAudioUrl.startsWith('http://') || genAudioUrl.startsWith('https://') || genAudioUrl.startsWith('uploads/'));
-            const defaultFront = type === 'deep_dive' ? [] : ['definition'];
-            const frontFields = Array.isArray(contentData.front_fields) ? contentData.front_fields : defaultFront;
-            const frontParts = [];
-            if (frontFields.includes('definition') && contentData.definition) frontParts.push(`<div class="text-base text-center px-2">${formatBreaks(escapeHtml(contentData.definition))}</div>`);
-            if (frontFields.includes('usage1') && contentData.usage1) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">${formatBreaks(escapeHtml(contentData.usage1))}</div>`);
-            if (frontFields.includes('tip') && contentData.tip) frontParts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${formatBreaks(escapeHtml(contentData.tip))}</div>`);
-            frontHtml = `
-                <div class="flex flex-col items-center justify-center min-h-[200px]">
-                    ${genHasImage ? `<img src="${escapeHtml(genImageUrl)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
-                    ${genHasAudio ? `<div class="text-sm mb-2">🔊 Audio file provided</div>` : ''}
-                    <div class="text-2xl text-center font-bold mb-2">${escapeHtml(title)}</div>
-                    ${frontParts.join('')}
-                    <p class="text-xs text-gray-400 mt-4">👆 Tap card to flip</p>
-                </div>
-            `;
-        }
-
-        let backHtml = '';
-        if (type === 'image_mcq') {
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            const correctIdx = contentData.correct_index || 1;
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
-                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
-                    </div>
-                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
-                </div>
-            `;
-        } else if (type === 'image_description') {
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
-                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.description || 'Description would appear here.'))}</p>
-                    </div>
-                </div>
-            `;
-        } else if (type === 'audio_listening') {
-            const transcript = contentData.transcript || contentData.notes || '';
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-2xl text-green-700 marker-underline mb-3">${escapeHtml(title)}</h3>
-                    ${transcript ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-lg">${formatBreaks(escapeHtml(transcript))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}
-                </div>
-            `;
-        } else if (type === 'multiple_choice') {
-            const options = contentData.options || ['Option A', 'Option B', 'Option C'];
-            const correctIdx = contentData.correct_index || 1;
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
-                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3">
-                        <p class="text-xl font-bold">${String.fromCharCode(65+correctIdx)}. ${escapeHtml(options[correctIdx] || 'Correct Answer')}</p>
-                    </div>
-                    <p class="text-sm text-gray-600">${formatBreaks(escapeHtml(contentData.explanation || 'Explanation would appear here.'))}</p>
-                </div>
-            `;
-        } else if (type === 'gap_fill') {
-            const answers = contentData.correct_answers || ['answer'];
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3>
-                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300">
-                        <p class="text-xl font-bold">${escapeHtml(answers.join(' / '))}</p>
-                    </div>
-                    ${contentData.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${formatBreaks(escapeHtml(contentData.example))}</p>` : ''}
-                </div>
-            `;
-        } else {
-            const exList = contentData.examples || [];
-            const exHtml = exList.length
-                ? exList.map((ex, i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${formatBreaks(escapeHtml(ex))}</p>`).join('')
-                : (contentData.example1a ? `<p class="text-md text-gray-600">📝 Example: ${formatBreaks(escapeHtml(contentData.example1a))}</p>` : '');
-            backHtml = `
-                <div class="text-center">
-                    <h3 class="text-2xl text-blue-700 marker-underline mb-3">${escapeHtml(title)}</h3>
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
-                        <p class="text-lg">${formatBreaks(escapeHtml(contentData.definition || 'Definition would appear here.'))}</p>
-                    </div>
-                    ${contentData.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${formatBreaks(escapeHtml(contentData.usage1))}</p>` : ''}
-                    ${exHtml ? `<div class="mt-2">${exHtml}</div>` : ''}
-                    ${contentData.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${formatBreaks(escapeHtml(contentData.tip))}</p></div>` : ''}
-                </div>
-            `;
-        }
-
-        document.getElementById('importFrontPreview').innerHTML = frontHtml;
-        document.getElementById('importBackPreview').innerHTML = backHtml;
-    }
-
-    function selectImportRow(idx) {
-        if (idx < 0 || idx >= importRows.length) return;
-        importSelectedIdx = idx;
-        const row = importRows[idx];
-
-        importEditTitle.value = row.title || '';
-        importEditStyle.value = row.type || 'usage_cases';
-        importEditLevel.value = row.level || 'Beginner';
-
-        const setName = row._setName || '';
-        let matchedSetId = '';
-        if (setName) {
-            const options = importEditSetId.options;
-            for (let i = 0; i < options.length; i++) {
-                if (options[i].text === setName) {
-                    matchedSetId = options[i].value;
-                    break;
-                }
-            }
-        }
-        importEditSetId.value = matchedSetId || '';
-
-        renderImportEditorFields(row.type || 'usage_cases', row);
-
-        importPreviewBody.querySelectorAll('tr').forEach(tr => {
-            tr.classList.toggle('selected', parseInt(tr.dataset.idx) === idx);
-        });
-
-        renderImportCardPreview();
-    }
-
-    function updateRowFromEditor(idx) {
-        if (idx < 0 || idx >= importRows.length) return;
-        const row = importRows[idx];
-        row.title = importEditTitle.value;
-        row.type = importEditStyle.value;
-        row.level = importEditLevel.value;
-
-        const setId = importEditSetId.value;
-        const setName = importEditSetId.options[importEditSetId.selectedIndex]?.text || '';
-        if (setId) {
-            row._setName = setName;
-            row.set_id = setId;
-        } else {
-            row._setName = '';
-            row.set_id = '';
-        }
-
-        const type = row.type;
-        row.definition = getImportField('importEditDefinition');
-        row.question_text = getImportField('importEditQuestionText');
-        row.sentence = getImportField('importEditSentence');
-        row.correct_answer = getImportField('importEditCorrectAnswer') || getImportField('importEditCorrectAnswers') || '';
-        row.explanation = getImportField('importEditExplanation');
-        row.image_url = getImportField('importEditImageUrl');
-        row.audio_url = getImportField('importEditAudioUrl');
-        row.description = getImportField('importEditDescription');
-        row.prompt = getImportField('importEditPrompt');
-        row.transcript = getImportField('importEditTranscript');
-        row.example1 = getImportField('importEditExample') || row.example1;
-        row.example2 = getImportField('importEditExample2') || row.example2;
-        row.usage1 = getImportField('importEditUsage') || row.usage1;
-        row.tip = getImportField('importEditTip');
-
-        if (type === 'multiple_choice' || type === 'image_mcq') {
-            const opts = getImportField('importEditOptions');
-            const parts = opts.split(',').map(s => s.trim()).filter(Boolean);
-            parts.forEach((opt, i) => { if (i < 4) row['opt' + (i + 1)] = opt; });
-            row.correct_answer = getImportField('importEditCorrectIndex');
-        } else if (type === 'gap_fill' || type === 'audio_listening') {
-            row.correct_answer = getImportField('importEditCorrectAnswers');
-        }
-    }
-
-    document.getElementById('importApplyCardBtn')?.addEventListener('click', () => {
-        if (importSelectedIdx < 0) { alert('Select a row first'); return; }
-        updateRowFromEditor(importSelectedIdx);
-        renderImportPreview();
-        selectImportRow(importSelectedIdx);
-    });
-
-    document.getElementById('importApplyAllBtn')?.addEventListener('click', () => {
-        if (importRows.length === 0) return;
-        for (let i = 0; i < importRows.length; i++) {
-            updateRowFromEditor(i);
-        }
-        renderImportPreview();
-        if (importSelectedIdx >= 0) selectImportRow(importSelectedIdx);
-    });
-
-    document.getElementById('importDeleteCardBtn')?.addEventListener('click', () => {
-        if (importSelectedIdx < 0) { alert('Select a row first'); return; }
-        if (!confirm('Remove this row from import?')) return;
-        importRows.splice(importSelectedIdx, 1);
-        importSelectedIdx = -1;
-        renderImportPreview();
-        if (importRows.length > 0) selectImportRow(0);
-    });
-
-    document.getElementById('importCreateSetBtn')?.addEventListener('click', async () => {
-        const name = importNewSetName.value.trim();
-        if (!name) { showToast('Enter a set name', 'warning'); return; }
-        const response = await adminFetch('admin_cards.php?action=create_set', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        if (!name) { toast('Enter a name', 'warning'); return; }
+        const res = await fetchJSON('admin_cards.php?action=create_set', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
             body: JSON.stringify({ name })
         });
-        const result = await response.json();
-        if (result.success) {
-            await refreshSets();
-            if (result.id && importSetSelector) importSetSelector.value = String(result.id);
-            importNewSetName.value = '';
-        } else {
-            showToast('❌ ' + (result.error || 'Error creating set'), 'error');
-        }
-    });
+        if (res.success) { input.value = ''; toast(`✅ "${name}" created`, 'success'); fetchSets(); }
+        else toast('❌ ' + (res.error || 'Error'), 'error');
+    }
 
-    importApplySetAll.addEventListener('change', () => {
-        if (importApplySetAll.checked && importSetSelector.value) {
-            const setName = importSetSelector.options[importSetSelector.selectedIndex]?.text || '';
-            importRows.forEach(row => {
-                row._setName = setName;
-                row.set_id = importSetSelector.value;
+    // ─── Shared: Refresh Selectors ────────────────────────────────
+    async function refreshSetSelectors(sets) {
+        if (!sets) {
+            const res = await fetchJSON('admin_cards.php?action=get_sets&t=' + Date.now(), {
+                headers: { 'X-Requested-With':'XMLHttpRequest' }
             });
-            renderImportPreview();
+            if (res.success && res.sets) sets = res.sets;
+            else return;
         }
-    });
-
-    importSetSelector.addEventListener('change', () => {
-        if (importApplySetAll.checked && importSetSelector.value) {
-            const setName = importSetSelector.options[importSetSelector.selectedIndex]?.text || '';
-            importRows.forEach(row => {
-                row._setName = setName;
-                row.set_id = importSetSelector.value;
-            });
-            renderImportPreview();
-        }
-    });
-
-    document.getElementById('importExecuteBtn')?.addEventListener('click', async () => {
-        const checkedRows = importRows.filter(r => r._checked);
-        if (checkedRows.length === 0) { showToast('Select at least one row to import', 'warning'); return; }
-        if (!confirm(`Import ${checkedRows.length} of ${importRows.length} card(s)?`)) return;
-
-        const csvCols = ['id', 'set', 'set_id', 'type', 'title', 'level', 'question_text', 'definition', 'sentence', 'opt1', 'opt2', 'opt3', 'opt4', 'correct_answer', 'explanation', 'example1', 'example2', 'example3', 'example4', 'usage1', 'tip', 'image_url', 'description', 'audio_url', 'prompt', 'transcript', 'front_fields'];
-        const csvRows = [csvCols.join(',')];
-
-        checkedRows.forEach(row => {
-            const vals = csvCols.map(col => {
-                let val = '';
-                if (col === 'set') {
-                    val = row._setName || '';
-                } else if (col === 'set_id') {
-                    val = row.set_id || '';
-                } else if (col === 'type') {
-                    val = row.type || 'usage_cases';
-                } else if (col === 'level') {
-                    val = row.level || 'Beginner';
-                } else {
-                    val = row[col] !== undefined ? String(row[col]) : '';
-                }
-                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-                    val = '"' + val.replace(/"/g, '""') + '"';
-                }
-                return val;
-            });
-            csvRows.push(vals.join(','));
+        const build = (placeholder) => { let h = placeholder ? `<option value="">${placeholder}</option>` : ''; sets.forEach(s => { h += `<option value="${s.id}">${esc(s.name)}</option>`; }); return h; };
+        const selects = ['editorSetFilter','editSetId','importSetSelector','importEditSetId'];
+        selects.forEach(id => {
+            const el = T(id);
+            if (!el) return;
+            const cur = el.value;
+            if (id === 'editorSetFilter') el.innerHTML = build('-- All Sets --');
+            else if (id === 'importSetSelector') el.innerHTML = build('-- Select Set --');
+            else el.innerHTML = build('');
+            if (cur) el.value = cur;
         });
+    }
 
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const formData = new FormData();
-        formData.append('csv', blob, (importFileHandle ? importFileHandle.name : 'import.csv'));
-
-        try {
-            const response = await adminFetch('api/import_csv.php', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (result.success) {
-                let msg = `✅ Imported ${result.imported} cards.`;
-                if (result.errors.length) msg += `\n⚠️ ${result.errors.length} errors:\n` + result.errors.slice(0, 10).join('\n');
-                if (result.errors.length > 10) msg += `\n...and ${result.errors.length - 10} more`;
-                alert(msg);
-                closeImportModal();
-                await refreshSets();
-                if (setSelector.value) loadCards(setSelector.value);
-            } else {
-                alert('❌ Import failed: ' + (result.error || 'Unknown error'));
-            }
-        } catch (err) {
-            alert('❌ Network error during import');
-        }
-    });
-
-    importEditTitle?.addEventListener('input', renderImportCardPreview);
-    importEditStyle?.addEventListener('change', () => {
-        if (importSelectedIdx >= 0 && importSelectedIdx < importRows.length) {
-            const row = importRows[importSelectedIdx];
-            renderImportEditorFields(importEditStyle.value, row);
-        }
-        renderImportCardPreview();
-    });
-    importEditLevel?.addEventListener('change', renderImportCardPreview);
-
-    loadCardSets().then(async () => {
-        const params = new URLSearchParams(window.location.search);
-        const focusCardId = params.get('focus_card');
-        const returnUrl = params.get('return_url');
-
-        if (returnUrl) {
-            const header = document.querySelector('.fixed-header .flex');
-            if (header) {
-                const backLink = document.createElement('a');
-                backLink.href = returnUrl;
-                backLink.className = 'btn btn-secondary btn-sm';
-                backLink.innerHTML = '← Back to Study';
-                header.prepend(backLink);
-            }
-        }
-
-        if (focusCardId) {
-            try {
-                const res = await adminFetch(`admin_cards.php?action=get_card&card_id=${focusCardId}&t=${Date.now()}`, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const data = await res.json();
-                if (data.success && data.card) {
-                    const card = data.card;
-                    const setId = card.set_id;
-                    if (setId) {
-                        setSelector.value = setId;
-                        setSelector.dispatchEvent(new Event('change'));
-                        // After cards load, find and select this card
-                        const checkCards = setInterval(() => {
-                            const found = currentCards.find(c => c.id == focusCardId);
-                            if (found) {
-                                clearInterval(checkCards);
-                                loadCardIntoEditor(found);
-                                document.querySelectorAll('.card-item').forEach(i => {
-                                    i.classList.toggle('selected', parseInt(i.dataset.id) == focusCardId);
-                                });
-                                selectedCardId = parseInt(focusCardId);
-                            }
-                        }, 200);
-                        // Stop checking after 10 seconds
-                        setTimeout(() => clearInterval(checkCards), 10000);
-                    }
-                }
-            } catch (e) {
-                console.error('Error loading focused card:', e);
-            }
-        }
-    });
+    // ═══════════════════════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════════════════════
+    initFieldConfig();
+    initTabs();
+    // Editor tab starts visible, init it
+    initEditor();
 })();
