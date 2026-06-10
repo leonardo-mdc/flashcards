@@ -742,7 +742,7 @@
                         ${usage ? `<div class="mt-2 p-2 bg-indigo-50 rounded-lg text-sm">📝 ${usage}</div>` : ''}
                         ${examples.map(ex => `
                             <div class="mt-2 p-2 bg-gray-100 rounded-lg">
-                                <p class="text-sm"><strong>Example:</strong> ${ex}</p>
+                                <p class="text-sm"><strong>Example:</strong> ${formatBreaks(escapeHtml(ex))}</p>
                             </div>
                         `).join('')}
                         ${t ? `<div class="mt-2 p-2 bg-yellow-50 rounded-lg text-sm">💡 ${t}</div>` : ''}

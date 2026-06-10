@@ -984,6 +984,7 @@
                 <div class="flex gap-2">
                     <button id="saveEditUserBtn" class="btn btn-success btn-xs">💾 Save</button>
                     <button id="createUserBtn" class="btn btn-primary btn-xs">➕ New</button>
+                    <button id="deleteUserBtn" class="btn btn-danger btn-xs">🗑 Del</button>
                 </div>
             </div>
             <input type="hidden" id="editUserId" value="${uid}">
@@ -1071,6 +1072,16 @@
                 if (res.success) { toast('✅ User created', 'success'); loadUsers(); openUserEditor({ id: res.user.id, username, fullname: fullName, level, admin: isAdmin ? 'true' : 'false' }); }
                 else toast('❌ ' + (res.error || 'Error'), 'error');
             });
+        });
+
+        T('deleteUserBtn').addEventListener('click', async () => {
+            if (!confirm('Delete this user?')) return;
+            const id = parseInt(T('editUserId').value);
+            const res = await fetchJSON(`admin_cards.php?action=delete_user&user_id=${id}`, {
+                headers: { 'X-Requested-With':'XMLHttpRequest' }
+            });
+            if (res.success) { toast('🗑 User deleted', 'success'); loadUsers(); T('userEditPanel').innerHTML = '<div class="text-gray-400 text-center py-8">Select a user to edit</div>'; }
+            else toast('❌ ' + (res.error || 'Error'), 'error');
         });
     }
 
