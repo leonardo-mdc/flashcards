@@ -506,7 +506,8 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                             <table class="import-table" id="importPreviewTable">
                                 <thead>
                                     <tr>
-                                        <th style="width:32px;">#</th>
+                                        <th style="width:36px;"><input type="checkbox" id="importSelectAll" checked></th>
+                                        <th style="width:28px;">#</th>
                                         <th style="width:110px;">Card Set</th>
                                         <th style="width:100px;">Style</th>
                                         <th>Title</th>
@@ -514,7 +515,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                     </tr>
                                 </thead>
                                 <tbody id="importPreviewBody">
-                                    <tr><td colspan="5" class="text-center text-gray-400 py-4">No data</td></tr>
+                                    <tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>
                                 </tbody>
                             </table>
                         </div>

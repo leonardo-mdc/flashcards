@@ -1335,7 +1335,7 @@
         importFileHandle = null;
         importFileName.textContent = '';
         importRowCount.textContent = '';
-        importPreviewBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-400 py-4">No data</td></tr>';
+        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-4">No data</td></tr>';
         importDynamicFields.innerHTML = '';
         document.getElementById('importPreviewSection')?.classList.add('hidden');
     }
@@ -1389,7 +1389,7 @@
         const formData = new FormData();
         formData.append('csv', file);
 
-        importPreviewBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
+        importPreviewBody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="loader"></div> Parsing CSV...</td></tr>';
 
         try {
             const response = await adminFetch('admin_cards.php?action=preview_csv&t=' + Date.now(), {
@@ -1458,6 +1458,7 @@
                 return {
                     ...row,
                     _setName: (row.set || '').trim(),
+                    _checked: true,
                     type: type,
                     level: level,
                 };
@@ -1485,6 +1486,8 @@
             audio_listening: '🎧 Audio Listening',
         };
 
+        const selectAll = document.getElementById('importSelectAll');
+
         let html = '';
         importRows.forEach((row, idx) => {
             const isSelected = idx === importSelectedIdx;
@@ -1497,6 +1500,7 @@
             const styleClass = style === 'multiple_choice' || style === 'image_mcq' ? 'mcq' : (style === 'gap_fill' ? 'gap' : 'text');
 
             html += `<tr class="${isSelected ? 'selected' : ''}" data-idx="${idx}">
+                <td><input type="checkbox" class="import-row-checkbox" data-idx="${idx}" ${row._checked ? 'checked' : ''}></td>
                 <td class="text-gray-400 text-xs">${idx + 1}</td>
                 <td>${escapeHtml(setName)}</td>
                 <td><span class="card-type ${styleClass}">${styleLabels[style] || style}</span></td>
@@ -1508,11 +1512,28 @@
         importPreviewBody.innerHTML = html;
 
         importPreviewBody.querySelectorAll('tr').forEach(tr => {
-            tr.addEventListener('click', () => {
+            tr.addEventListener('click', (e) => {
+                if (e.target.type === 'checkbox') return;
                 const idx = parseInt(tr.dataset.idx);
                 selectImportRow(idx);
             });
         });
+
+        importPreviewBody.querySelectorAll('.import-row-checkbox').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                if (importRows[idx]) importRows[idx]._checked = e.target.checked;
+                if (selectAll) selectAll.checked = importRows.every(r => r._checked);
+            });
+        });
+
+        if (selectAll) {
+            selectAll.onchange = () => {
+                const checked = selectAll.checked;
+                importRows.forEach(row => { row._checked = checked; });
+                importPreviewBody.querySelectorAll('.import-row-checkbox').forEach(cb => { cb.checked = checked; });
+            };
+        }
 
         if (importRows.length > 0 && importSelectedIdx < 0) {
             selectImportRow(0);
@@ -1911,13 +1932,14 @@
     });
 
     document.getElementById('importExecuteBtn')?.addEventListener('click', async () => {
-        if (importRows.length === 0) { alert('No rows to import'); return; }
-        if (!confirm(`Import ${importRows.length} cards?`)) return;
+        const checkedRows = importRows.filter(r => r._checked);
+        if (checkedRows.length === 0) { showToast('Select at least one row to import', 'warning'); return; }
+        if (!confirm(`Import ${checkedRows.length} of ${importRows.length} card(s)?`)) return;
 
         const csvCols = ['id', 'set', 'set_id', 'type', 'title', 'level', 'question_text', 'definition', 'sentence', 'opt1', 'opt2', 'opt3', 'opt4', 'correct_answer', 'explanation', 'example1', 'example2', 'example3', 'example4', 'usage1', 'tip', 'image_url', 'description', 'audio_url', 'prompt', 'transcript', 'front_fields'];
         const csvRows = [csvCols.join(',')];
 
-        importRows.forEach(row => {
+        checkedRows.forEach(row => {
             const vals = csvCols.map(col => {
                 let val = '';
                 if (col === 'set') {
