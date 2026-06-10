@@ -202,7 +202,8 @@ if ($isAjax && isset($_GET['action'])) {
                 exit;
             }
             $exclusiveTo = $data['exclusive_to'] ?? '';
-            $id = CardSet::create($name, $exclusiveTo);
+            $description = $data['description'] ?? '';
+            $id = CardSet::create($name, $exclusiveTo, $description);
             echo json_encode(['success' => true, 'id' => $id, 'name' => $name]);
         } elseif ($action === 'update_set') {
             $data = json_decode(file_get_contents('php://input'), true);
@@ -213,7 +214,8 @@ if ($isAjax && isset($_GET['action'])) {
                 exit;
             }
             $exclusiveTo = $data['exclusive_to'] ?? '';
-            CardSet::update($id, $name, $exclusiveTo);
+            $description = $data['description'] ?? '';
+            CardSet::update($id, $name, $exclusiveTo, $description);
             echo json_encode(['success' => true]);
         } elseif ($action === 'get_students') {
             echo json_encode(['success' => true, 'students' => User::getStudents()]);
@@ -239,6 +241,20 @@ if ($isAjax && isset($_GET['action'])) {
             }
             Review::setAccessibleSets($userId, $setIds);
             echo json_encode(['success' => true]);
+        } elseif ($action === 'update_cards_type_bulk') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $ids = array_map('intval', $data['card_ids'] ?? []);
+            $type = $data['pattern_type'] ?? '';
+            $validTypes = ['usage_cases','deep_dive','formula_table','multiple_choice','gap_fill','image_mcq','image_description','audio_listening'];
+            if (!in_array($type, $validTypes)) {
+                echo json_encode(['success' => false, 'error' => 'Invalid type']);
+                exit;
+            }
+            $ids = array_filter($ids, fn($id) => $id > 0);
+            foreach ($ids as $id) {
+                Card::updateType($id, $type);
+            }
+            echo json_encode(['success' => true, 'updated' => count($ids)]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
         }
@@ -343,7 +359,22 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         <input type="checkbox" id="editorSelectAll">
                         <span>All</span>
                     </label>
-                    <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 Delete (<span id="editorSelectedCount">0</span>)</button>
+                    <div class="flex items-center gap-1">
+                        <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 Delete (<span id="editorSelectedCount">0</span>)</button>
+                        <span id="editorBulkTypeWrap" class="hidden flex items-center gap-1 ml-2">
+                            <select id="editorBulkTypeSelect" class="form-select text-xs" style="width:120px;margin:0;padding:4px 6px;">
+                                <option value="usage_cases">📘 Usage Cases</option>
+                                <option value="deep_dive">🧠 Deep Dive</option>
+                                <option value="formula_table">📐 Formula Table</option>
+                                <option value="multiple_choice">❓ Multiple Choice</option>
+                                <option value="gap_fill">✏️ Gap Fill</option>
+                                <option value="image_mcq">🖼️ Image MCQ</option>
+                                <option value="image_description">🖼️ Image Description</option>
+                                <option value="audio_listening">🎧 Audio Listening</option>
+                            </select>
+                            <button id="editorBulkTypeBtn" class="btn btn-primary btn-xs">Change</button>
+                        </span>
+                    </div>
                 </div>
                 <div id="editorCardList" class="editor-card-list">
                     <div class="text-center text-gray-500 py-8">Select a set to load cards</div>

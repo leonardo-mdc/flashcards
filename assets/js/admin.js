@@ -84,7 +84,7 @@
             { key:'audio_url',   label:'Audio URL (optional)',    type:'text',     placeholder:'https://...' },
         ];
         function textFromContentData(cd) {
-            const ex = cd.examples || [];
+            const ex = Array.isArray(cd.examples) ? cd.examples : (typeof cd.examples === 'string' ? cd.examples.split('\n').map(s => s.trim()).filter(Boolean) : []);
             return { definition: cd.definition || '', usage1: cd.usage1 || '', examples: ex.join('\n'), tip: cd.tip || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
         }
         function textToContentData(dom) {
@@ -114,7 +114,10 @@
                 { key:'correct_index', label:'Correct Index (0, 1, 2...)', type:'text', default:'0', placeholder:'0' },
                 { key:'explanation',   label:'Explanation (optional)', type:'textarea', rows:3, placeholder:'Why this is correct...' },
             ],
-            fromContentData(cd) { return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: Array.isArray(cd.options) ? cd.options.join(', ') : '', correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' }; },
+            fromContentData(cd) {
+                const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? cd.options.split(',').map(s => s.trim()).filter(Boolean) : []);
+                return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: opts.join(', '), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
+            },
             toContentData(dom) { return { image_url: dom.image_url, audio_url: dom.audio_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
         });
 
@@ -126,7 +129,10 @@
                 { key:'correct_index', label:'Correct Index (0, 1, 2...)', type:'text', default:'0', placeholder:'0' },
                 { key:'explanation',   label:'Explanation (optional)', type:'textarea', rows:3, placeholder:'Why this is correct...' },
             ],
-            fromContentData(cd) { return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: Array.isArray(cd.options) ? cd.options.join(', ') : '', correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' }; },
+            fromContentData(cd) {
+                const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? cd.options.split(',').map(s => s.trim()).filter(Boolean) : []);
+                return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: opts.join(', '), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
+            },
             toContentData(dom) { return { image_url: dom.image_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
         });
 
@@ -138,7 +144,10 @@
                 { key:'image_url',       label:'Image URL (optional)', type:'text', placeholder:'https://...' },
                 { key:'audio_url',       label:'Audio URL (optional)', type:'text', placeholder:'https://...' },
             ],
-            fromContentData(cd) { return { sentence: cd.sentence || '', correct_answers: Array.isArray(cd.correct_answers) ? cd.correct_answers.join(', ') : '', example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' }; },
+            fromContentData(cd) {
+                const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? cd.correct_answers.split(',').map(s => s.trim()).filter(Boolean) : []);
+                return { sentence: cd.sentence || '', correct_answers: ca.join(', '), example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
+            },
             toContentData(dom) { return { sentence: dom.sentence, correct_answers: dom.correct_answers, example: dom.example, image_url: dom.image_url, audio_url: dom.audio_url }; },
         });
 
@@ -158,7 +167,10 @@
                 { key:'correct_answers', label:'Correct Answer(s)',       type:'csv', default:[], placeholder:'answer1, answer2', help:'Comma separated accepted answers' },
                 { key:'transcript',      label:'Notes / Full Transcript', type:'textarea', rows:3, placeholder:'Full transcript...' },
             ],
-            fromContentData(cd) { return { audio_url: cd.audio_url || '', prompt: cd.prompt || '', correct_answers: Array.isArray(cd.correct_answers) ? cd.correct_answers.join(', ') : '', transcript: cd.transcript || cd.notes || '' }; },
+            fromContentData(cd) {
+                const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? cd.correct_answers.split(',').map(s => s.trim()).filter(Boolean) : []);
+                return { audio_url: cd.audio_url || '', prompt: cd.prompt || '', correct_answers: ca.join(', '), transcript: cd.transcript || cd.notes || '' };
+            },
             toContentData(dom) { return { audio_url: dom.audio_url, prompt: dom.prompt, correct_answers: dom.correct_answers, transcript: dom.transcript, notes: dom.transcript }; },
         });
     }
@@ -266,6 +278,7 @@
         T('editDeleteBtn').addEventListener('click', editorDeleteCard);
         T('editorSelectAll').addEventListener('change', editorToggleSelectAll);
         T('editorBulkDeleteBtn').addEventListener('click', editorBulkDelete);
+        T('editorBulkTypeBtn').addEventListener('click', editorBulkChangeType);
         T('editPatternType').addEventListener('change', editorOnTypeChange);
         T('editTitle').addEventListener('input', editorUpdatePreview);
         loadEditorCards();
@@ -350,9 +363,27 @@
 
     function updateEditorBulkDeleteBtn() {
         const checked = document.querySelectorAll('.editor-card-cb:checked').length;
-        const btn = T('editorBulkDeleteBtn');
         T('editorSelectedCount').textContent = checked;
-        btn.classList.toggle('hidden', checked === 0);
+        T('editorBulkDeleteBtn').classList.toggle('hidden', checked === 0);
+        T('editorBulkTypeWrap').classList.toggle('hidden', checked === 0);
+    }
+
+    async function editorBulkChangeType() {
+        const ids = Array.from(document.querySelectorAll('.editor-card-cb:checked')).map(cb => parseInt(cb.value));
+        if (!ids.length) return;
+        const type = T('editorBulkTypeSelect').value;
+        if (!type) { toast('Select a type', 'warning'); return; }
+        if (!confirm(`Change type of ${ids.length} card(s) to ${type}?`)) return;
+        const data = await fetchJSON('admin_cards.php?action=update_cards_type_bulk', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+            body: JSON.stringify({ card_ids: ids, pattern_type: type })
+        });
+        if (data.success) {
+            toast(`✅ Changed ${data.updated} card(s) to ${type}`, 'success');
+            loadEditorCards();
+        } else {
+            toast('❌ ' + (data.error || 'Error'), 'error');
+        }
     }
 
     function editorToggleSelectAll() {
@@ -609,20 +640,30 @@
     function renderImportEditorFields(idx) {
         const row = importRows[idx];
         const type = T('importEditType').value || row.type || 'usage_cases';
-        // Build content_data-like object from row
-        const cd = {};
         const cfg = CFC[type];
         if (cfg) {
-            const vals = cfg.fromContentData ? cfg.fromContentData(row) : {};
-            // Merge from raw CSV fields too
+            const vals = {};
             cfg.fields.forEach(f => {
-                if (row[f.key] !== undefined && row[f.key] !== '') vals[f.key] = row[f.key];
+                vals[f.key] = row[f.key] !== undefined && row[f.key] !== '' ? row[f.key] : '';
             });
+            // CSV column aliases
+            if (!vals.correct_answers && row.correct_answer) vals.correct_answers = row.correct_answer;
+            if (!vals.example && row.example1) vals.example = row.example1;
+            if (!vals.examples) {
+                const exs = [row.example1, row.example2, row.example3, row.example4].filter(Boolean);
+                if (exs.length) vals.examples = exs.join('\n');
+            }
+            if (!vals.options) {
+                const opts = [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean);
+                if (opts.length) vals.options = opts.join(', ');
+            }
+            if (!vals.correct_index && row.correct_answer !== undefined && row.correct_answer !== '' && isNaN(parseInt(vals.correct_index))) {
+                vals.correct_index = row.correct_answer;
+            }
             renderFields('importDynamicFields', type, vals);
         } else {
             T('importDynamicFields').innerHTML = '<div class="text-sm text-gray-500">No fields</div>';
         }
-        // Attach listeners for preview
         T('importDynamicFields').querySelectorAll('input, textarea, select').forEach(el => {
             el.addEventListener('input', importRenderPreview);
             el.addEventListener('change', importRenderPreview);
@@ -938,7 +979,13 @@
         if (!allSets.length) setCbs = '<div class="text-sm text-gray-400">No sets available</div>';
 
         panel.innerHTML = `
-            <h2 class="text-lg marker-underline mb-3">✏️ Edit User</h2>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg marker-underline">✏️ Edit User</h2>
+                <div class="flex gap-2">
+                    <button id="saveEditUserBtn" class="btn btn-success btn-xs">💾 Save</button>
+                    <button id="createUserBtn" class="btn btn-primary btn-xs">➕ New</button>
+                </div>
+            </div>
             <input type="hidden" id="editUserId" value="${uid}">
             <label class="block font-bold mb-1">Username:</label>
             <input type="text" id="editUserUsername" class="form-input" value="${esc(data.username)}" maxlength="30">
@@ -960,10 +1007,6 @@
                 <label class="block font-bold mb-1">📚 Card Set Access:</label>
                 <p class="text-xs text-gray-500 mb-2">Leave all unchecked = show all sets</p>
                 <div class="space-y-1">${setCbs}</div>
-            </div>
-            <div class="flex gap-2 mt-3">
-                <button id="saveEditUserBtn" class="btn btn-success flex-1">💾 Save</button>
-                <button id="createUserBtn" class="btn btn-primary flex-1">➕ New User</button>
             </div>
         `;
 
@@ -1059,6 +1102,7 @@
         filtered.forEach(set => {
             const cnt = set.card_count !== undefined ? parseInt(set.card_count) : 0;
             const excl = set.exclusive_to || '';
+            const desc = set.description || '';
             const names = excl.split(',').map(s => s.trim()).filter(Boolean);
             let chips = names.length ? names.slice(0,3).map(u => `<span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full mr-1 mb-0.5">🔒 ${esc(u)}</span>`).join('') + (names.length > 3 ? `<span class="text-xs text-gray-400">+${names.length-3} more</span>` : '') : '<span class="text-xs text-gray-400">🌐 Public</span>';
             html += `<div class="set-item mb-2 p-2.5 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-colors" data-id="${set.id}">
@@ -1066,6 +1110,9 @@
                     <span class="set-name-display font-bold text-sm flex-1 cursor-text" contenteditable="true">${esc(set.name)}</span>
                     <span class="text-xs text-gray-400 font-mono">${cnt} card${cnt !== 1 ? 's' : ''}</span>
                     <button class="delete-set-btn btn btn-danger text-xs" style="padding:2px 6px;">🗑</button>
+                </div>
+                <div class="mt-1">
+                    <textarea class="set-description-display form-textarea text-xs" rows="1" placeholder="Set description...">${esc(desc)}</textarea>
                 </div>
                 <div class="mt-1 flex items-center gap-2 flex-wrap">
                     <div class="exclusive-chips">${chips}</div>
@@ -1092,6 +1139,26 @@
                 if (e.key === 'Escape') { el.textContent = el.dataset.orig; el.blur(); }
             });
             el.dataset.orig = el.textContent;
+        });
+
+        // Description auto-save on blur
+        document.querySelectorAll('.set-description-display').forEach(el => {
+            el.addEventListener('blur', () => {
+                const item = el.closest('.set-item');
+                const id = parseInt(item.dataset.id);
+                const name = item.querySelector('.set-name-display').textContent.trim();
+                const description = el.value.trim();
+                const set = cachedSets.find(s => s.id == id);
+                const exclusiveTo = set?.exclusive_to || '';
+                if (description === (set?.description || '')) return;
+                const res = fetchJSON('admin_cards.php?action=update_set', {
+                    method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+                    body: JSON.stringify({ id, name, exclusive_to: exclusiveTo, description })
+                });
+                res.then(r => { if (r.success) { toast('✅ Description saved', 'success'); fetchSets(); } });
+            });
+            el.addEventListener('keydown', e => { if (e.key === 'Escape') { el.value = el.dataset.orig || ''; el.blur(); } });
+            el.dataset.orig = el.value;
         });
 
         // Delete set
@@ -1140,9 +1207,10 @@
                 const sel = item.querySelector('.exclusive-select');
                 const exclusiveTo = sel ? Array.from(sel.selectedOptions).map(o => o.value).filter(v => v).join(',') : '';
                 const name = item.querySelector('.set-name-display').textContent.trim();
+                const description = item.querySelector('.set-description-display')?.value.trim() || '';
                 const res = await fetchJSON('admin_cards.php?action=update_set', {
                     method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
-                    body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
+                    body: JSON.stringify({ id, name, exclusive_to: exclusiveTo, description })
                 });
                 if (res.success) { toast('✅ Access saved', 'success'); item.querySelector('.exclusive-editor').classList.add('hidden'); item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access'; fetchSets(); }
                 else toast('❌ ' + (res.error || 'Error'), 'error');
@@ -1167,9 +1235,10 @@
         if (name === el.dataset.orig) return;
         const set = cachedSets.find(s => s.id == id);
         const exclusiveTo = set?.exclusive_to || '';
+        const description = set?.description || '';
         const res = await fetchJSON('admin_cards.php?action=update_set', {
             method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
-            body: JSON.stringify({ id, name, exclusive_to: exclusiveTo })
+            body: JSON.stringify({ id, name, exclusive_to: exclusiveTo, description })
         });
         if (res.success) { el.dataset.orig = name; toast('✅ Renamed', 'success'); fetchSets(); }
         else { el.textContent = el.dataset.orig || name; toast('❌ Error', 'error'); }

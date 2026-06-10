@@ -126,6 +126,14 @@ class Card
         }
     }
 
+    public static function updateType(int $id, string $type): void
+    {
+        self::ensurePatternTypeEnum($type);
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE cards SET pattern_type = ? WHERE id = ?");
+        $stmt->execute([$type, $id]);
+    }
+
     public static function delete(int $id): void
     {
         $pdo = Database::getConnection();
