@@ -36,6 +36,7 @@ fputcsv($out, [
     'example1', 'example2', 'example3', 'example4',
     'usage1', 'tip',
     'image_url', 'description', 'audio_url', 'prompt', 'transcript',
+    'front_fields',
 ]);
 
 foreach ($cards as $card) {
@@ -102,8 +103,8 @@ foreach ($cards as $card) {
             $row['example3'] = $cd['examples'][2] ?? '';
             $row['example4'] = $cd['examples'][3] ?? '';
         } else {
-            $row['example1'] = $cd['example1a'] ?? $cd['example'] ?? '';
-            $row['example2'] = $cd['example'] ?? '';
+            $row['example1'] = $cd['example1a'] ?? $cd['examples'][0] ?? $cd['example'] ?? '';
+            $row['example2'] = $cd['example2a'] ?? $cd['examples'][1] ?? '';
         }
         if ($type === 'usage_cases') {
             $row['usage1'] = $cd['usage1'] ?? '';

@@ -10,6 +10,7 @@
 | `type`     | Card pattern: see table below |
 | `title`    | The word, phrase, or main subject of the card |
 | `level`    | `A1` `A2` `B1` `B2` `C1` `C2` (will be mapped to Beginner/Intermediate/Advanced on import) |
+| `front_fields` | Comma-separated list of fields to display on the front (e.g. `title,image_url`). Only applies to text types. Defaults to `title` if empty. |
 
 ## Level Mapping
 
@@ -255,6 +256,7 @@ Every file name MUST follow this pattern:
 | 24 | `audio_url`      | ALL types     | Path like `uploads/audio/<topic>/<name>.mp3` OR full URL |
 | 25 | `prompt`         | audio_listening | Question/prompt shown below the audio player |
 | 26 | `transcript`     | audio_listening | Full transcript or notes shown on the back |
+| 27 | `front_fields`   | text types (usage_cases, deep_dive, formula_table) | Comma-separated list of fields to display on the front of the card (e.g. `title,image_url`). Defaults to `title` if empty. |
 
 ---
 
