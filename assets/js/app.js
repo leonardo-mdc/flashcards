@@ -417,11 +417,9 @@
                 alert('No cards found for the selected filters! Try different difficulty levels.');
                 return;
             }
-            if (randomMode) {
-                for (let i = cards.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [cards[i], cards[j]] = [cards[j], cards[i]];
-                }
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
             }
             currentCards = cards;
             currentIndex = 0;

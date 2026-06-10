@@ -40,16 +40,18 @@ if (!$loggedInStudent) {
         <link rel="stylesheet" href="<?= assetVersion('assets/css/app.css') ?>">
     </head>
     <body class="flex items-center justify-center">
+    <?php if ($loggedInStudent && !empty($loggedInStudent['is_admin'])): ?>
         <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
-        <div id="appRoot" class="w-full max-w-5xl mx-auto"></div>
+    <?php endif; ?>
+    <div id="appRoot" class="w-full max-w-5xl mx-auto"></div>
 
-        <script>
-            window.FLASHCARD_DATA = {
-                cardSets: [],
-                dbConnected: <?= $dbConnected ? 'true' : 'false' ?>,
-                loggedInStudent: null
-            };
-        </script>
+    <script>
+        window.FLASHCARD_DATA = {
+            cardSets: [],
+            dbConnected: <?= $dbConnected ? 'true' : 'false' ?>,
+            loggedInStudent: null
+        };
+    </script>
         <script src="<?= assetVersion('assets/js/app.js') ?>"></script>
     </body>
     </html>
@@ -68,7 +70,9 @@ if (!$loggedInStudent) {
     <link rel="stylesheet" href="<?= assetVersion('assets/css/app.css') ?>">
 </head>
 <body class="flex items-center justify-center">
-    <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
+    <?php if (!empty($loggedInStudent['is_admin'])): ?>
+        <a href="admin_cards.php" class="admin-link">⚙️ Admin Panel</a>
+    <?php endif; ?>
     <div id="appRoot" class="w-full max-w-5xl mx-auto"></div>
 
     <script>
