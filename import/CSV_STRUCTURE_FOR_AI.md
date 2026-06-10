@@ -45,10 +45,10 @@ Front shows the title. Back shows definition, usage context, examples, and tip.
 
 | Column       | Required | Description |
 |--------------|----------|-------------|
-| `definition` | yes      | The definition or explanation of the word |
-| `usage1`     | yes      | Usage context (when/where to use this word) |
-| `example1`   | yes      | Example sentence (max 4: `example1` to `example4`) |
-| `tip`        | if >=B2  | Extra tip or memory aid |
+| `definition` | no       | The definition or explanation of the word (defaults to "No definition" if empty) |
+| `usage1`     | no       | Usage context — when/where to use this word (auto-fills from `example1` if empty) |
+| `example1`   | no       | Example sentence (max 4: `example1` to `example4`) |
+| `tip`        | no       | Extra tip or memory aid |
 | `image_url`  | no       | Optional image shown on front above the title |
 | `audio_url`  | no       | Optional audio player shown on front above the title |
 
@@ -58,9 +58,9 @@ Front shows the title. Back shows definition, examples, and tip.
 
 | Column       | Required | Description |
 |--------------|----------|-------------|
-| `definition` | yes      | Deep definition or explanation |
-| `example1`   | yes      | Example sentence (max 4: `example1` to `example4`) |
-| `tip`        | yes      | Extra note or insight |
+| `definition` | no       | Deep definition or explanation (defaults to "No definition" if empty) |
+| `example1`   | no       | Example sentence (max 4: `example1` to `example4`) |
+| `tip`        | no       | Extra note or insight |
 | `image_url`  | no       | Optional image shown on front above the title |
 | `audio_url`  | no       | Optional audio player shown on front above the title |
 
@@ -70,9 +70,9 @@ Front shows the title. Back shows formula, examples, and tip.
 
 | Column       | Required | Description |
 |--------------|----------|-------------|
-| `definition` | yes      | The formula, structure, or rule |
-| `example1`   | yes      | Example sentence (max 4: `example1` to `example4`) |
-| `tip`        | yes      | Extra note or memory aid |
+| `definition` | no       | The formula, structure, or rule (defaults to "No definition" if empty) |
+| `example1`   | no       | Example sentence (max 4: `example1` to `example4`) |
+| `tip`        | no       | Extra note or memory aid |
 | `image_url`  | no       | Optional image shown on front above the title |
 | `audio_url`  | no       | Optional audio player shown on front above the title |
 
@@ -82,12 +82,12 @@ Front shows a question with clickable answer options. Can optionally include an 
 
 | Column           | Required | Description |
 |------------------|----------|-------------|
-| `question_text`  | yes      | The question to display (e.g. "Which tense is correct?") |
-| `opt1`           | yes      | Answer option 1 (max 4 options: `opt1` to `opt4`) |
-| `opt2`           | yes      | Answer option 2 |
+| `question_text`  | no       | The question to display (defaults to "Select the correct answer:") |
+| `opt1`           | no*      | Answer option 1 — at least one option required total (max 4: `opt1` to `opt4`) |
+| `opt2`           | no*      | Answer option 2 |
 | `opt3`           | no       | Answer option 3 |
 | `opt4`           | no       | Answer option 4 |
-| `correct_answer` | yes      | Zero-based index of the correct option (0, 1, 2, or 3) |
+| `correct_answer` | no       | Zero-based index of the correct option (0, 1, 2, or 3). Defaults to 0 if empty or invalid |
 | `explanation`    | no       | Text shown after answering explaining why it's correct |
 | `image_url`      | no       | Optional image displayed above the question on front |
 | `audio_url`      | no       | Optional audio player displayed above the question on front |
@@ -98,9 +98,9 @@ Front shows a sentence with a blank. User types the missing word(s). Can optiona
 
 | Column           | Required | Description |
 |------------------|----------|-------------|
-| `sentence`       | yes      | The sentence with `______` indicating the blank |
-| `correct_answer` | yes      | One correct answer, or multiple comma-separated (e.g. `go,goes,went`) |
-| `example1`       | no       | Example sentence showing correct usage |
+| `sentence`       | no       | The sentence with `______` indicating the blank (defaults to "Complete: ______") |
+| `correct_answer` | no       | One correct answer, or multiple comma-separated (e.g. `go,goes,went`). Defaults to `answer` if empty |
+| `example1`       | no       | Example sentence showing correct usage (maps to `example` in card data) |
 | `image_url`      | no       | Optional image displayed at the TOP of the card (always above the sentence) |
 | `audio_url`      | no       | Optional audio player displayed at the TOP of the card (always above the sentence) |
 
@@ -111,13 +111,13 @@ Front shows a sentence with a blank. User types the missing word(s). Can optiona
 
 | Column           | Required | Description |
 |------------------|----------|-------------|
-| `image_url`      | yes*     | Image URL (strongly recommended — card works without it but shows a placeholder icon) |
-| `question_text`  | yes      | The question to display (e.g. "What does this picture show?") |
-| `opt1`           | yes      | Answer option 1 (max 4 options: `opt1` to `opt4`) |
-| `opt2`           | yes      | Answer option 2 |
+| `image_url`      | no*      | Image URL (strongly recommended — card works without it but shows a placeholder icon) |
+| `question_text`  | no       | The question to display (defaults to "Select the correct answer:") |
+| `opt1`           | no*      | Answer option 1 — at least one option required total (max 4: `opt1` to `opt4`) |
+| `opt2`           | no*      | Answer option 2 |
 | `opt3`           | no       | Answer option 3 |
 | `opt4`           | no       | Answer option 4 |
-| `correct_answer` | yes      | Zero-based index of the correct option (0, 1, 2, or 3) |
+| `correct_answer` | no       | Zero-based index of the correct option (0, 1, 2, or 3). Defaults to 0 if empty or invalid |
 | `explanation`    | no       | Text shown after answering explaining why it's correct |
 
 ### image_description (Image Card)
@@ -126,8 +126,8 @@ Front shows the image (or a placeholder). Back shows the description.
 
 | Column       | Required | Description |
 |--------------|----------|-------------|
-| `image_url`  | yes*     | Image URL (strongly recommended — shows a 🖼️ placeholder if missing) |
-| `description`| yes      | Description text shown on the back of the card |
+| `image_url`  | no*      | Image URL (strongly recommended — shows a 🖼️ placeholder if missing) |
+| `description`| no       | Description text shown on the back of the card (falls back to `definition`, then "No description") |
 
 ### audio_listening (Audio Card)
 
@@ -251,9 +251,9 @@ Every file name MUST follow this pattern:
 | 19 | `example4`       | usage_cases, deep_dive, formula_table | Fourth example |
 | 20 | `usage1`         | usage_cases   | Usage context description |
 | 21 | `tip`            | usage_cases, deep_dive, formula_table | Extra tip or memory aid |
-| 22 | `image_url`      | ALL types     | Path like `uploads/images/<topic>/<name>.jpg` OR full URL |
+| 22 | `image_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, image_mcq, image_description | Path like `uploads/images/<topic>/<name>.jpg` OR full URL |
 | 23 | `description`    | image_description | Text shown on the back of image cards |
-| 24 | `audio_url`      | ALL types     | Path like `uploads/audio/<topic>/<name>.mp3` OR full URL |
+| 24 | `audio_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, audio_listening | Path like `uploads/audio/<topic>/<name>.mp3` OR full URL |
 | 25 | `prompt`         | audio_listening | Question/prompt shown below the audio player |
 | 26 | `transcript`     | audio_listening | Full transcript or notes shown on the back |
 | 27 | `front_fields`   | text types (usage_cases, deep_dive, formula_table) | Comma-separated list of fields to display on the front of the card (e.g. `title,image_url`). Defaults to `title` if empty. |
@@ -276,7 +276,7 @@ id,set,type,title,level,definition,example1,usage1,tip,image_url,audio_url
 ```
 id,set,type,title,level,question_text,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,image_url
 ,Tenses,multiple_choice,Present Perfect,B1,"Which sentence uses Present Perfect correctly?","","She has visited London","She visited London","She visits London","She is visiting London",2,"Present Perfect uses 'have/has + past participle'",uploads/images/tenses/present-perfect-example.jpg
-,Phrasal Verbs,gap_fill,break up,B1,,"They decided to ______ after five years","break up",,,,,,She broke up with him last week,uploads/images/phrasal-verbs/break-up.jpg
+,Phrasal Verbs,gap_fill,break up,B1,,"They decided to ______ after five years",,,,,,break up,,,uploads/images/phrasal-verbs/break-up.jpg
 ```
 
 ### Image MCQ card
@@ -309,10 +309,10 @@ id,set,type,title,level,prompt,correct_answer,transcript,audio_url
 ```
 id,set,type,title,level,question_text,definition,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,example1,usage1,tip,image_url,audio_url,description,prompt,transcript
 ,Phrasal Verbs,usage_cases,break down,A1,,"To stop functioning (machine) or lose control emotionally",,,,,,,,,"The car broke down on the highway","When talking about machines or emotions","Use 'break down' for both machines and people",uploads/images/phrasal-verbs/break-down-car.jpg,,,,
-,Phrasal Verbs,gap_fill,break up,B1,,,"They decided to ______ after five years","break up",,,,,,,,,,,,uploads/audio/phrasal-verbs/break-up.mp3,,
+,Phrasal Verbs,gap_fill,break up,B1,,,"They decided to ______ after five years",,,,,"break up",,,,,,uploads/audio/phrasal-verbs/break-up.mp3,,
 ,Wh-Questions,image_mcq,WHERE - Location,B1,"Which question word fits this image?","",,"WHAT","WHEN","WHERE","WHO",2,"The image shows a map - we use WHERE for places",,,,,,uploads/images/wh-questions/where-map.jpg,,,,
 ,Wh-Questions,image_description,WHAT vs WHICH,A2,,,,,,,,,,,,,,,uploads/images/wh-questions/what-vs-which.jpg,,"WHAT = open, unlimited. WHICH = limited choices.",,
-,Wh-Questions,audio_listening,WH- Questions Quiz,A2,,,,,,,,,,,,,,,,uploads/audio/wh-questions/wh-quiz.mp3,"Listen to each question and identify the WH-word",what,when,where,who,which,why,how
+,Wh-Questions,audio_listening,WH- Questions Quiz,A2,,,,,,,,"what,when,where,who,which,why,how",,,,,,,uploads/audio/wh-questions/wh-quiz.mp3,,"Listen to each question and identify the WH-word",
 ```
 
 ## Important Notes
