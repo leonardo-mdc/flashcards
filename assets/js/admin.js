@@ -32,6 +32,43 @@
     styleSpin.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
     document.head.appendChild(styleSpin);
 
+    // ─── Keyboard arrow navigation for lists ──────────────────────
+    function arrowNav(containerId, itemSelector, onEnter) {
+        const c = T(containerId);
+        if (!c) return;
+        c.setAttribute('tabindex', '0');
+        c.style.outline = 'none';
+        c.addEventListener('keydown', e => {
+            const items = c.querySelectorAll(itemSelector);
+            if (!items.length) return;
+            let idx = -1;
+            items.forEach((it, i) => { if (it.classList.contains('selected') || it.matches('.selected')) idx = i; });
+            if (idx < 0) idx = 0;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                idx = Math.min(idx + 1, items.length - 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                idx = Math.max(idx - 1, 0);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (items[idx]) onEnter(items[idx], idx);
+                return;
+            } else return;
+            if (items[idx]) {
+                items[idx].click();
+                items[idx].scrollIntoView({ block: 'nearest' });
+            }
+        });
+        c.addEventListener('focus', () => {
+            const sel = c.querySelector(itemSelector + '.selected');
+            if (!sel) {
+                const first = c.querySelector(itemSelector);
+                if (first) first.click();
+            }
+        });
+    }
+
     // ─── Unified Card Field Config ──────────────────────────────────
     const CFC = {};
 
@@ -431,6 +468,9 @@
         });
         allChecked.checked = cards.length > 0 && document.querySelectorAll('.editor-card-cb:not(:checked)').length === 0;
 
+        // Enable arrow navigation
+        arrowNav('editorCardList', '.card-item');
+
         // Expose select function globally for inline onclick
         window._selectEditorCard = (id) => {
             const card = editorCards.find(c => c.id === id);
@@ -618,6 +658,7 @@
         });
         T('importEditTitle').addEventListener('input', importRenderPreview);
         T('importEditLevel').addEventListener('change', importRenderPreview);
+        arrowNav('importPreviewBody', 'tr', (el) => { if (el.dataset.idx !== undefined) selectImportRow(parseInt(el.dataset.idx)); });
     }
 
     async function loadImportPreview(file) {
@@ -913,6 +954,7 @@
             updateExportCount();
         });
         T('exportExecuteBtn').addEventListener('click', exportExecute);
+        arrowNav('exportCardListContainer', '.export-card-item');
         loadExportCards();
     }
 
@@ -961,6 +1003,13 @@
         });
         T('exportCardListContainer').innerHTML = html;
         document.querySelectorAll('.export-card-cb').forEach(cb => cb.addEventListener('change', updateExportCount));
+        T('exportCardListContainer').querySelectorAll('.export-card-item').forEach(el => {
+            el.addEventListener('click', e => {
+                if (e.target.type === 'checkbox') return;
+                const cb = el.querySelector('.export-card-cb');
+                if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }
+            });
+        });
         updateExportCount();
     }
 
@@ -1065,6 +1114,7 @@
     function initUsersSubTab() {
         usersSubInitialized = true;
         T('userListNewBtn').addEventListener('click', renderNewUserForm);
+        arrowNav('userListContainer', 'tr');
         loadUsers();
     }
 
@@ -1100,6 +1150,14 @@
         });
         html += '</table>';
         T('userListContainer').innerHTML = html;
+
+        // Row click → edit
+        T('userListContainer').querySelectorAll('tr').forEach(tr => {
+            tr.addEventListener('click', e => {
+                if (e.target.closest('button')) return;
+                tr.querySelector('.user-edit-btn')?.click();
+            });
+        });
 
         // Edit button
         document.querySelectorAll('.user-edit-btn').forEach(b => {
