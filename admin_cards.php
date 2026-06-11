@@ -710,7 +710,9 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
 
 <script>
     window.FLASHCARD_ADMIN = {
-        csrfToken: <?= json_encode(csrfToken()) ?>
+        csrfToken: <?= json_encode(csrfToken()) ?>,
+        focusCard: <?= json_encode(isset($_GET['focus_card']) ? (int) $_GET['focus_card'] : null) ?>,
+        returnUrl: <?= json_encode($_GET['return_url'] ?? null) ?>
     };
 </script>
 <script src="assets/js/admin.js"></script>

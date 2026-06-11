@@ -316,8 +316,53 @@
             editorPages = data.pages || 1;
             editorPage = data.page || 1;
             renderEditorCardList();
+            handleFocusCard();
         } else {
             T('editorCardList').innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
+        }
+    }
+
+    async function handleFocusCard() {
+        const fc = window.FLASHCARD_ADMIN?.focusCard;
+        if (!fc) return;
+        delete window.FLASHCARD_ADMIN.focusCard;
+        const card = editorCards.find(c => c.id === fc);
+        if (card) {
+            editorSelectedCardId = fc;
+            editorLoadCard(card);
+            renderEditorCardList();
+            const el = document.querySelector(`.card-item[data-id="${fc}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        const res = await fetchJSON(`admin_cards.php?action=get_card&card_id=${fc}`, { headers: { 'X-Requested-With':'XMLHttpRequest' } });
+        if (res.success && res.card) {
+            if (T('editorSetFilter').value && parseInt(T('editorSetFilter').value) !== res.card.set_id) {
+                T('editorSetFilter').value = '';
+                editorPage = 1;
+                await loadEditorCards();
+                const c2 = editorCards.find(c => c.id === fc);
+                if (c2) {
+                    editorSelectedCardId = fc;
+                    editorLoadCard(c2);
+                    renderEditorCardList();
+                    const el = document.querySelector(`.card-item[data-id="${fc}"]`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+            editorCards.unshift(res.card);
+            editorTotal++;
+            renderEditorCardList();
+            const cardItem = document.querySelector(`.card-item[data-id="${fc}"]`);
+            if (cardItem) {
+                cardItem.classList.add('selected');
+                cardItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            editorSelectedCardId = fc;
+            editorLoadCard(res.card);
+        } else {
+            toast('Card #' + fc + ' not found', 'error');
         }
     }
 
