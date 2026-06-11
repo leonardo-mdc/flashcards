@@ -697,6 +697,18 @@
         // Collect dynamic fields
         const cd = collectFields('importDynamicFields', row.type);
         Object.keys(cd).forEach(k => { row[k] = Array.isArray(cd[k]) ? cd[k].join(', ') : cd[k]; });
+        // Map CFC keys back to CSV column names
+        if (row.correct_answers) row.correct_answer = Array.isArray(row.correct_answers) ? row.correct_answers.join(',') : String(row.correct_answers).split(', ').join(',');
+        if (row.options) {
+            const opts = Array.isArray(row.options) ? row.options : String(row.options).split(',').map(s => s.trim()).filter(Boolean);
+            for (let i = 0; i < 4; i++) row['opt' + (i + 1)] = opts[i] || '';
+        }
+        if (row.examples) {
+            const exs = Array.isArray(row.examples) ? row.examples : String(row.examples).split('\n').filter(Boolean);
+            for (let i = 0; i < 4; i++) row['example' + (i + 1)] = exs[i] || '';
+        }
+        if (row.example && !row.example1) row.example1 = String(row.example);
+        if (row.front_fields && Array.isArray(row.front_fields)) row.front_fields = row.front_fields.join(',');
     }
 
     function importDeleteRow() {
