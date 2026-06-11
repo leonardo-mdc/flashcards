@@ -2,23 +2,23 @@
 
 ## Common Columns (all card types)
 
-| Column       | Description |
-|--------------|-------------|
-| `id`         | Leave empty for new cards, or set an existing ID to update |
-| `set`        | Card set name — if the set doesn't exist, it is **created automatically** during import |
-| `set_id`     | Optional numeric set ID. If both `set` and `set_id` are given, `set` takes priority |
-| `type`       | Card pattern: `usage_cases`, `deep_dive`, `formula_table`, `multiple_choice`, `gap_fill`, `image_mcq`, `image_description`, `audio_listening` |
-| `title`      | The word, phrase, or main subject of the card |
-| `level`      | `A1` `A2` `B1` `B2` `C1` `C2` (mapped to Beginner/Intermediate/Advanced on import) or use Beginner/Intermediate/Advanced directly |
+| Column | Description |
+|--------|-------------|
+| `id` | Leave empty for new cards, or set an existing ID to update |
+| `set` | Card set name — if the set doesn't exist, it is **created automatically** during import |
+| `set_id` | Optional numeric set ID. If both `set` and `set_id` are given, `set` takes priority |
+| `type` | Card pattern: `usage_cases`, `deep_dive`, `formula_table`, `multiple_choice`, `gap_fill`, `image_mcq`, `image_description`, `audio_listening` |
+| `title` | The word, phrase, or main subject of the card |
+| `level` | `A1` `A2` `B1` `B2` `C1` `C2` (mapped to Beginner/Intermediate/Advanced on import) or use Beginner/Intermediate/Advanced directly |
 | `front_fields` | Comma-separated list of fields to display on the front (e.g. `title,image_url`). Only applies to text types. Defaults to `title` if empty. |
 
 ## Level Mapping
 
-| CSV value    | Stored as      |
-|--------------|----------------|
-| `A1` or `A2` | `Beginner`     |
+| CSV value | Stored as |
+|-----------|-----------|
+| `A1` or `A2` | `Beginner` |
 | `B1` or `B2` | `Intermediate` |
-| `C1` or `C2` | `Advanced`     |
+| `C1` or `C2` | `Advanced` |
 
 ---
 
@@ -27,38 +27,40 @@
 **You MUST produce every CSV using this exact 27-column order.** Never reorder columns. For unused columns, leave the cell empty but KEEP the column in the header. The header row must be this exact string:
 
 ```
-id,set,set_id,type,title,level,question_text,definition,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,example1,example2,example3,example4,usage1,tip,image_url,description,audio_url,prompt,transcript,front_fields
+id;set;set_id;type;title;level;question_text;definition;sentence;opt1;opt2;opt3;opt4;correct_answer;explanation;example1;example2;example3;example4;usage1;tip;image_url;description;audio_url;prompt;transcript;front_fields
 ```
 
-| # | Column           | Filled for these types |
-|---|------------------|------------------------|
-| 1 | `id`             | all (leave empty for new cards) |
-| 2 | `set`            | all |
-| 3 | `set_id`         | all (optional, `set` takes priority) |
-| 4 | `type`           | all |
-| 5 | `title`          | all |
-| 6 | `level`          | all |
-| 7 | `question_text`  | multiple_choice, image_mcq |
-| 8 | `definition`     | usage_cases, deep_dive, formula_table |
-| 9 | `sentence`       | gap_fill |
-| 10 | `opt1`           | multiple_choice, image_mcq (at least 1 required) |
-| 11 | `opt2`           | multiple_choice, image_mcq (at least 1 required with opt1) |
-| 12 | `opt3`           | multiple_choice, image_mcq (optional) |
-| 13 | `opt4`           | multiple_choice, image_mcq (optional) |
+**Delimiter: semicolon (`;`).** This allows commas inside field values (e.g. `correct_answer` for gap_fill: `one,1` or thousands: `2500,2,500`). The header and all data rows use `;` between fields.
+
+| # | Column | Filled for these types |
+|---|--------|------------------------|
+| 1 | `id` | all (leave empty for new cards) |
+| 2 | `set` | all |
+| 3 | `set_id` | all (optional, `set` takes priority) |
+| 4 | `type` | all |
+| 5 | `title` | all |
+| 6 | `level` | all |
+| 7 | `question_text` | multiple_choice, image_mcq |
+| 8 | `definition` | usage_cases, deep_dive, formula_table |
+| 9 | `sentence` | gap_fill |
+| 10 | `opt1` | multiple_choice, image_mcq (at least 1 required) |
+| 11 | `opt2` | multiple_choice, image_mcq (at least 1 required with opt1) |
+| 12 | `opt3` | multiple_choice, image_mcq (optional) |
+| 13 | `opt4` | multiple_choice, image_mcq (optional) |
 | 14 | `correct_answer` | multiple_choice (0-based index), image_mcq (0-based index), gap_fill (comma-separated), audio_listening (comma-separated) |
-| 15 | `explanation`    | multiple_choice, image_mcq |
-| 16 | `example1`       | usage_cases, deep_dive, formula_table, gap_fill |
-| 17 | `example2`       | usage_cases, deep_dive, formula_table |
-| 18 | `example3`       | usage_cases, deep_dive, formula_table |
-| 19 | `example4`       | usage_cases, deep_dive, formula_table |
-| 20 | `usage1`         | usage_cases |
-| 21 | `tip`            | usage_cases, deep_dive, formula_table |
-| 22 | `image_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, image_mcq, image_description |
-| 23 | `description`    | image_description |
-| 24 | `audio_url`      | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, audio_listening |
-| 25 | `prompt`         | audio_listening |
-| 26 | `transcript`     | audio_listening |
-| 27 | `front_fields`   | usage_cases, deep_dive, formula_table |
+| 15 | `explanation` | multiple_choice, image_mcq |
+| 16 | `example1` | usage_cases, deep_dive, formula_table, gap_fill |
+| 17 | `example2` | usage_cases, deep_dive, formula_table |
+| 18 | `example3` | usage_cases, deep_dive, formula_table |
+| 19 | `example4` | usage_cases, deep_dive, formula_table |
+| 20 | `usage1` | usage_cases |
+| 21 | `tip` | usage_cases, deep_dive, formula_table |
+| 22 | `image_url` | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, image_mcq, image_description |
+| 23 | `description` | image_description |
+| 24 | `audio_url` | usage_cases, deep_dive, formula_table, multiple_choice, gap_fill, audio_listening |
+| 25 | `prompt` | audio_listening |
+| 26 | `transcript` | audio_listening |
+| 27 | `front_fields` | usage_cases, deep_dive, formula_table |
 
 ---
 
@@ -116,55 +118,61 @@ For each type, fill these columns (by number from the Master Table above). Leave
 
 ## Example CSV Rows
 
-All examples below keep columns in the EXACT order of the Master Table. Unused columns are omitted from the header but the RELATIVE order is always preserved.
+All examples use `;` as the delimiter. Commas inside field values (like `correct_answer` alternatives) are field-internal and do NOT conflict with the semicolon separator.
 
 ### Basic text cards (usage_cases, deep_dive, formula_table)
 
 ```
-id,set,type,title,level,definition,example1,usage1,tip,image_url,audio_url
-,Wh-Questions,usage_cases,WHAT - Asking for Information,Beginner,"How to use WHAT in questions?","What is your name?","Names & Identity","In Portuguese 'Qual é seu nome?' but English uses 'What is your name?'",uploads/images/wh-questions/what-intro.jpg,uploads/audio/wh-questions/what-example.mp3
-,Wh-Questions,deep_dive,WH- Prepositions at the End,Intermediate,"Why prepositions go at the end of WH questions","Who do you live with?","In Portuguese, prepositions start ('Com quem...') but English puts them at the end.",
-,Wh-Questions,formula_table,WHEN - Asking About Time,Beginner,"When + be + subject? OR When + do/does + subject + verb?","When is your birthday?",,,"When asking about days and dates",
+id;set;type;title;level;definition;example1;usage1;tip;image_url;audio_url
+;Wh-Questions;usage_cases;WHAT - Asking for Information;Beginner;"How to use WHAT in questions?";"What is your name?";"Names & Identity";"In Portuguese 'Qual é seu nome?' but English uses 'What is your name?'";uploads/images/wh-questions/what-intro.jpg;uploads/audio/wh-questions/what-example.mp3
+;Wh-Questions;deep_dive;WH- Prepositions at the End;Intermediate;"Why prepositions go at the end of WH questions";"Who do you live with?";"In Portuguese, prepositions start ('Com quem...') but English puts them at the end.";
+;Wh-Questions;formula_table;WHEN - Asking About Time;Beginner;"When + be + subject? OR When + do/does + subject + verb?";"When is your birthday?";;;"When asking about days and dates";
 ```
-
-Header columns map to master columns: 1,2,4,5,6,8,16,20,21,22,24 — correct relative order ✓
 
 ### Quiz cards (multiple_choice, gap_fill)
 
 ```
-id,set,type,title,level,question_text,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,image_url
-,Tenses,multiple_choice,Present Perfect,B1,"Which sentence uses Present Perfect correctly?","","She has visited London","She visited London","She visits London","She is visiting London",2,"Present Perfect uses 'have/has + past participle'",uploads/images/tenses/present-perfect-example.jpg
-,Phrasal Verbs,gap_fill,break up,B1,,"They decided to ______ after five years",,,,,,break up,,,
+id;set;type;title;level;question_text;sentence;opt1;opt2;opt3;opt4;correct_answer;explanation;image_url
+;Tenses;multiple_choice;Present Perfect;B1;"Which sentence uses Present Perfect correctly?";;"She has visited London";"She visited London";"She visits London";"She is visiting London";2;"Present Perfect uses 'have/has + past participle'";uploads/images/tenses/present-perfect-example.jpg
+;Phrasal Verbs;gap_fill;break up;B1;;"They decided to ______ after five years";;;;;;break up;;
 ```
-
-Header columns map to master columns: 1,2,4,5,6,7,9,10,11,12,13,14,15,22 — correct relative order ✓
 
 ### Full mixed example (all types, full 27-column header)
 
 ```
-id,set,set_id,type,title,level,question_text,definition,sentence,opt1,opt2,opt3,opt4,correct_answer,explanation,example1,example2,example3,example4,usage1,tip,image_url,description,audio_url,prompt,transcript,front_fields
-,Phrasal Verbs,,usage_cases,break down,A1,,"To stop functioning (machine) or lose control emotionally",,,,,,,,,,"The car broke down on the highway",,,,,"When talking about machines or emotions","Use 'break down' for both machines and people",,,,,,
-,Phrasal Verbs,,gap_fill,break up,B1,,,"They decided to ______ after five years",,,,,,"break up",,,,,,,,,,,uploads/audio/phrasal-verbs/break-up.mp3,,,
-,Wh-Questions,,image_mcq,WHERE - Location,B1,"Which question word fits this image?",,,,,,"WHAT","WHEN","WHERE","WHO",2,"The image shows a map - we use WHERE for places",,,,,,,,,,uploads/images/wh-questions/where-map.jpg,,,,
-,Wh-Questions,,image_description,WHAT vs WHICH,A2,,,,,,,,,,,,,,,,,,,,uploads/images/wh-questions/what-vs-which.jpg,"WHAT = open, unlimited. WHICH = limited choices.",,,,
-,Wh-Questions,,audio_listening,WH- Questions Quiz,A2,,,,,,,,,,,"what,when,where,who,which,why,how",,,,,,,,,,uploads/audio/wh-questions/wh-quiz.mp3,,"Listen to each question and identify the WH-word",
+id;set;set_id;type;title;level;question_text;definition;sentence;opt1;opt2;opt3;opt4;correct_answer;explanation;example1;example2;example3;example4;usage1;tip;image_url;description;audio_url;prompt;transcript;front_fields
+;Phrasal Verbs;;usage_cases;break down;A1;;"To stop functioning (machine) or lose control emotionally";;;;;;;;;;;"The car broke down on the highway";;;;"When talking about machines or emotions";"Use 'break down' for both machines and people";;;;;;
+;Phrasal Verbs;;gap_fill;break up;B1;;;"They decided to ______ after five years";;;;;;break up;;;;;;;;;;;;;uploads/audio/phrasal-verbs/break-up.mp3;;;
+;Wh-Questions;;image_mcq;WHERE - Location;B1;"Which question word fits this image?";;;;"WHAT";"WHEN";"WHERE";"WHO";2;"The image shows a map - we use WHERE for places";;;;;;;;;;;;uploads/images/wh-questions/where-map.jpg;;;;
+;Wh-Questions;;image_description;WHAT vs WHICH;A2;;;;;;;;;;;;;;;;;;;;;;;uploads/images/wh-questions/what-vs-which.jpg;"WHAT = open, unlimited. WHICH = limited choices.";;;;
+;Wh-Questions;;audio_listening;WH- Questions Quiz;A2;;;;;;;;;;;"what,when,where,who,which,why,how";;;;;;;;;;;;;;uploads/audio/wh-questions/wh-quiz.mp3;"Listen to each question and identify the WH-word";
 ```
 
 ### Image Description card
 
 ```
-id,set,type,title,level,image_url,description
-,Wh-Questions,image_description,WHAT - Asking for Information,A1,uploads/images/wh-questions/what-intro.jpg,"In English, we use WHAT to ask for general information."
-,Tenses,image_description,Present Simple Routine,B1,uploads/images/tenses/simple-present-routine.png,"The image shows a daily routine. Present Simple is used for habits, routines, and general truths. 'I wake up at 7 AM every day.'"
+id;set;type;title;level;image_url;description
+;Wh-Questions;image_description;WHAT - Asking for Information;A1;uploads/images/wh-questions/what-intro.jpg;"In English, we use WHAT to ask for general information."
+;Tenses;image_description;Present Simple Routine;B1;uploads/images/tenses/simple-present-routine.png;"The image shows a daily routine. Present Simple is used for habits, routines, and general truths. 'I wake up at 7 AM every day.'"
 ```
 
 ### Audio Listening card
 
 ```
-id,set,type,title,level,correct_answer,audio_url,prompt,transcript
-,Wh-Questions,audio_listening,WHAT - Listening Practice,A2,What is your name?,uploads/audio/wh-questions/what-is-your-name.mp3,"Listen and type what you hear:","What is your name?"
-,Modals,audio_listening,CAN - Pronunciation,B1,I can swim,uploads/audio/modal-verbs/can-swim.mp3,"Listen and complete:",I can swim
-,Modals,audio_listening,Can or Can't - Listening,B1,"can,can't",uploads/audio/modal-verbs/can-cant-listening.mp3,,"I can speak English but I can't speak Japanese."
+id;set;type;title;level;correct_answer;audio_url;prompt;transcript
+;Wh-Questions;audio_listening;WHAT - Listening Practice;A2;What is your name?;uploads/audio/wh-questions/what-is-your-name.mp3;"Listen and type what you hear:";"What is your name?"
+;Modals;audio_listening;CAN - Pronunciation;B1;I can swim;uploads/audio/modal-verbs/can-swim.mp3;"Listen and complete:";I can swim
+;Modals;audio_listening;Can or Can't - Listening;B1;can,can't;uploads/audio/modal-verbs/can-cant-listening.mp3;;"I can speak English but I can't speak Japanese."
+```
+
+### gap_fill with comma-separated answers (no quoting needed)
+
+Because the CSV uses `;` as delimiter, commas inside `correct_answer` are just normal field content:
+
+```
+id;set;type;title;level;sentence;correct_answer;example1
+;DMV;gap_fill;DUI refusal suspension;Beginner;A driver who refuses to take a breath test after a DUI arrest will have their license suspended for ______ year(s).;one,1;Refusal = automatic 1-year suspension.
+;DMV;gap_fill;Texting school zone extra;Intermediate;Texting while driving in a school zone adds an additional ______ points to the primary offense.;3,três;Texting = 3 points. School zone adds 3 more.
 ```
 
 ---
@@ -199,10 +207,10 @@ project-root/
 
 Use the **relative path** from the website root, starting with `uploads/`:
 
-| Media type | CSV column    | Example value |
-|------------|---------------|---------------|
-| Image      | `image_url`   | `uploads/images/wh-questions/what-is-this.jpg` |
-| Audio      | `audio_url`   | `uploads/audio/modal-verbs/can-ability.mp3` |
+| Media type | CSV column | Example value |
+|------------|------------|---------------|
+| Image | `image_url` | `uploads/images/wh-questions/what-is-this.jpg` |
+| Audio | `audio_url` | `uploads/audio/modal-verbs/can-ability.mp3` |
 
 You can also use **full URLs** (from external sites or CDNs).
 
@@ -235,17 +243,19 @@ Every file name MUST follow this pattern:
 | Media type | Allowed formats |
 |------------|----------------|
 | **Images** | `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp` |
-| **Audio**  | `.mp3`, `.wav`, `.ogg`, `.m4a` |
+| **Audio** | `.mp3`, `.wav`, `.ogg`, `.m4a` |
 
 ---
 
 ## Important Notes
 
+- **Delimiter: semicolon (`;`)** — fields are separated by `;`, NOT commas. This allows commas inside field values like `correct_answer: one,1` or `2500,2,500`.
 - **Always use the full 27-column header** as shown in the Master Table. Leave unused cells empty.
+- The import automatically **detects** the delimiter by checking the first line. Both `;` and `,` delimited files are accepted.
 - The import automatically **creates any set name** that doesn't exist yet
 - Text fields support `\br` (backslash + br) for line breaks within a single cell
 - Max **4 options** per MCQ/image_mcq (`opt1`–`opt4`), max **4 examples** per text card (`example1`–`example4`)
-- The `correct_answer` for **gap_fill** and **audio_listening** accepts **comma-separated alternatives**: `go,goes,went`
+- The `correct_answer` for **gap_fill** and **audio_listening** accepts **comma-separated alternatives**: `go,goes,went` (commas are field-internal, the CSV delimiter is `;`)
 - For **multiple_choice** and **image_mcq**, the `correct_answer` is a **zero-based index** (0, 1, 2, or 3). Defaults to 0 if empty.
 - For **audio_listening**, leave `correct_answer` AND `prompt` empty to make a **descriptive-only** card (just listen + read transcript)
 - Media files can be referenced as **relative paths** (`uploads/images/...`) or **full URLs** (`https://...`)

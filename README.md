@@ -110,7 +110,7 @@ A flashcard study application with 8 card types, spaced repetition, multi-user s
 3. Execute import (auto-creates new sets, validates types/levels)
 
 ### CSV Export
-- Download all cards as CSV with 25 columns covering all card types
+- Download all cards as CSV with 27 columns covering all card types
 
 ---
 
@@ -124,6 +124,8 @@ A standalone offline-style CSV editor:
 ---
 
 ## CSV Format (Import / Export)
+
+**Delimiter: semicolon (`;`).** Commas inside field values (e.g. `correct_answer: go,goes,went` or thousands: `2500,2,500`) don't conflict with the separator.
 
 | Column | Used By |
 |--------|---------|
@@ -146,8 +148,11 @@ A standalone offline-style CSV editor:
 | `description` | image_description |
 | `prompt` | audio_listening |
 | `transcript` | audio_listening |
+| `front_fields` | Text types |
 
 Level values are normalized: A1/A2 → Beginner, B1/B2 → Intermediate, C1/C2 → Advanced.
+
+See [`import/CSV_STRUCTURE_FOR_AI.md`](import/CSV_STRUCTURE_FOR_AI.md) for the full 27-column master table, type-specific field guides, and examples.
 
 ---
 
