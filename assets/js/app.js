@@ -207,10 +207,13 @@
         const ef = parseFloat(p.ease_factor) || 2.5;
         const rep = parseInt(p.repetitions) || 0;
         const prev = parseInt(p.interval_days) || 0;
-        const newEF = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-        if (rep < 2) return quality === 3 ? '7d' : '3d';
+        const sm2q = quality === 2 ? 3 : 5;
+        const newEF = Math.max(1.3, ef + (0.1 - (5 - sm2q) * (0.08 + (5 - sm2q) * 0.02)));
+        if (rep === 0) return quality === 3 ? '1d' : '1d';
+        if (rep === 1) return quality === 3 ? '8d' : '6d';
         const base = Math.round(prev * newEF);
-        return Math.round(base * (quality === 3 ? 1.3 : 1)) + 'd';
+        const interval = quality === 3 ? Math.round(base * 1.3) : base;
+        return interval + 'd';
     }
 
     function formatBreaks(text) {

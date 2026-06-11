@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/src/session_init.php';
+initSession();
 
 require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/helpers.php';
@@ -27,9 +28,28 @@ function requireAdminAjax(): void
     }
 }
 
+$rateLimitFile = sys_get_temp_dir() . '/login_attempts_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+$rateLimitWindow = 300;
+$rateLimitMax = 10;
+
+function checkRateLimit(string $file, int $window, int $max): bool
+{
+    $attempts = [];
+    if (file_exists($file)) {
+        $attempts = json_decode(file_get_contents($file), true) ?: [];
+        $attempts = array_filter($attempts, fn($t) => $t > time() - $window);
+    }
+    if (count($attempts) >= $max) return false;
+    $attempts[] = time();
+    file_put_contents($file, json_encode($attempts));
+    return true;
+}
+
 if (isset($_POST['setup'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
         $setupError = 'Invalid security token.';
+    } elseif (!checkRateLimit($rateLimitFile, $rateLimitWindow, $rateLimitMax)) {
+        $setupError = 'Too many attempts. Please try again later.';
     } else {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -37,6 +57,7 @@ if (isset($_POST['setup'])) {
             User::create($username, $password, true);
             $user = User::authenticate($username, $password);
             if ($user) {
+                session_regenerate_id(true);
                 $_SESSION['admin_user'] = $user;
                 $currentUser = $user;
                 $isLoggedIn = true;
@@ -50,11 +71,14 @@ if (isset($_POST['setup'])) {
 if (isset($_POST['login'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
         $loginError = 'Invalid security token.';
+    } elseif (!checkRateLimit($rateLimitFile, $rateLimitWindow, $rateLimitMax)) {
+        $loginError = 'Too many attempts. Please try again later.';
     } else {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
         $user = User::authenticate($username, $password);
         if ($user && $user['is_admin']) {
+            session_regenerate_id(true);
             $_SESSION['admin_user'] = $user;
             $currentUser = $user;
             $isLoggedIn = true;
@@ -116,10 +140,19 @@ if ($isAjax && isset($_GET['action'])) {
             exit;
         } elseif ($action === 'get_cards') {
             $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
+            $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+            $perPage = isset($_GET['per_page']) ? min(200, max(10, (int) $_GET['per_page'])) : 100;
+            $offset = ($page - 1) * $perPage;
             if ($setId === 0) {
-                echo json_encode(['success' => true, 'cards' => Card::getAll()]);
+                $allCards = Card::getAll();
+                $total = count($allCards);
+                $cards = array_slice($allCards, $offset, $perPage);
+                echo json_encode(['success' => true, 'cards' => $cards, 'total' => $total, 'page' => $page, 'per_page' => $perPage, 'pages' => max(1, (int) ceil($total / $perPage))]);
             } else {
-                echo json_encode(['success' => true, 'cards' => Card::getBySet($setId)]);
+                $allCards = Card::getBySet($setId);
+                $total = count($allCards);
+                $cards = array_slice($allCards, $offset, $perPage);
+                echo json_encode(['success' => true, 'cards' => $cards, 'total' => $total, 'page' => $page, 'per_page' => $perPage, 'pages' => max(1, (int) ceil($total / $perPage))]);
             }
         } elseif ($action === 'get_sets') {
             echo json_encode(['success' => true, 'sets' => CardSet::getAll()]);
@@ -261,7 +294,8 @@ if ($isAjax && isset($_GET['action'])) {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
         }
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        error_log('Admin action error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'error' => 'An error occurred.']);
     }
 
     exit;
@@ -299,6 +333,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             <span class="text-sm text-gray-500">👤 <?= escapeHtml($currentUser['username']) ?></span>
             <a href="?logout=1" class="btn btn-logout">🚪 Logout</a>
             <form action="api/migrate_types.php" method="POST" style="display:inline" onsubmit="return confirm('Fix truncated card types? This will update cards with empty pattern_type.');">
+                <?= csrfField() ?>
                 <button type="submit" class="btn btn-secondary text-sm">🛠 Fix Card Types</button>
             </form>
         </div>

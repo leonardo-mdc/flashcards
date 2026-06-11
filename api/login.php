@@ -1,15 +1,40 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/../src/session_init.php';
+initSession();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/User.php';
 require_once __DIR__ . '/../src/Review.php';
 
+$rateLimitFile = sys_get_temp_dir() . '/login_attempts_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+$rateLimitWindow = 300;
+$rateLimitMax = 20;
+
+function checkRateLimit(string $file, int $window, int $max): bool
+{
+    $attempts = [];
+    if (file_exists($file)) {
+        $attempts = json_decode(file_get_contents($file), true) ?: [];
+        $attempts = array_filter($attempts, fn($t) => $t > time() - $window);
+    }
+    if (count($attempts) >= $max) return false;
+    $attempts[] = time();
+    file_put_contents($file, json_encode($attempts));
+    return true;
+}
+
 try {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? 'login';
+
+    if ($action === 'login' || $action === 'register') {
+        if (!checkRateLimit($rateLimitFile, $rateLimitWindow, $rateLimitMax)) {
+            echo json_encode(['success' => false, 'error' => 'Too many attempts. Please try again later.']);
+            exit;
+        }
+    }
 
     if ($action === 'update_profile') {
         $userId = (int) ($input['user_id'] ?? 0);
@@ -48,8 +73,8 @@ try {
     }
 
     if ($action === 'register') {
-        if (strlen($password) < 4) {
-            echo json_encode(['success' => false, 'error' => 'Password must be at least 4 characters']);
+        if (strlen($password) < 6) {
+            echo json_encode(['success' => false, 'error' => 'Password must be at least 6 characters']);
             exit;
         }
         $fullName = isset($input['full_name']) ? trim($input['full_name']) : '';
@@ -81,5 +106,6 @@ try {
         echo json_encode(['success' => true, 'student' => $user, 'new' => false]);
     }
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    error_log('Login API error: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'A database error occurred.']);
 }

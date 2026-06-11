@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/../src/session_init.php';
+initSession();
 
 $currentUser = $_SESSION['admin_user'] ?? null;
 $isAdmin = $currentUser !== null && ($currentUser['is_admin'] ?? false);

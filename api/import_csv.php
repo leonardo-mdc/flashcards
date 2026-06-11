@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/../src/session_init.php';
+initSession();
 
 header('Content-Type: application/json');
 
@@ -223,6 +224,16 @@ try {
 
         $cardId = isset($data['id']) && is_numeric($data['id']) ? (int) $data['id'] : 0;
 
+        if ($cardId === 0) {
+            $dupCheck = $pdo->prepare("SELECT id FROM cards WHERE title = ? AND pattern_type = ? AND set_id = ?");
+            $dupCheck->execute([$title, $type, $setId]);
+            $existing = $dupCheck->fetch();
+            if ($existing) {
+                $errors[] = "Row $rowNum: Duplicate skipped (title='$title', type='$type', set_id=$setId)";
+                continue;
+            }
+        }
+
         Card::save([
             'id' => $cardId,
             'set_id' => $setId,
@@ -247,8 +258,9 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('Import CSV error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage(),
+        'error' => 'An error occurred during import.',
     ]);
 }

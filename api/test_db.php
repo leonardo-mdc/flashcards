@@ -7,5 +7,6 @@ try {
     echo "Connected successfully!\n";
     echo "Server: " . $pdo->getAttribute(PDO::ATTR_SERVER_VERSION);
 } catch (PDOException $e) {
-    echo "Connection failed: " . $e->getMessage();
+    error_log('Test DB connection failed: ' . $e->getMessage());
+    echo "Connection failed.\n";
 }

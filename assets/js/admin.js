@@ -17,6 +17,20 @@
         el.textContent = msg; el.style.display = 'block';
         clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 3000);
     }
+    function setLoading(btnId, loading, label) {
+        const btn = T(btnId); if (!btn) return;
+        if (loading) {
+            btn._label = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:4px;"></span> ' + (label || 'Working...');
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = btn._label || label || btn.innerHTML;
+        }
+    }
+    const styleSpin = document.createElement('style');
+    styleSpin.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(styleSpin);
 
     // ─── Unified Card Field Config ──────────────────────────────────
     const CFC = {};
@@ -264,6 +278,8 @@
     let editorCards = [];
     let editorSelectedCardId = null;
     let editorEditingCard = null;
+    let editorTotal = 0;
+    let editorPages = 1;
 
     function initEditor() {
         editorInitialized = true;
@@ -284,20 +300,31 @@
         loadEditorCards();
     }
 
+    let editorPage = 1;
+    const EDITOR_PER_PAGE = 100;
+
     async function loadEditorCards() {
         const setId = T('editorSetFilter').value;
-        let url = 'admin_cards.php?action=get_cards&t=' + Date.now();
+        let url = `admin_cards.php?action=get_cards&t=${Date.now()}&page=${editorPage}&per_page=${EDITOR_PER_PAGE}`;
         if (setId) url += `&set_id=${setId}`;
         else url += '&set_id=0';
         T('editorCardList').innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading...</div>';
         const data = await fetchJSON(url, { headers: { 'X-Requested-With':'XMLHttpRequest' } });
         if (data.success) {
             editorCards = data.cards;
+            editorTotal = data.total || 0;
+            editorPages = data.pages || 1;
+            editorPage = data.page || 1;
             renderEditorCardList();
         } else {
             T('editorCardList').innerHTML = '<div class="text-center text-red-500 py-8">Error loading cards</div>';
         }
     }
+
+    window._editorPage = (p) => {
+        editorPage = Math.max(1, Math.min(p, editorPages || 1));
+        loadEditorCards();
+    };
 
     function getEditorCardFilter() {
         const typeFilter = T('editorTypeFilter').value;
@@ -321,7 +348,7 @@
             return true;
         });
 
-        T('editorCardCount').textContent = cards.length + ' cards';
+        T('editorCardCount').textContent = (editorTotal || cards.length) + ' cards';
 
         const allChecked = T('editorSelectAll');
         const checkedCbs = [];
@@ -344,6 +371,13 @@
             </div>`;
         });
         if (!cards.length) html = '<div class="text-center text-gray-500 py-8">No cards match filters</div>';
+        if (editorPages > 1) {
+            html += '<div class="flex justify-center items-center gap-2 py-2 text-xs">';
+            html += `<button class="btn btn-xs" onclick="window._editorPage(${editorPage - 1})" ${editorPage <= 1 ? 'disabled' : ''}>← Prev</button>`;
+            html += `<span>Page ${editorPage} / ${editorPages}</span>`;
+            html += `<button class="btn btn-xs" onclick="window._editorPage(${editorPage + 1})" ${editorPage >= editorPages ? 'disabled' : ''}>Next →</button>`;
+            html += '</div>';
+        }
         T('editorCardList').innerHTML = html;
 
         // Attach checkboxes
@@ -374,10 +408,12 @@
         const type = T('editorBulkTypeSelect').value;
         if (!type) { toast('Select a type', 'warning'); return; }
         if (!confirm(`Change type of ${ids.length} card(s) to ${type}?`)) return;
+        setLoading('editorBulkTypeBtn', true, 'Changing...');
         const data = await fetchJSON('admin_cards.php?action=update_cards_type_bulk', {
             method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
             body: JSON.stringify({ card_ids: ids, pattern_type: type })
         });
+        setLoading('editorBulkTypeBtn', false);
         if (data.success) {
             toast(`✅ Changed ${data.updated} card(s) to ${type}`, 'success');
             loadEditorCards();
@@ -396,10 +432,12 @@
         const ids = Array.from(document.querySelectorAll('.editor-card-cb:checked')).map(cb => parseInt(cb.value));
         if (!ids.length) return;
         if (!confirm(`Delete ${ids.length} card(s)? This cannot be undone.`)) return;
+        setLoading('editorBulkDeleteBtn', true, 'Deleting...');
         const data = await fetchJSON('admin_cards.php?action=delete_cards_bulk', {
             method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
             body: JSON.stringify({ card_ids: ids })
         });
+        setLoading('editorBulkDeleteBtn', false);
         if (data.success) {
             toast(`✅ Deleted ${data.deleted} card(s)`, 'success');
             loadEditorCards();
@@ -453,6 +491,7 @@
     }
 
     async function editorSaveCard() {
+        setLoading('editorSaveBtn', true, 'Saving...');
         const type = T('editPatternType').value;
         const cd = collectFields('editFieldsContainer', type);
         const data = {
@@ -468,6 +507,7 @@
             method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
             body: JSON.stringify(data)
         });
+        setLoading('editorSaveBtn', false);
         if (res.success) {
             toast('✅ Card saved!', 'success');
             loadEditorCards();
@@ -481,9 +521,11 @@
         const id = parseInt(T('editCardId').value);
         if (!id) { toast('No card selected', 'warning'); return; }
         if (!confirm('Delete this card?')) return;
+        setLoading('editDeleteBtn', true, 'Deleting...');
         const res = await fetchJSON(`admin_cards.php?action=delete_card&card_id=${id}`, {
             headers: { 'X-Requested-With':'XMLHttpRequest' }
         });
+        setLoading('editDeleteBtn', false);
         if (res.success) {
             toast('🗑 Deleted', 'success');
             editorNewCard();
@@ -766,12 +808,12 @@
     }
 
     async function importExecute() {
-        // ── FIX: Auto-save current editor row before import ──
         if (importSelectedIdx >= 0) updateImportRow(importSelectedIdx);
 
         const checked = importRows.filter(r => r._checked);
         if (!checked.length) { toast('Select at least one row', 'warning'); return; }
         if (!confirm(`Import ${checked.length} card(s)?`)) return;
+        setLoading('importExecuteBtn', true, 'Importing...');
 
         const cols = ['id','set','set_id','type','title','level','question_text','definition','sentence','opt1','opt2','opt3','opt4','correct_answer','explanation','example1','example2','example3','example4','usage1','tip','image_url','description','audio_url','prompt','transcript','front_fields'];
         const csvRows = [cols.join(';')];
@@ -807,7 +849,8 @@
             } else {
                 toast('❌ ' + (res.error || 'Import failed'), 'error');
             }
-        } catch (e) { toast('❌ Network error', 'error'); }
+            setLoading('importExecuteBtn', false);
+        } catch (e) { setLoading('importExecuteBtn', false); toast('❌ Network error', 'error'); }
     }
 
     // ═══════════════════════════════════════════════════════════════

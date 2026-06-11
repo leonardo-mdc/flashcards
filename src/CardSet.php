@@ -15,9 +15,30 @@ class CardSet
         }
     }
 
+    public static function ensureIndexes(): void
+    {
+        $pdo = Database::getConnection();
+        try {
+            $pdo->exec("ALTER TABLE cards ADD INDEX idx_level (level)");
+        } catch (\PDOException $e) {
+            if ($e->getCode() !== '42000') throw $e;
+        }
+        try {
+            $pdo->exec("ALTER TABLE cards ADD INDEX idx_pattern_type (pattern_type)");
+        } catch (\PDOException $e) {
+            if ($e->getCode() !== '42000') throw $e;
+        }
+        try {
+            $pdo->exec("ALTER TABLE cards ADD INDEX idx_set_id (set_id)");
+        } catch (\PDOException $e) {
+            if ($e->getCode() !== '42000') throw $e;
+        }
+    }
+
     public static function getAll(): array
     {
         self::ensureTable();
+        self::ensureIndexes();
         $pdo = Database::getConnection();
         $stmt = $pdo->query("
             SELECT cs.id, cs.name, cs.description, cs.exclusive_to,

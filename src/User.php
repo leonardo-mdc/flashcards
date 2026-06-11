@@ -127,7 +127,10 @@ class User
         self::ensureTable();
         $pdo = Database::getConnection();
         if ($password !== null && $password !== '') {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
+            if (strlen($password) < 6) {
+                throw new \InvalidArgumentException('Password must be at least 6 characters');
+            }
+            $hash = password_hash($password, PASSWORD_BCRYPT);
             $stmt = $pdo->prepare("UPDATE users SET username = ?, full_name = ?, english_level = ?, is_admin = ?, password_hash = ? WHERE id = ?");
             $stmt->execute([$username, $fullName, $englishLevel, $isAdmin ? 1 : 0, $hash, $id]);
         } else {

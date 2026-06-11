@@ -16,6 +16,7 @@ class Review
             correct_streak INT DEFAULT 0,
             was_correct TINYINT(1) DEFAULT 1,
             total_reviews INT DEFAULT 0,
+            repetitions INT DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
             UNIQUE KEY unique_pair (user_id, card_id)
@@ -29,6 +30,11 @@ class Review
         $stmt = $pdo->query("SHOW COLUMNS FROM user_card_progress LIKE 'user_id'");
         if (!$stmt->fetch()) {
             $pdo->exec("ALTER TABLE user_card_progress CHANGE student_id user_id INT NOT NULL");
+        }
+
+        $stmt = $pdo->query("SHOW COLUMNS FROM user_card_progress LIKE 'repetitions'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE user_card_progress ADD COLUMN repetitions INT DEFAULT 0 AFTER total_reviews");
         }
     }
 
@@ -53,37 +59,76 @@ class Review
         self::ensureHistoryTable();
         $pdo = Database::getConnection();
 
-        $daysToAdd = match ($quality) {
+        $stmt = $pdo->prepare("SELECT id, ease_factor, interval_days, repetitions, correct_streak FROM user_card_progress WHERE user_id = ? AND card_id = ?");
+        $stmt->execute([$userId, $cardId]);
+        $progress = $stmt->fetch();
+
+        $ef = $progress ? (float) $progress['ease_factor'] : 2.5;
+        $interval = $progress ? (int) $progress['interval_days'] : 0;
+        $reps = $progress ? (int) $progress['repetitions'] : 0;
+        $streak = $progress ? (int) $progress['correct_streak'] : 0;
+
+        $sm2Quality = match ($quality) {
             0 => 1,
             2 => 3,
-            3 => 7,
-            default => 1,
+            3 => 5,
+            default => 3,
         };
 
-        $nextReview = date('Y-m-d', strtotime("+$daysToAdd days"));
+        $newEF = max(1.3, $ef + (0.1 - (5 - $sm2Quality) * (0.08 + (5 - $sm2Quality) * 0.02)));
+
+        [$newReps, $newInterval] = self::calculateSM2($sm2Quality, $reps, $interval, $newEF);
+
+        if ($sm2Quality === 5) {
+            $newInterval = (int) round($newInterval * 1.3);
+        }
+
+        if ($sm2Quality >= 3) {
+            $streak++;
+        } else {
+            $streak = 0;
+        }
+
+        $nextReview = date('Y-m-d', strtotime("+$newInterval days"));
         $today = date('Y-m-d');
 
-        $stmt = $pdo->prepare("SELECT id FROM user_card_progress WHERE user_id = ? AND card_id = ?");
-        $stmt->execute([$userId, $cardId]);
-        $exists = $stmt->fetch();
-
-        if ($exists) {
+        if ($progress) {
             $stmt = $pdo->prepare("
                 UPDATE user_card_progress
-                SET next_review = ?, last_review = ?, was_correct = ?, total_reviews = total_reviews + 1
+                SET next_review = ?, last_review = ?, was_correct = ?,
+                    ease_factor = ?, interval_days = ?, repetitions = ?,
+                    correct_streak = ?, total_reviews = total_reviews + 1
                 WHERE user_id = ? AND card_id = ?
             ");
-            $stmt->execute([$nextReview, $today, $wasCorrect ? 1 : 0, $userId, $cardId]);
+            $stmt->execute([$nextReview, $today, $wasCorrect ? 1 : 0, $newEF, $newInterval, $newReps, $streak, $userId, $cardId]);
         } else {
             $stmt = $pdo->prepare("
-                INSERT INTO user_card_progress (user_id, card_id, next_review, last_review, was_correct, total_reviews)
-                VALUES (?, ?, ?, ?, ?, 1)
+                INSERT INTO user_card_progress (user_id, card_id, next_review, last_review, was_correct, ease_factor, interval_days, repetitions, correct_streak, total_reviews)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ");
-            $stmt->execute([$userId, $cardId, $nextReview, $today, $wasCorrect ? 1 : 0]);
+            $stmt->execute([$userId, $cardId, $nextReview, $today, $wasCorrect ? 1 : 0, $newEF, $newInterval, $newReps, $streak]);
         }
 
         $stmt = $pdo->prepare("INSERT INTO review_history (user_id, card_id, quality, was_correct) VALUES (?, ?, ?, ?)");
         $stmt->execute([$userId, $cardId, $quality, $wasCorrect ? 1 : 0]);
+    }
+
+    private static function calculateSM2(int $quality, int $repetitions, int $interval, float $easeFactor): array
+    {
+        if ($quality < 3) {
+            return [0, 1];
+        }
+
+        if ($repetitions === 0) {
+            return [1, 1];
+        }
+
+        if ($repetitions === 1) {
+            return [2, 6];
+        }
+
+        $newInterval = (int) round($interval * $easeFactor);
+        return [$repetitions + 1, $newInterval];
     }
 
     public static function resetForUser(int $userId): void
@@ -112,25 +157,21 @@ class Review
         self::ensureSetAccessTable();
         $pdo = Database::getConnection();
 
-        // Layer 1: user → sets (student_set_access).
         $stmt = $pdo->prepare("SELECT set_id FROM student_set_access WHERE user_id = ?");
         $stmt->execute([$userId]);
         $allowed = $stmt->fetchAll(\PDO::FETCH_COLUMN);
         $allowed = array_map('intval', $allowed);
 
-        // Admin context (no username): return only explicit assignments
         if ($username === '') {
             return $allowed;
         }
 
-        // Student context: empty = all sets
         if (empty($allowed)) {
             $stmt = $pdo->query("SELECT id FROM card_sets");
             $all = $stmt->fetchAll(\PDO::FETCH_COLUMN);
             $allowed = array_map('intval', $all);
         }
 
-        // Layer 2: set → users (exclusive_to). Remove sets where user isn't listed.
         $stmt = $pdo->query("SELECT id, exclusive_to FROM card_sets WHERE exclusive_to IS NOT NULL AND exclusive_to != ''");
         $exclusiveSets = $stmt->fetchAll();
         foreach ($exclusiveSets as $set) {

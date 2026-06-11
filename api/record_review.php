@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/../src/session_init.php';
+initSession();
 
 header('Content-Type: application/json');
 
@@ -44,25 +45,24 @@ try {
     $progressPercent = $totalCards > 0 ? min(100, (int) round(($stats['cards_reviewed'] / $totalCards) * 100)) : 0;
     User::updateProgress($userId, $progressPercent);
 
-    $daysToAdd = match ($quality) {
-        0 => 1,
-        2 => 3,
-        3 => 7,
-        default => 1,
-    };
-    $nextReview = date('Y-m-d', strtotime("+$daysToAdd days"));
+    $stmt = $pdo->prepare("SELECT next_review, ease_factor, interval_days, repetitions FROM user_card_progress WHERE user_id = ? AND card_id = ?");
+    $stmt->execute([$userId, $cardId]);
+    $progress = $stmt->fetch();
 
     echo json_encode([
         'success' => true,
         'message' => 'Review recorded',
-        'next_review' => $nextReview,
-        'days_added' => $daysToAdd,
+        'next_review' => $progress ? $progress['next_review'] : date('Y-m-d'),
+        'ease_factor' => $progress ? (float) $progress['ease_factor'] : 2.5,
+        'interval_days' => $progress ? (int) $progress['interval_days'] : 1,
+        'repetitions' => $progress ? (int) $progress['repetitions'] : 0,
         'quality' => $quality,
         'progress' => $progressPercent,
     ]);
 } catch (PDOException $e) {
+    error_log('Record review error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'error' => 'Database error: ' . $e->getMessage(),
+        'error' => 'A database error occurred.',
     ]);
 }

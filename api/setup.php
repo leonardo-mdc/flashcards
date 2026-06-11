@@ -54,6 +54,7 @@ try {
         correct_streak INT DEFAULT 0,
         was_correct TINYINT(1) DEFAULT 1,
         total_reviews INT DEFAULT 0,
+        repetitions INT DEFAULT 0,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
         UNIQUE KEY unique_pair (user_id, card_id)
@@ -71,5 +72,6 @@ try {
 
     echo json_encode(['success'=>true]);
 } catch(Exception $e) {
-    echo json_encode(['error'=>$e->getMessage()]);
+    error_log('Setup error: ' . $e->getMessage());
+    echo json_encode(['error'=>'Setup failed']);
 }

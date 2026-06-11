@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/src/session_init.php';
+initSession();
 
 require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/helpers.php';
@@ -37,6 +38,7 @@ if ($isAjax && isset($_GET['action'])) {
             $password = $input['password'] ?? '';
             $user = User::authenticate($username, $password);
             if ($user && $user['is_admin']) {
+                session_regenerate_id(true);
                 $_SESSION['admin_user'] = $user;
                 echo json_encode(['success' => true]);
             } else {
@@ -92,7 +94,8 @@ if ($isAjax && isset($_GET['action'])) {
             exit;
         }
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        error_log('Card inspector action error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'error' => 'An error occurred.']);
         exit;
     }
 }

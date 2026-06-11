@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/../src/session_init.php';
+initSession();
 
 header('Content-Type: application/json');
 
@@ -34,8 +35,9 @@ try {
         'count' => count($sets),
     ]);
 } catch (PDOException $e) {
+    error_log('Get sets error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'error' => 'Database error: ' . $e->getMessage(),
+        'error' => 'A database error occurred.',
     ]);
 }
