@@ -64,7 +64,7 @@ fputcsv($out, [
     'usage1', 'tip',
     'image_url', 'description', 'audio_url', 'prompt', 'transcript',
     'front_fields',
-]);
+], ';');
 
 foreach ($cards as $card) {
     $cd = json_decode($card['content_data'], true) ?: [];
@@ -149,7 +149,7 @@ foreach ($cards as $card) {
     $row['prompt'] = $cd['prompt'] ?? '';
     $row['transcript'] = $cd['transcript'] ?? $cd['notes'] ?? '';
 
-    fputcsv($out, $row);
+    fputcsv($out, $row, ';');
 }
 
 fclose($out);

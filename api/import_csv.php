@@ -39,7 +39,9 @@ try {
         exit;
     }
 
-    $header = fgetcsv($handle);
+    $firstLine = fgets($handle); rewind($handle);
+    $delim = (count(str_getcsv($firstLine, ';')) > count(str_getcsv($firstLine, ','))) ? ';' : ',';
+    $header = fgetcsv($handle, 0, $delim);
     if (!$header) {
         fclose($handle);
         echo json_encode(['success' => false, 'error' => 'Empty CSV']);
@@ -65,7 +67,7 @@ try {
     $pdo = Database::getConnection();
     $pdo->beginTransaction();
 
-    while (($row = fgetcsv($handle)) !== false) {
+    while (($row = fgetcsv($handle, 0, $delim)) !== false) {
         $rowNum++;
         $data = array_combine($header, array_pad($row, count($header), ''));
 

@@ -762,7 +762,7 @@
         if (!confirm(`Import ${checked.length} card(s)?`)) return;
 
         const cols = ['id','set','set_id','type','title','level','question_text','definition','sentence','opt1','opt2','opt3','opt4','correct_answer','explanation','example1','example2','example3','example4','usage1','tip','image_url','description','audio_url','prompt','transcript','front_fields'];
-        const csvRows = [cols.join(',')];
+        const csvRows = [cols.join(';')];
         checked.forEach(row => {
             const vals = cols.map(col => {
                 if (col === 'set') return row._setName || '';
@@ -770,10 +770,10 @@
                 if (col === 'type') return row.type || 'usage_cases';
                 if (col === 'level') return row.level || 'Beginner';
                 let v = row[col] !== undefined ? String(row[col]) : '';
-                if (v.includes(',') || v.includes('"') || v.includes('\n')) v = '"' + v.replace(/"/g, '""') + '"';
+                if (v.includes(';') || v.includes('"') || v.includes('\n')) v = '"' + v.replace(/"/g, '""') + '"';
                 return v;
             });
-            csvRows.push(vals.join(','));
+            csvRows.push(vals.join(';'));
         });
 
         const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });

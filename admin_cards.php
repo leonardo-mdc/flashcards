@@ -94,7 +94,9 @@ if ($isAjax && isset($_GET['action'])) {
                 echo json_encode(['success' => false, 'error' => 'Cannot read file']);
                 exit;
             }
-            $header = fgetcsv($handle);
+            $firstLine = fgets($handle); rewind($handle);
+            $delim = (count(str_getcsv($firstLine, ';')) > count(str_getcsv($firstLine, ','))) ? ';' : ',';
+            $header = fgetcsv($handle, 0, $delim);
             if (!$header) {
                 fclose($handle);
                 echo json_encode(['success' => false, 'error' => 'Empty CSV']);
@@ -105,7 +107,7 @@ if ($isAjax && isset($_GET['action'])) {
                 $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
             }
             $rows = [];
-            while (($row = fgetcsv($handle)) !== false) {
+            while (($row = fgetcsv($handle, 0, $delim)) !== false) {
                 $row = array_slice(array_map('trim', $row), 0, count($header));
                 $rows[] = array_combine($header, array_pad($row, count($header), ''));
             }
