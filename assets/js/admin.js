@@ -978,7 +978,7 @@
                 importRows = []; importSelectedIdx = -1; importFileHandle = null;
                 await refreshSetSelectors();
             } else {
-                toast('❌ ' + (res.error || 'Import failed'), 'error');
+                toast('❌ ' + (res.error || 'Import failed') + (res.debug ? ': ' + res.debug : ''), 'error');
             }
             setLoading('importExecuteBtn', false);
         } catch (e) { setLoading('importExecuteBtn', false); toast('❌ Network error', 'error'); }

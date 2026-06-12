@@ -83,7 +83,9 @@ try {
 
     while (($row = fgetcsv($handle, 0, $delim)) !== false) {
         $rowNum++;
+        $row = array_slice(array_map('trim', $row), 0, count($header));
         $data = array_combine($header, array_pad($row, count($header), ''));
+        if ($data === false) { $errors[] = "Row $rowNum: Column count mismatch"; continue; }
 
         $type = trim($data['type'] ?? '');
         $title = trim($data['title'] ?? '');
@@ -271,7 +273,7 @@ try {
         'imported' => $imported,
         'errors' => $errors,
     ]);
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
@@ -279,5 +281,6 @@ try {
     echo json_encode([
         'success' => false,
         'error' => 'An error occurred during import.',
+        'debug' => $e->getMessage(),
     ]);
 }
