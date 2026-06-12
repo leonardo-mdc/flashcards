@@ -421,6 +421,10 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             <!-- Center: Fields -->
             <div class="whiteboard-card editor-fields-panel">
                 <input type="hidden" id="editCardId" value="0">
+                <div class="flex gap-2 mb-3">
+                    <button id="editRevertBtn" class="btn btn-warning">↺ Revert</button>
+                    <button id="editDeleteBtn" class="btn btn-danger">🗑 Delete</button>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block font-bold mb-1">Title:</label>
@@ -455,10 +459,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                             <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
-                </div>
-                <div class="flex gap-2 mb-3">
-                    <button id="editRevertBtn" class="btn btn-warning">↺ Revert</button>
-                    <button id="editDeleteBtn" class="btn btn-danger">🗑 Delete</button>
                 </div>
                 <div id="editFieldsContainer"></div>
             </div>
