@@ -176,13 +176,19 @@ class Review
         $exclusiveSets = $stmt->fetchAll();
         foreach ($exclusiveSets as $set) {
             $setId = (int) $set['id'];
-            if (in_array($setId, $allowed)) {
-                $usernames = array_map('trim', explode(',', $set['exclusive_to']));
-                if (!in_array($username, $usernames)) {
-                    $allowed = array_values(array_filter($allowed, fn($id) => $id !== $setId));
+            $usernames = array_map('trim', explode(',', $set['exclusive_to']));
+            if (in_array($username, $usernames)) {
+                if (!in_array($setId, $allowed)) {
+                    $allowed[] = $setId;
+                }
+            } else {
+                $key = array_search($setId, $allowed);
+                if ($key !== false) {
+                    unset($allowed[$key]);
                 }
             }
         }
+        $allowed = array_values($allowed);
 
         return $allowed;
     }
