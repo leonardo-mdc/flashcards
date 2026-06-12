@@ -456,15 +456,16 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div id="editFieldsContainer"></div>
-                <div class="flex gap-2 mt-3">
+                <div class="flex gap-2 mb-3">
                     <button id="editRevertBtn" class="btn btn-warning">↺ Revert</button>
                     <button id="editDeleteBtn" class="btn btn-danger">🗑 Delete</button>
                 </div>
+                <div id="editFieldsContainer"></div>
             </div>
 
             <!-- Right: Preview -->
             <div class="editor-preview-panel">
+                <div id="editFieldVisibility"></div>
                 <div class="card-preview mb-3">
                     <div class="card-front-preview" style="position:relative;min-height:280px;">
                         <span class="preview-label">📖 FRONT</span>
@@ -595,6 +596,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 </div>
 
                 <div class="whiteboard-card" style="padding:12px;">
+                    <div id="importFieldVisibility"></div>
                     <h3 class="text-sm font-bold marker-underline mb-2">👁️ Preview</h3>
                     <div id="importPreviewSection" class="hidden">
                         <div class="card-preview mb-2">

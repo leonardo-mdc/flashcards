@@ -91,18 +91,7 @@
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
             }
         });
-        // front/back checkboxes for text types
-        if (cfg.frontFields) {
-            const ff = Array.isArray(contentData?.front_fields) ? contentData.front_fields : cfg.defaultFrontFields;
-            const bf = Array.isArray(contentData?.back_fields) ? contentData.back_fields : cfg.frontFields;
-            let ffHtml = '<div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200"><table class="w-full text-xs"><thead><tr><th class="text-left font-bold pb-1">Field</th><th class="text-center font-bold pb-1">Front</th><th class="text-center font-bold pb-1">Back</th></tr></thead><tbody>';
-            cfg.frontFields.forEach(fk => {
-                const fLabel = cfg.fields.find(f => f.key === fk)?.label || fk;
-                ffHtml += `<tr><td class="py-0.5">${fLabel}</td><td class="text-center"><input type="checkbox" class="ff-cb" data-key="${fk}" ${ff.includes(fk) ? 'checked' : ''}></td><td class="text-center"><input type="checkbox" class="bf-cb" data-key="${fk}" ${bf.includes(fk) ? 'checked' : ''}></td></tr>`;
-            });
-            ffHtml += '</tbody></table><p class="text-gray-400 mt-1 text-xs">Unchecked = default</p></div>';
-            html += ffHtml;
-        }
+
         T(containerId).innerHTML = html;
     }
 
@@ -118,14 +107,32 @@
                 dom[f.key] = el ? el.value : '';
             }
         });
-        if (cfg.frontFields) {
-            const ff = [], bf = [];
-            document.querySelectorAll(`#${containerId} .ff-cb:checked`).forEach(cb => ff.push(cb.dataset.key));
-            document.querySelectorAll(`#${containerId} .bf-cb:checked`).forEach(cb => bf.push(cb.dataset.key));
-            dom.front_fields = ff;
-            dom.back_fields = bf;
-        }
-        return cfg.toContentData ? cfg.toContentData(dom) : dom;
+            return cfg.toContentData ? cfg.toContentData(dom) : dom;
+    }
+
+    function collectFieldVisibility(visId) {
+        const el = T(visId); if (!el) return {};
+        const ff = [], bf = [];
+        el.querySelectorAll('.ff-cb:checked').forEach(cb => ff.push(cb.dataset.key));
+        el.querySelectorAll('.bf-cb:checked').forEach(cb => bf.push(cb.dataset.key));
+        const r = {};
+        if (ff.length) r.front_fields = ff;
+        if (bf.length) r.back_fields = bf;
+        return r;
+    }
+
+    function renderFieldVisibility(containerId, type, contentData) {
+        const cfg = CFC[type];
+        if (!cfg || !cfg.frontFields) { T(containerId).innerHTML = ''; return; }
+        const ff = Array.isArray(contentData?.front_fields) ? contentData.front_fields : cfg.defaultFrontFields;
+        const bf = Array.isArray(contentData?.back_fields) ? contentData.back_fields : cfg.frontFields;
+        let html = '<div class="p-2 bg-gray-50 rounded-lg border border-gray-200 mb-2"><table class="w-full text-xs"><thead><tr><th class="text-left font-bold pb-1">Field</th><th class="text-center font-bold pb-1">Front</th><th class="text-center font-bold pb-1">Back</th></tr></thead><tbody>';
+        cfg.frontFields.forEach(fk => {
+            const fLabel = cfg.fields.find(f => f.key === fk)?.label || fk;
+            html += `<tr><td class="py-0.5">${fLabel}</td><td class="text-center"><input type="checkbox" class="ff-cb" data-key="${fk}" ${ff.includes(fk) ? 'checked' : ''}></td><td class="text-center"><input type="checkbox" class="bf-cb" data-key="${fk}" ${bf.includes(fk) ? 'checked' : ''}></td></tr>`;
+        });
+        html += '</tbody></table><p class="text-gray-400 mt-1 text-xs">Unchecked = default</p></div>';
+        T(containerId).innerHTML = html;
     }
 
     // ─── Register all 8 types ──────────────────────────────────────
@@ -351,6 +358,7 @@
         T('editTitle').addEventListener('input', editorUpdatePreview);
         T('editFieldsContainer').addEventListener('input', editorUpdatePreview);
         T('editFieldsContainer').addEventListener('change', editorUpdatePreview);
+        T('editFieldVisibility').addEventListener('change', editorUpdatePreview);
         loadEditorCards();
     }
 
@@ -558,6 +566,7 @@
         T('editLevel').value = 'Beginner';
         T('editSetId').value = T('editorSetFilter').value || '1';
         renderFields('editFieldsContainer', 'usage_cases', {});
+        renderFieldVisibility('editFieldVisibility', 'usage_cases', {});
         editorUpdatePreview();
         document.querySelectorAll('.card-item').forEach(i => i.classList.remove('selected'));
     }
@@ -570,6 +579,7 @@
         T('editLevel').value = card.level || 'Beginner';
         T('editSetId').value = card.set_id || 1;
         renderFields('editFieldsContainer', card.pattern_type || 'usage_cases', card.content_data || {});
+        renderFieldVisibility('editFieldVisibility', card.pattern_type || 'usage_cases', card.content_data || {});
         editorUpdatePreview();
     }
 
@@ -582,6 +592,7 @@
         const type = T('editPatternType').value;
         const current = collectFields('editFieldsContainer', type);
         renderFields('editFieldsContainer', type, current);
+        renderFieldVisibility('editFieldVisibility', type, current);
         editorUpdatePreview();
     }
 
@@ -589,6 +600,7 @@
         const type = T('editPatternType').value;
         const title = T('editTitle').value || 'Flashcard';
         const cd = collectFields('editFieldsContainer', type);
+        Object.assign(cd, collectFieldVisibility('editFieldVisibility'));
         renderPreview('frontPreviewContent', 'backPreviewContent', type, title, cd);
     }
 
@@ -596,6 +608,7 @@
         setLoading('editorSaveBtn', true, 'Saving...');
         const type = T('editPatternType').value;
         const cd = collectFields('editFieldsContainer', type);
+        Object.assign(cd, collectFieldVisibility('editFieldVisibility'));
         const data = {
             id: parseInt(T('editCardId').value) || 0,
             set_id: parseInt(T('editSetId').value) || 1,
@@ -806,10 +819,16 @@
                 vals.correct_index = row.correct_answer;
             }
             renderFields('importDynamicFields', type, vals);
+            renderFieldVisibility('importFieldVisibility', type, vals);
         } else {
             T('importDynamicFields').innerHTML = '<div class="text-sm text-gray-500">No fields</div>';
+            T('importFieldVisibility').innerHTML = '';
         }
         T('importDynamicFields').querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', importRenderPreview);
+            el.addEventListener('change', importRenderPreview);
+        });
+        T('importFieldVisibility').querySelectorAll('input, textarea, select').forEach(el => {
             el.addEventListener('input', importRenderPreview);
             el.addEventListener('change', importRenderPreview);
         });
@@ -841,6 +860,7 @@
         row.set_id = setId;
         // Collect dynamic fields
         const cd = collectFields('importDynamicFields', row.type);
+        Object.assign(cd, collectFieldVisibility('importFieldVisibility'));
         Object.keys(cd).forEach(k => { row[k] = Array.isArray(cd[k]) ? cd[k].join(', ') : cd[k]; });
         // Map CFC keys back to CSV column names
         if (row.correct_answers) row.correct_answer = Array.isArray(row.correct_answers) ? row.correct_answers.join(',') : splitCSV(row.correct_answers).join(',');
@@ -875,6 +895,7 @@
         const type = T('importEditType').value || row.type || 'usage_cases';
         // Collect content data from editor fields (same as editor preview)
         const cd = collectFields('importDynamicFields', type);
+        Object.assign(cd, collectFieldVisibility('importFieldVisibility'));
         renderPreview('importFrontPreview', 'importBackPreview', type, title, cd);
     }
 
