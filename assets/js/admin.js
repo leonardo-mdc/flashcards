@@ -814,7 +814,7 @@
             }
             if (!vals.options) {
                 const opts = [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean);
-                if (opts.length) vals.options = opts.join(', ');
+                if (opts.length) vals.options = joinCSV(opts);
             }
             if (!vals.correct_index && row.correct_answer !== undefined && row.correct_answer !== '' && isNaN(parseInt(vals.correct_index))) {
                 vals.correct_index = row.correct_answer;

@@ -79,6 +79,8 @@ try {
     $rowNum = 1;
 
     $pdo = Database::getConnection();
+    // Ensure cards table uses utf8mb4 to match connection charset
+    $pdo->exec("ALTER TABLE cards CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
     $pdo->beginTransaction();
 
     while (($row = fgetcsv($handle, 0, $delim)) !== false) {
