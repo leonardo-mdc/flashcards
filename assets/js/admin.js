@@ -6,6 +6,7 @@
     function esc(str) { if (!str) return ''; const m = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }; return String(str).replace(/[&<>"']/g, c => m[c]); }
     function fmtBreaks(t) { if (!t) return ''; let s = String(t); s = s.replace(/\\\\/g, '\\').replace(/\\br ?/g, '<br>'); s = s.replace(/\\b(.*?)\\b/g,'<b>$1</b>').replace(/\\i(.*?)\\i/g,'<i>$1</i>').replace(/\\u(.*?)\\u/g,'<u>$1</u>').replace(/\\em(.*?)\\em/g,'<em>$1</em>').replace(/\\strong(.*?)\\strong/g,'<strong>$1</strong>'); return s; }
     function splitCSV(s) { if (!s) return []; const r=[]; let c='',q=false; for(let i=0;i<s.length;i++){const ch=s[i];if(ch==='"'){q=!q;continue}if(ch===','&&!q){r.push(c.trim());c='';continue}c+=ch}r.push(c.trim());return r.filter(Boolean); }
+    function joinCSV(arr) { return arr.map(v => { const s = String(v); return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(', '); }
     function fetchJSON(url, opts = {}) {
         const h = new Headers(opts.headers || {}); if (CSRF) h.set('X-CSRF-Token', CSRF);
         if (!(opts.body instanceof FormData)) h.set('Content-Type', 'application/json');
@@ -183,7 +184,7 @@
             ],
             fromContentData(cd) {
                 const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? splitCSV(cd.options) : []);
-                return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: opts.join(', '), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
+                return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: joinCSV(opts), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
             },
             toContentData(dom) { return { image_url: dom.image_url, audio_url: dom.audio_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
         });
@@ -198,7 +199,7 @@
             ],
             fromContentData(cd) {
                 const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? splitCSV(cd.options) : []);
-                return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: opts.join(', '), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
+                return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: joinCSV(opts), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
             },
             toContentData(dom) { return { image_url: dom.image_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
         });
@@ -213,7 +214,7 @@
             ],
             fromContentData(cd) {
                 const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? splitCSV(cd.correct_answers) : []);
-                return { sentence: cd.sentence || '', correct_answers: ca.join(', '), example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
+                return { sentence: cd.sentence || '', correct_answers: joinCSV(ca), example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
             },
             toContentData(dom) { return { sentence: dom.sentence, correct_answers: dom.correct_answers, example: dom.example, image_url: dom.image_url, audio_url: dom.audio_url }; },
         });
@@ -236,7 +237,7 @@
             ],
             fromContentData(cd) {
                 const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? splitCSV(cd.correct_answers) : []);
-                return { audio_url: cd.audio_url || '', prompt: cd.prompt || '', correct_answers: ca.join(', '), transcript: cd.transcript || cd.notes || '' };
+                return { audio_url: cd.audio_url || '', prompt: cd.prompt || '', correct_answers: joinCSV(ca), transcript: cd.transcript || cd.notes || '' };
             },
             toContentData(dom) { return { audio_url: dom.audio_url, prompt: dom.prompt, correct_answers: dom.correct_answers, transcript: dom.transcript, notes: dom.transcript }; },
         });
@@ -862,7 +863,7 @@
         // Collect dynamic fields
         const cd = collectFields('importDynamicFields', row.type);
         Object.assign(cd, collectFieldVisibility('importFieldVisibility'));
-        Object.keys(cd).forEach(k => { row[k] = Array.isArray(cd[k]) ? cd[k].join(', ') : cd[k]; });
+        Object.keys(cd).forEach(k => { row[k] = cd[k]; });
         // Map CFC keys back to CSV column names
         if (row.correct_answers) row.correct_answer = Array.isArray(row.correct_answers) ? row.correct_answers.join(',') : splitCSV(row.correct_answers).join(',');
         if (row.options) {
