@@ -116,15 +116,15 @@ body {
 /* ─── 3-Column Editor Grid ────────────────────────── */
 .editor-3col-grid {
     display: grid;
-    grid-template-columns: 450px 1fr 510px;
+    grid-template-columns: 25% 40% 35%;
     gap: 16px;
     align-items: start;
 }
 @media (max-width: 1400px) {
-    .editor-3col-grid { grid-template-columns: 350px 1fr 380px; }
+    .editor-3col-grid { grid-template-columns: 25% 40% 35%; }
 }
 @media (max-width: 1200px) {
-    .editor-3col-grid { grid-template-columns: 300px 1fr 320px; }
+    .editor-3col-grid { grid-template-columns: 25% 40% 35%; }
 }
 @media (max-width: 1024px) {
     .editor-3col-grid { grid-template-columns: 1fr; }
@@ -383,7 +383,7 @@ body {
 }
 .import-3col-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 25% 40% 35%;
     gap: 12px;
     align-items: start;
 }

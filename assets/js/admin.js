@@ -5,6 +5,7 @@
     // ─── Helpers ────────────────────────────────────────────────────
     function esc(str) { if (!str) return ''; const m = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }; return String(str).replace(/[&<>"']/g, c => m[c]); }
     function fmtBreaks(t) { if (!t) return ''; let s = String(t); s = s.replace(/\\\\/g, '\\').replace(/\\br ?/g, '<br>'); s = s.replace(/\\b(.*?)\\b/g,'<b>$1</b>').replace(/\\i(.*?)\\i/g,'<i>$1</i>').replace(/\\u(.*?)\\u/g,'<u>$1</u>').replace(/\\em(.*?)\\em/g,'<em>$1</em>').replace(/\\strong(.*?)\\strong/g,'<strong>$1</strong>'); return s; }
+    function splitCSV(s) { if (!s) return []; const r=[]; let c='',q=false; for(let i=0;i<s.length;i++){const ch=s[i];if(ch==='"'){q=!q;continue}if(ch===','&&!q){r.push(c.trim());c='';continue}c+=ch}r.push(c.trim());return r.filter(Boolean); }
     function fetchJSON(url, opts = {}) {
         const h = new Headers(opts.headers || {}); if (CSRF) h.set('X-CSRF-Token', CSRF);
         if (!(opts.body instanceof FormData)) h.set('Content-Type', 'application/json');
@@ -90,15 +91,16 @@
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
             }
         });
-        // front_fields for text types
+        // front/back checkboxes for text types
         if (cfg.frontFields) {
             const ff = Array.isArray(contentData?.front_fields) ? contentData.front_fields : cfg.defaultFrontFields;
-            let ffHtml = '<div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200"><label class="block font-bold mb-1 text-xs">Show on front:</label>';
+            const bf = Array.isArray(contentData?.back_fields) ? contentData.back_fields : cfg.frontFields;
+            let ffHtml = '<div class="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200"><table class="w-full text-xs"><thead><tr><th class="text-left font-bold pb-1">Field</th><th class="text-center font-bold pb-1">Front</th><th class="text-center font-bold pb-1">Back</th></tr></thead><tbody>';
             cfg.frontFields.forEach(fk => {
                 const fLabel = cfg.fields.find(f => f.key === fk)?.label || fk;
-                ffHtml += `<label class="inline-flex items-center gap-1 mr-3 text-xs"><input type="checkbox" class="ff-cb" data-key="${fk}" ${ff.includes(fk) ? 'checked' : ''}> ${fLabel}</label>`;
+                ffHtml += `<tr><td class="py-0.5">${fLabel}</td><td class="text-center"><input type="checkbox" class="ff-cb" data-key="${fk}" ${ff.includes(fk) ? 'checked' : ''}></td><td class="text-center"><input type="checkbox" class="bf-cb" data-key="${fk}" ${bf.includes(fk) ? 'checked' : ''}></td></tr>`;
             });
-            ffHtml += '</div>';
+            ffHtml += '</tbody></table><p class="text-gray-400 mt-1 text-xs">Unchecked = default</p></div>';
             html += ffHtml;
         }
         T(containerId).innerHTML = html;
@@ -111,15 +113,17 @@
         cfg.fields.forEach(f => {
             const el = T(`${containerId}_${f.key}`);
             if (f.type === 'csv') {
-                dom[f.key] = el ? el.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+                dom[f.key] = el ? splitCSV(el.value) : [];
             } else {
                 dom[f.key] = el ? el.value : '';
             }
         });
         if (cfg.frontFields) {
-            const ff = [];
+            const ff = [], bf = [];
             document.querySelectorAll(`#${containerId} .ff-cb:checked`).forEach(cb => ff.push(cb.dataset.key));
+            document.querySelectorAll(`#${containerId} .bf-cb:checked`).forEach(cb => bf.push(cb.dataset.key));
             dom.front_fields = ff;
+            dom.back_fields = bf;
         }
         return cfg.toContentData ? cfg.toContentData(dom) : dom;
     }
@@ -136,12 +140,17 @@
         ];
         function textFromContentData(cd) {
             const ex = Array.isArray(cd.examples) ? cd.examples : (typeof cd.examples === 'string' ? cd.examples.split('\n').map(s => s.trim()).filter(Boolean) : []);
-            return { definition: cd.definition || '', usage1: cd.usage1 || '', examples: ex.join('\n'), tip: cd.tip || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
+            const r = { definition: cd.definition || '', usage1: cd.usage1 || '', examples: ex.join('\n'), tip: cd.tip || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
+            if (cd.front_fields) r.front_fields = cd.front_fields;
+            if (cd.back_fields) r.back_fields = cd.back_fields;
+            return r;
         }
         function textToContentData(dom) {
             const exLines = dom.examples.split('\n').map(s => s.trim()).filter(Boolean);
             const cd = { definition: dom.definition, usage1: dom.usage1, tip: dom.tip, image_url: dom.image_url, audio_url: dom.audio_url };
             if (exLines.length) { cd.examples = exLines; cd.example1a = exLines[0]; }
+            if (dom.front_fields?.length) cd.front_fields = dom.front_fields;
+            if (dom.back_fields?.length) cd.back_fields = dom.back_fields;
             return cd;
         }
         ['usage_cases','deep_dive','formula_table'].forEach(t => {
@@ -166,7 +175,7 @@
                 { key:'explanation',   label:'Explanation (optional)', type:'textarea', rows:3, placeholder:'Why this is correct...' },
             ],
             fromContentData(cd) {
-                const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? cd.options.split(',').map(s => s.trim()).filter(Boolean) : []);
+                const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? splitCSV(cd.options) : []);
                 return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: opts.join(', '), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
             },
             toContentData(dom) { return { image_url: dom.image_url, audio_url: dom.audio_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
@@ -181,7 +190,7 @@
                 { key:'explanation',   label:'Explanation (optional)', type:'textarea', rows:3, placeholder:'Why this is correct...' },
             ],
             fromContentData(cd) {
-                const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? cd.options.split(',').map(s => s.trim()).filter(Boolean) : []);
+                const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? splitCSV(cd.options) : []);
                 return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: opts.join(', '), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
             },
             toContentData(dom) { return { image_url: dom.image_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
@@ -196,7 +205,7 @@
                 { key:'audio_url',       label:'Audio URL (optional)', type:'text', placeholder:'https://...' },
             ],
             fromContentData(cd) {
-                const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? cd.correct_answers.split(',').map(s => s.trim()).filter(Boolean) : []);
+                const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? splitCSV(cd.correct_answers) : []);
                 return { sentence: cd.sentence || '', correct_answers: ca.join(', '), example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
             },
             toContentData(dom) { return { sentence: dom.sentence, correct_answers: dom.correct_answers, example: dom.example, image_url: dom.image_url, audio_url: dom.audio_url }; },
@@ -219,7 +228,7 @@
                 { key:'transcript',      label:'Notes / Full Transcript', type:'textarea', rows:3, placeholder:'Full transcript...' },
             ],
             fromContentData(cd) {
-                const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? cd.correct_answers.split(',').map(s => s.trim()).filter(Boolean) : []);
+                const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? splitCSV(cd.correct_answers) : []);
                 return { audio_url: cd.audio_url || '', prompt: cd.prompt || '', correct_answers: ca.join(', '), transcript: cd.transcript || cd.notes || '' };
             },
             toContentData(dom) { return { audio_url: dom.audio_url, prompt: dom.prompt, correct_answers: dom.correct_answers, transcript: dom.transcript, notes: dom.transcript }; },
@@ -270,7 +279,13 @@
             if (ff.includes('usage1') && cd.usage1) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">${fmtBreaks(esc(cd.usage1))}</div>`);
             if (ff.includes('tip') && cd.tip) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${fmtBreaks(esc(cd.tip))}</div>`);
             front = `<div class="flex flex-col items-center justify-center min-h-[200px]">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-2xl text-center font-bold mb-2">${t}</div>${parts.join('')}<p class="text-xs text-gray-400 mt-4">👆 Tap to flip</p></div>`;
-            back = `<div class="text-center"><h3 class="text-2xl text-blue-700 marker-underline mb-3">${t}</h3><div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.definition || ''))}</p></div>${cd.usage1 ? `<p class="text-md text-gray-600 mt-2">💡 Usage: ${fmtBreaks(esc(cd.usage1))}</p>` : ''}${exHtml}${cd.tip ? `<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${fmtBreaks(esc(cd.tip))}</p></div>` : ''}</div>`;
+            const bf = Array.isArray(cd.back_fields) ? cd.back_fields : null;
+            const bParts = [];
+            if (bf === null || bf.includes('definition')) { if (cd.definition) bParts.push(`<div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.definition))}</p></div>`); }
+            if (bf === null || bf.includes('usage1')) { if (cd.usage1) bParts.push(`<p class="text-md text-gray-600 mt-2">💡 Usage: ${fmtBreaks(esc(cd.usage1))}</p>`); }
+            if (bf === null || bf.includes('examples')) bParts.push(exHtml);
+            if (bf === null || bf.includes('tip')) { if (cd.tip) bParts.push(`<div class="mt-3 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-3"><p class="text-md text-yellow-800">💡 Tip: ${fmtBreaks(esc(cd.tip))}</p></div>`); }
+            back = `<div class="text-center"><h3 class="text-2xl text-blue-700 marker-underline mb-3">${t}</h3>${bParts.join('') || '<p class="text-gray-500">(No back fields selected)</p>'}</div>`;
         }
 
         T(frontEl).innerHTML = front;
@@ -334,6 +349,8 @@
         T('editorBulkTypeBtn').addEventListener('click', editorBulkChangeType);
         T('editPatternType').addEventListener('change', editorOnTypeChange);
         T('editTitle').addEventListener('input', editorUpdatePreview);
+        T('editFieldsContainer').addEventListener('input', editorUpdatePreview);
+        T('editFieldsContainer').addEventListener('change', editorUpdatePreview);
         loadEditorCards();
     }
 
@@ -826,9 +843,9 @@
         const cd = collectFields('importDynamicFields', row.type);
         Object.keys(cd).forEach(k => { row[k] = Array.isArray(cd[k]) ? cd[k].join(', ') : cd[k]; });
         // Map CFC keys back to CSV column names
-        if (row.correct_answers) row.correct_answer = Array.isArray(row.correct_answers) ? row.correct_answers.join(',') : String(row.correct_answers).split(', ').join(',');
+        if (row.correct_answers) row.correct_answer = Array.isArray(row.correct_answers) ? row.correct_answers.join(',') : splitCSV(row.correct_answers).join(',');
         if (row.options) {
-            const opts = Array.isArray(row.options) ? row.options : String(row.options).split(',').map(s => s.trim()).filter(Boolean);
+            const opts = Array.isArray(row.options) ? row.options : splitCSV(String(row.options));
             for (let i = 0; i < 4; i++) row['opt' + (i + 1)] = opts[i] || '';
         }
         if (row.examples) {
@@ -837,6 +854,7 @@
         }
         if (row.example && !row.example1) row.example1 = String(row.example);
         if (row.front_fields && Array.isArray(row.front_fields)) row.front_fields = row.front_fields.join(',');
+        if (row.back_fields && Array.isArray(row.back_fields)) row.back_fields = row.back_fields.join(',');
     }
 
     function importDeleteRow() {
@@ -901,7 +919,7 @@
         if (!confirm(`Import ${checked.length} card(s)?`)) return;
         setLoading('importExecuteBtn', true, 'Importing...');
 
-        const cols = ['id','set','set_id','type','title','level','question_text','definition','sentence','opt1','opt2','opt3','opt4','correct_answer','explanation','example1','example2','example3','example4','usage1','tip','image_url','description','audio_url','prompt','transcript','front_fields'];
+        const cols = ['id','set','set_id','type','title','level','question_text','definition','sentence','opt1','opt2','opt3','opt4','correct_answer','explanation','example1','example2','example3','example4','usage1','tip','image_url','description','audio_url','prompt','transcript','front_fields','back_fields'];
         const csvRows = [cols.join(';')];
         checked.forEach(row => {
             const vals = cols.map(col => {

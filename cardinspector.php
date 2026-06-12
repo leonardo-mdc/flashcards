@@ -245,6 +245,8 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         return s;
     }
 
+    function splitCSV(s) { if (!s) return []; const r=[]; let c='',q=false; for(let i=0;i<s.length;i++){const ch=s[i];if(ch==='"'){q=!q;continue}if(ch===','&&!q){r.push(c.trim());c='';continue}c+=ch}r.push(c.trim());return r.filter(Boolean); }
+
     // ── Login ──────────────────────────────────────────────────
     document.getElementById('loginBtn')?.addEventListener('click', async () => {
         const username = document.getElementById('loginUsername').value.trim();
@@ -556,7 +558,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         const explanation = document.getElementById('editExplanation')?.value || '';
 
         if (type === 'multiple_choice' || type === 'image_mcq') {
-            const opts = options ? options.split(',').map(s => s.trim()).filter(Boolean) : ['Option A', 'Option B', 'Option C'];
+            const opts = options ? splitCSV(options) : ['Option A', 'Option B', 'Option C'];
             contentData.options = opts;
             contentData.correct_index = correctIdx;
             contentData.question_text = questionText || 'Select the correct answer:';
@@ -564,7 +566,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             contentData.image_url = imageUrl;
             contentData.audio_url = audioUrl;
         } else if (type === 'gap_fill') {
-            const answers = correctAnswer ? correctAnswer.split(',').map(s => s.trim()).filter(Boolean) : ['answer'];
+            const answers = correctAnswer ? splitCSV(correctAnswer) : ['answer'];
             contentData.sentence = sentence || 'Complete: ______';
             contentData.correct_answers = answers;
             contentData.example = example;
@@ -574,7 +576,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             contentData.image_url = imageUrl;
             contentData.description = description || 'No description';
         } else if (type === 'audio_listening') {
-            const answers = correctAnswer ? correctAnswer.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const answers = correctAnswer ? splitCSV(correctAnswer) : [];
             contentData.audio_url = audioUrl;
             contentData.prompt = prompt;
             contentData.correct_answers = answers;
@@ -782,15 +784,13 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
             row.image_url = type === 'image_mcq' ? (document.getElementById('editImageUrl')?.value || '') : '';
             row.explanation = document.getElementById('editExplanation')?.value || '';
             // Store in content_data as CSV columns
-            row['opt1'] = opts.split(',')[0]?.trim() || '';
-            row['opt2'] = opts.split(',')[1]?.trim() || '';
-            row['opt3'] = opts.split(',')[2]?.trim() || '';
-            row['opt4'] = opts.split(',')[3]?.trim() || '';
+            const optArr = splitCSV(opts);
+            for (let i = 0; i < 4; i++) row['opt' + (i + 1)] = optArr[i] || '';
             row.correct_answer = String(row.correct_index);
         } else if (type === 'gap_fill') {
             row.sentence = document.getElementById('editSentence')?.value || '';
             const answers = document.getElementById('editCorrectAnswers')?.value || 'answer';
-            row.correct_answer = answers.split(',').map(s => s.trim()).join(',');
+            row.correct_answer = splitCSV(answers).join(',');
             row.example1 = document.getElementById('editExample')?.value || '';
             row.definition = '';
             row.usage1 = '';

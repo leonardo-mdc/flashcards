@@ -10,6 +10,19 @@ require_once __DIR__ . '/../src/CardSet.php';
 require_once __DIR__ . '/../src/Card.php';
 require_once __DIR__ . '/../src/helpers.php';
 
+function splitCSV($str) {
+    if ($str === '' || $str === null) return [];
+    $result = []; $current = ''; $inQuotes = false;
+    for ($i = 0; $i < strlen($str); $i++) {
+        $ch = $str[$i];
+        if ($ch === '"') { $inQuotes = !$inQuotes; continue; }
+        if ($ch === ',' && !$inQuotes) { $result[] = trim($current); $current = ''; continue; }
+        $current .= $ch;
+    }
+    $result[] = trim($current);
+    return array_values(array_filter($result, fn($v) => $v !== ''));
+}
+
 $currentUser = $_SESSION['admin_user'] ?? null;
 $isAdmin = $currentUser !== null && ($currentUser['is_admin'] ?? false);
 if (!$isAdmin || !verifyCsrfToken($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
@@ -118,6 +131,7 @@ try {
         $usage1 = trim($data['usage1'] ?? '');
         $tip = trim($data['tip'] ?? '');
         $frontFieldsRaw = trim($data['front_fields'] ?? '');
+        $backFieldsRaw = trim($data['back_fields'] ?? '');
 
         $examples = [];
         for ($i = 1; $i <= 4; $i++) {
@@ -157,7 +171,7 @@ try {
                 'audio_url' => $audioUrl,
             ];
         } elseif ($type === 'gap_fill') {
-            $answers = !empty($correctAnswer) ? array_map('trim', explode(',', $correctAnswer)) : ['answer'];
+            $answers = !empty($correctAnswer) ? splitCSV($correctAnswer) : ['answer'];
             $contentData = [
                 'sentence' => $sentence ?: 'Complete: ______',
                 'correct_answers' => $answers,
@@ -193,7 +207,7 @@ try {
                 'description' => $description ?: $definition ?: 'No description',
             ];
         } elseif ($type === 'audio_listening') {
-            $answers = !empty($correctAnswer) ? array_map('trim', explode(',', $correctAnswer)) : [];
+            $answers = !empty($correctAnswer) ? splitCSV($correctAnswer) : [];
             $contentData = [
                 'audio_url' => $audioUrl,
                 'prompt' => $prompt,
@@ -214,7 +228,10 @@ try {
                 $contentData['examples'] = $examples;
             }
             if (!empty($frontFieldsRaw)) {
-                $contentData['front_fields'] = array_map('trim', explode(',', $frontFieldsRaw));
+                $contentData['front_fields'] = splitCSV($frontFieldsRaw);
+            }
+            if (!empty($backFieldsRaw)) {
+                $contentData['back_fields'] = splitCSV($backFieldsRaw);
             }
         }
 

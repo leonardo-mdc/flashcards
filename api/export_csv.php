@@ -64,7 +64,7 @@ fputcsv($out, [
     'example1', 'example2', 'example3', 'example4',
     'usage1', 'tip',
     'image_url', 'description', 'audio_url', 'prompt', 'transcript',
-    'front_fields',
+    'front_fields', 'back_fields',
 ], ';');
 
 foreach ($cards as $card) {
@@ -144,6 +144,7 @@ foreach ($cards as $card) {
     }
 
     $row['front_fields'] = !empty($cd['front_fields']) ? implode(',', $cd['front_fields']) : '';
+    $row['back_fields'] = !empty($cd['back_fields']) ? implode(',', $cd['back_fields']) : '';
     $row['image_url'] = $cd['image_url'] ?? '';
     $row['description'] = $cd['description'] ?? '';
     $row['audio_url'] = $cd['audio_url'] ?? '';
