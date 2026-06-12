@@ -727,19 +727,22 @@
                 </div>
             `;
         } else {
-            const def = formatBreaks(escapeHtml(data.definition || data.usage1 || 'No definition available'));
+            const bf = Array.isArray(data.back_fields) ? data.back_fields : null;
+            const showDef = bf === null || bf.includes('definition');
+            const showUsage = bf === null || bf.includes('usage1');
+            const showExamples = bf === null || bf.includes('examples');
+            const showTip = bf === null || bf.includes('tip');
+            const def = showDef ? formatBreaks(escapeHtml(data.definition || data.usage1 || 'No definition available')) : '';
             const exampleList = data.examples || [];
-            const examples = exampleList.length ? exampleList : [data.example1a || data.example].filter(Boolean);
-            const usage = data.usage1 ? formatBreaks(escapeHtml(data.usage1)) : '';
-            const t = data.tip ? formatBreaks(escapeHtml(data.tip)) : '';
+            const examples = showExamples ? (exampleList.length ? exampleList : [data.example1a || data.example].filter(Boolean)) : [];
+            const usage = showUsage && data.usage1 ? formatBreaks(escapeHtml(data.usage1)) : '';
+            const t = showTip && data.tip ? formatBreaks(escapeHtml(data.tip)) : '';
 
             return `
                 <div class="back-content">
                     <div class="text-center">
                         <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
-                        <div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
-                            ${def}
-                        </div>
+                        ${def ? `<div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">${def}</div>` : ''}
                         ${usage ? `<div class="mt-2 p-2 bg-indigo-50 rounded-lg text-sm">📝 ${usage}</div>` : ''}
                         ${examples.map(ex => `
                             <div class="mt-2 p-2 bg-gray-100 rounded-lg">

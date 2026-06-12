@@ -285,6 +285,7 @@
             const parts = [];
             if (ff.includes('definition') && cd.definition) parts.push(`<div class="text-base text-center">${fmtBreaks(esc(cd.definition))}</div>`);
             if (ff.includes('usage1') && cd.usage1) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">${fmtBreaks(esc(cd.usage1))}</div>`);
+            if (ff.includes('examples') && exList.length) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">${exHtml}</div>`);
             if (ff.includes('tip') && cd.tip) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${fmtBreaks(esc(cd.tip))}</div>`);
             front = `<div class="flex flex-col items-center justify-center min-h-[200px]">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-2xl text-center font-bold mb-2">${t}</div>${parts.join('')}<p class="text-xs text-gray-400 mt-4">👆 Tap to flip</p></div>`;
             const bf = Array.isArray(cd.back_fields) ? cd.back_fields : null;
