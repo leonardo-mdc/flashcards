@@ -154,8 +154,8 @@
         }
         function textToContentData(dom) {
             const exLines = dom.examples.split('\n').map(s => s.trim()).filter(Boolean);
-            const cd = { definition: dom.definition, usage1: dom.usage1, tip: dom.tip, image_url: dom.image_url, audio_url: dom.audio_url };
-            if (exLines.length) { cd.examples = exLines; cd.example1a = exLines[0]; }
+            const cd = { definition: dom.definition, usage1: dom.usage1, examples: exLines, tip: dom.tip, image_url: dom.image_url, audio_url: dom.audio_url };
+            if (exLines.length) cd.example1a = exLines[0];
             if (dom.front_fields?.length) cd.front_fields = dom.front_fields;
             if (dom.back_fields?.length) cd.back_fields = dom.back_fields;
             return cd;
@@ -839,6 +839,7 @@
         updateImportRow(importSelectedIdx);
         renderImportPreview();
         selectImportRow(importSelectedIdx);
+        toast('Row updated', 'success');
     }
 
     function importApplyAll() {
@@ -867,10 +868,14 @@
         if (row.options) {
             const opts = Array.isArray(row.options) ? row.options : splitCSV(String(row.options));
             for (let i = 0; i < 4; i++) row['opt' + (i + 1)] = opts[i] || '';
+        } else {
+            for (let i = 0; i < 4; i++) row['opt' + (i + 1)] = '';
         }
         if (row.examples) {
             const exs = Array.isArray(row.examples) ? row.examples : String(row.examples).split('\n').filter(Boolean);
             for (let i = 0; i < 4; i++) row['example' + (i + 1)] = exs[i] || '';
+        } else {
+            for (let i = 0; i < 4; i++) row['example' + (i + 1)] = '';
         }
         if (row.example && !row.example1) row.example1 = String(row.example);
         if (row.front_fields && Array.isArray(row.front_fields)) row.front_fields = row.front_fields.join(',');
