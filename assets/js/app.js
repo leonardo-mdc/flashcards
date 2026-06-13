@@ -568,7 +568,7 @@
             const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
-                    <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${escapeHtml(title)}</h1>
+                    <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${formatBreaks(escapeHtml(title))}</h1>
                     ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-64 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-6xl mb-2">🖼️</div>`}
                     <p class="text-sm text-gray-400 mt-2">👆 Tap card to flip</p>
                 </div>
@@ -580,7 +580,7 @@
             const isInteractive = !!(prompt || data.correct_answers);
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
-                    <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🎧 ${escapeHtml(title)}</h1>
+                    <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🎧 ${formatBreaks(escapeHtml(title))}</h1>
                     ${hasAudio ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : `<div class="text-6xl mb-2">🎧</div>`}
                     ${prompt ? `<p class="text-sm bg-gray-100 p-2 rounded-xl mb-1">${formatBreaks(escapeHtml(prompt))}</p>` : ''}
                     ${isInteractive ? `<input type="text" id="gapFillInput" placeholder="Type your answer..." class="w-full p-2 text-sm border-2 rounded-xl mb-2">` : ''}
@@ -604,7 +604,7 @@
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(title)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
                     ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}">Your browser does not support audio.</audio>` : ''}
-                    <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${escapeHtml(title)}</h1>
+                    <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${formatBreaks(escapeHtml(title))}</h1>
                     ${frontParts.join('')}
                     <p class="text-sm text-gray-400 mt-3">👆 Tap card to flip</p>
                 </div>
@@ -693,7 +693,7 @@
             return `
                 <div class="back-content">
                     <div class="text-center">
-                        <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
+                        <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${formatBreaks(escapeHtml(title))}</h3>
                         <div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
                             ${description}
                         </div>
@@ -715,7 +715,7 @@
             return `
                 <div class="back-content">
                     <div class="text-center">
-                        <h3 class="text-lg text-green-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
+                        <h3 class="text-lg text-green-700 title-font marker-underline mb-2">${formatBreaks(escapeHtml(title))}</h3>
                         ${transcript ? `<div class="card-definition bg-green-50 p-3 rounded-xl border-2 border-green-300 mb-2">${transcript}</div>` : ''}
                         ${isInteractive && userAnswer ? `
                         <div class="p-2 rounded-lg mb-2 ${isMatch ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
@@ -741,7 +741,7 @@
             return `
                 <div class="back-content">
                     <div class="text-center">
-                        <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${escapeHtml(title)}</h3>
+                        <h3 class="text-lg text-blue-700 title-font marker-underline mb-2">${formatBreaks(escapeHtml(title))}</h3>
                         ${def ? `<div class="card-definition bg-blue-50 p-3 rounded-xl border-2 border-blue-300">${def}</div>` : ''}
                         ${usage ? `<div class="mt-2 p-2 bg-indigo-50 rounded-lg text-sm">📝 ${usage}</div>` : ''}
                         ${examples.map(ex => `

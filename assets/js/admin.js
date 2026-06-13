@@ -252,13 +252,13 @@
 
         let front = '';
         let back = '';
-        const t = esc(title || 'Flashcard');
+        const t = fmtBreaks(esc(title || 'Flashcard'));
 
         if (type === 'image_mcq') {
             const opts = cd.options || ['Option A','Option B','Option C'];
             front = `<div class="flex flex-col md:flex-row gap-3 min-h-[200px]"><div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain">` : '<div class="text-5xl text-gray-300">🖼️</div>'}</div><div class="flex flex-col justify-center md:w-1/2 gap-2"><p class="text-sm font-bold text-center md:text-left">Select the correct answer:</p>${opts.map((o,i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}</div></div>`;
             const ci = cd.correct_index || 0;
-            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${esc(opts[ci] || 'Correct')}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
+            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${fmtBreaks(esc(opts[ci] || 'Correct'))}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
         } else if (type === 'image_description') {
             front = `<div class="flex flex-col items-center justify-center min-h-[200px]"><div class="text-xl font-bold marker-underline mb-3">🖼️ ${t}</div>${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : '<div class="text-5xl mb-2">🖼️</div>'}<p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p></div>`;
             back = `<div class="text-center"><h3 class="text-2xl text-blue-700 marker-underline mb-3">${t}</h3><div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.description || ''))}</p></div></div>`;
@@ -271,12 +271,12 @@
             const opts = cd.options || ['Option A','Option B','Option C'];
             front = `<div class="text-center">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-4xl mb-3">❓</div><p class="text-lg mb-4 font-bold">${fmtBreaks(esc(cd.question_text || 'Select the correct answer:'))}</p>${opts.map((o,i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}<p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip</p></div>`;
             const ci = cd.correct_index || 0;
-            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${esc(opts[ci] || 'Correct')}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
+            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${fmtBreaks(esc(opts[ci] || 'Correct'))}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
         } else if (type === 'gap_fill') {
             const gapMedia = (hasImg || hasAud) ? `<div class="w-full flex justify-center mb-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg">` : ''}${hasAud ? '<div class="text-sm">🔊 Audio</div>' : ''}</div>` : '';
             front = `<div class="text-center">${gapMedia}<div class="text-4xl mb-3">✏️</div><p class="text-lg mb-4 font-bold">Complete the sentence:</p><p class="text-base bg-gray-100 p-3 rounded-xl">${fmtBreaks(esc(cd.sentence || 'Complete: ______'))}</p><input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6"><p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p></div>`;
             const ans = Array.isArray(cd.correct_answers) ? cd.correct_answers : [cd.correct_answers || 'answer'];
-            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300"><p class="text-xl font-bold">${esc(ans.join(' / '))}</p></div>${cd.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${fmtBreaks(esc(cd.example))}</p>` : ''}</div>`;
+            back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300"><p class="text-xl font-bold">${fmtBreaks(esc(ans.join(' / ')))}</p></div>${cd.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${fmtBreaks(esc(cd.example))}</p>` : ''}</div>`;
         } else {
             const exList = cd.examples || [];
             const exHtml = exList.length ? exList.map((ex,i) => `<p class="text-md text-gray-600">📝 Example ${i+1}: ${fmtBreaks(esc(ex))}</p>`).join('') : '';
