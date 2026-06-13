@@ -30,10 +30,11 @@ if (isset($_GET['logout'])) {
 
 if (!$loggedInStudent) {
     ?><!DOCTYPE html>
-    <html lang="en">
+    <html lang="en" translate="no">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+        <meta name="google" content="notranslate">
         <title>Flashcard Studio | Spaced Repetition</title>
         <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
         <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
@@ -60,10 +61,11 @@ if (!$loggedInStudent) {
     exit;
 }
 ?><!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="google" content="notranslate">
     <title>Flashcard Studio | Spaced Repetition</title>
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">

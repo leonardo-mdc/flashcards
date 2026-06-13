@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
     <title>Admin Setup - Flashcard Studio</title>
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
