@@ -211,3 +211,22 @@ body {
     font-weight: 700;
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
 }
+
+@keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.3); }
+}
+.animate-pulse-slow {
+    animation: pulse-slow 2.5s ease-in-out infinite;
+}
+.due-banner {
+    position: relative;
+}
+.due-banner::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    border: 2px solid rgba(251, 146, 60, 0.2);
+    animation: pulse-slow 2.5s ease-in-out infinite;
+}

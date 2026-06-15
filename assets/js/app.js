@@ -280,6 +280,26 @@
                     <h1 class="text-2xl md:text-4xl text-blue-900 marker-underline"><span class="text-3xl md:text-4xl">🎓</span> Flashcard Studio <span class="text-xl md:text-2xl">✏️</span></h1>
                     <p class="text-gray-600 text-sm md:text-lg mt-1">spaced repetition · tap card to flip</p>
                 </div>
+                ${stats && stats.due_today > 0 ? `
+                <div class="due-banner mb-4 p-3 md:p-4 rounded-xl border-2 border-orange-400 bg-orange-50 flex items-center justify-between gap-3 flex-wrap animate-pulse-slow">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🔥</span>
+                        <div>
+                            <div class="text-lg md:text-xl font-bold text-orange-800">${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review!</div>
+                            <div class="text-xs text-orange-600">Keep your streak alive — review now</div>
+                        </div>
+                    </div>
+                    <button id="dueReviewBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base shadow-md transition-all whitespace-nowrap">📚 Review Now →</button>
+                </div>
+                ` : stats && stats.due_today === 0 && stats.total_reviews > 0 ? `
+                <div class="mb-4 p-3 rounded-xl border-2 border-green-300 bg-green-50 flex items-center gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <div class="text-sm font-bold text-green-800">All caught up!</div>
+                        <div class="text-xs text-green-600">No cards due for review — come back later</div>
+                    </div>
+                </div>
+                ` : ''}
                 <div class="space-y-4 md:space-y-5">
                     <div class="md:grid md:grid-cols-2 md:gap-5">
                     <div class="marker-border p-4 md:p-5 bg-white/80">
@@ -322,7 +342,6 @@
                             <div class="text-xs text-gray-500 mb-1">📊 Progress:</div>
                             <div class="progress-bar-container" style="max-width:100%;" data-pct="${Math.round(currentStudent?.progress || 0)}%"><div class="progress-bar-fill" style="width: ${currentStudent?.progress || 0}%"></div></div>
                         </div>
-                        ${stats.due_today > 0 ? `<button id="dueReviewBtn" class="text-xs text-orange-600 mt-2 font-bold cursor-pointer hover:text-orange-800 underline" style="background:none;border:none;padding:0;font:inherit;">📅 ${stats.due_today} card${stats.due_today > 1 ? 's' : ''} due for review today!</button>` : ''}
                     </div>
                     ` : ''}
                     </div>
@@ -341,7 +360,7 @@
                         </div>
                         <p class="text-xs text-gray-500 mt-2">💡 Select levels, then click START to filter cards</p>
                     </div>
-                    <button id="launchStudyBtn" class="w-full bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all">🚀 START STUDYING →</button>
+                    <button id="launchStudyBtn" class="w-full bg-blue-700 text-white py-3 md:py-4 text-xl md:text-2xl title-font rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-1 transition-all relative">🚀 START STUDYING →${stats && stats.due_today > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow-lg">${stats.due_today > 9 ? '9+' : stats.due_today}</span>` : ''}</button>
                     <button id="switchStudentBtn" class="w-full text-gray-500 py-2 text-xs md:text-sm underline">↺ Switch student</button>
                 </div>
                 <div class="teacher-script mt-5 md:mt-6 p-2 md:p-3 text-center text-gray-500 text-xs md:text-sm bg-yellow-50 border border-yellow-200 rounded-lg">
