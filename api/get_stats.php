@@ -17,9 +17,18 @@ try {
         $userId = (int) $input['user_id'];
     }
 
-    if (!requireSessionStudent($userId)) {
+    $currentUser = $_SESSION['admin_user'] ?? null;
+    $isAdmin = $currentUser !== null && ($currentUser['is_admin'] ?? false);
+
+    if (!$isAdmin && !requireSessionStudent($userId)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Forbidden']);
+        exit;
+    }
+
+    if ($isAdmin && $userId === 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'user_id required for admin']);
         exit;
     }
 

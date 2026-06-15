@@ -316,6 +316,7 @@
                 if (btn.dataset.tab === 'import' && !importInitialized) initImport();
                 if (btn.dataset.tab === 'export' && !exportInitialized) initExport();
                 if (btn.dataset.tab === 'users' && !usersInitialized) initUsersAndSets();
+                if (btn.dataset.tab === 'progress' && !progressInitialized) initProgressTab();
             });
         });
         document.querySelectorAll('.sub-tab-btn').forEach(btn => {
@@ -1522,6 +1523,176 @@
             if (cur) el.value = cur;
         });
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  TAB 5: PROGRESS DASHBOARD
+    // ═══════════════════════════════════════════════════════════════
+    let progressInitialized = false;
+
+    function initProgressTab() {
+        progressInitialized = true;
+        loadProgressDashboard();
+    }
+
+    async function loadProgressDashboard() {
+        const dash = T('progressDashboard');
+        dash.innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading...</div>';
+        try {
+            const res = await fetchJSON('api/admin_stats.php');
+            if (res.success) {
+                renderProgressDashboard(res);
+            } else {
+                dash.innerHTML = `<div class="text-center text-red-500 py-8">❌ ${res.error || 'Failed to load stats'}</div>`;
+            }
+        } catch (e) {
+            dash.innerHTML = '<div class="text-center text-red-500 py-8">❌ Network error</div>';
+        }
+    }
+
+    function renderProgressDashboard(data) {
+        const { overview, students } = data;
+        const sorted = [...students].sort((a, b) => b.total_reviews - a.total_reviews);
+        const weekDays = getLast7Days();
+        const weekLabels = weekDays.map(d => d.slice(5));
+
+        let html = `
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div class="whiteboard-card p-3 text-center">
+                    <div class="text-2xl font-bold text-blue-700">${overview.total_students}</div>
+                    <div class="text-xs text-gray-500">Students</div>
+                </div>
+                <div class="whiteboard-card p-3 text-center">
+                    <div class="text-2xl font-bold text-green-700">${overview.total_cards}</div>
+                    <div class="text-xs text-gray-500">Total Cards</div>
+                </div>
+                <div class="whiteboard-card p-3 text-center">
+                    <div class="text-2xl font-bold text-purple-700">${overview.total_reviews}</div>
+                    <div class="text-xs text-gray-500">All-time Reviews</div>
+                </div>
+                <div class="whiteboard-card p-3 text-center">
+                    <div class="text-2xl font-bold text-orange-700">${overview.reviews_today}</div>
+                    <div class="text-xs text-gray-500">Reviews Today</div>
+                </div>
+            </div>
+            <div class="whiteboard-card">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-2 px-2 font-bold">Student</th>
+                            <th class="text-center py-2 px-2 font-bold">Level</th>
+                            <th class="text-center py-2 px-2 font-bold">Progress</th>
+                            <th class="text-center py-2 px-2 font-bold">Reviews</th>
+                            <th class="text-center py-2 px-2 font-bold">Correct</th>
+                            <th class="text-center py-2 px-2 font-bold">Streak</th>
+                            <th class="text-center py-2 px-2 font-bold">Due</th>
+                            <th class="text-center py-2 px-2 font-bold">Last 7d</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+        sorted.forEach(s => {
+            const total = s.total_reviews || 0;
+            const correct = s.correct_count || 0;
+            const pct = total ? Math.round(correct / total * 100) : 0;
+            const bars = weekDays.map(d => {
+                const dayData = s.daily.find(r => r.day === d);
+                return dayData ? parseInt(dayData.count) : 0;
+            });
+            const maxBar = Math.max(...bars, 1);
+            const barHtml = bars.map(v => {
+                const h = Math.max(v / maxBar * 24, 2);
+                const color = v > 0 ? 'bg-green-400' : 'bg-gray-200';
+                return `<div style="height:24px;width:12px;display:flex;flex-direction:column-reverse;align-items:center"><div class="${color} rounded-sm" style="width:8px;height:${h}px;min-height:2px" title="${v} reviews"></div></div>`;
+            }).join('');
+
+            html += `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onclick="toggleProgressDetail(${s.id})">
+                            <td class="py-2 px-2 font-medium">${esc(s.full_name || s.username)}</td>
+                            <td class="text-center py-2 px-2"><span class="px-2 py-0.5 rounded-full text-xs ${s.level === 'Advanced' ? 'bg-green-100 text-green-800' : s.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}">${esc(s.level)}</span></td>
+                            <td class="text-center py-2 px-2"><div class="w-full bg-gray-200 rounded-full h-2 max-w-[60px] mx-auto"><div class="bg-blue-500 rounded-full h-2" style="width:${s.progress}%"></div></div><span class="text-xs">${s.progress}%</span></td>
+                            <td class="text-center py-2 px-2">${total}</td>
+                            <td class="text-center py-2 px-2">${pct}%</td>
+                            <td class="text-center py-2 px-2">${s.streak_days > 0 ? '🔥 ' + s.streak_days + 'd' : '—'}</td>
+                            <td class="text-center py-2 px-2">${s.due_today > 0 ? '<span class="text-orange-600 font-bold">' + s.due_today + '</span>' : '0'}</td>
+                            <td class="text-center py-2 px-2"><div class="flex items-end justify-center gap-px">${barHtml}</div></td>
+                        </tr>
+                        <tr id="progressDetail-${s.id}" class="hidden">
+                            <td colspan="8" class="p-0">
+                                <div class="bg-gray-50 p-4 border-b border-gray-200">
+                                    <div class="text-xs text-gray-500 mb-2">Loading details...</div>
+                                </div>
+                            </td>
+                        </tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+                <div class="flex items-center gap-4 mt-3 text-xs text-gray-400 px-2 pb-2">
+                    <span>⬤ <span class="text-green-400">●</span> Reviews this week</span>
+                    <span>${weekLabels.map((d,i) => `<span class="mr-1">${d}</span>`).join('')}</span>
+                </div>
+            </div>`;
+
+        T('progressDashboard').innerHTML = html;
+    }
+
+    function getLast7Days() {
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            days.push(d.toISOString().slice(0, 10));
+        }
+        return days;
+    }
+
+    window.toggleProgressDetail = function(userId) {
+        const row = T('progressDetail-' + userId);
+        if (!row) return;
+        if (!row.classList.contains('hidden')) { row.classList.add('hidden'); return; }
+        row.classList.remove('hidden');
+        const inner = row.querySelector('td > div');
+        inner.innerHTML = '<div class="text-xs text-gray-500">Loading...</div>';
+
+        // Fetch detailed stats for this student
+        fetchJSON('api/get_stats.php', { method: 'POST', body: JSON.stringify({ user_id: userId }) }).then(res => {
+            if (!res.success || !res.stats) { inner.innerHTML = '<div class="text-xs text-red-500">Failed to load</div>'; return; }
+            const st = res.stats;
+            const total = st.total_reviews || 0;
+            const correct = st.correct_count || 0;
+            const pct = total ? Math.round(correct / total * 100) : 0;
+
+            // Build daily mini-chart (30 days)
+            const days = [];
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                days.push(d.toISOString().slice(0, 10));
+            }
+            const maxDay = Math.max(...(st.daily || []).map(d => parseInt(d.count)), 1);
+            const chartHtml = days.map(d => {
+                const dayData = (st.daily || []).find(r => r.day === d);
+                const v = dayData ? parseInt(dayData.count) : 0;
+                const h = Math.max(v / maxDay * 60, 2);
+                const color = v > 0 ? 'bg-green-400' : 'bg-gray-100';
+                return `<div style="height:64px;width:14px;display:flex;flex-direction:column-reverse;align-items:center"><div class="${color} rounded-sm" style="width:10px;height:${h}px;min-height:2px" title="${d}: ${v} reviews"></div></div>`;
+            }).join('');
+
+            inner.innerHTML = `
+                <div class="grid grid-cols-4 gap-3 mb-3">
+                    <div class="text-center"><div class="text-lg font-bold">${total}</div><div class="text-xs text-gray-500">Total Reviews</div></div>
+                    <div class="text-center"><div class="text-lg font-bold text-green-700">${pct}%</div><div class="text-xs text-gray-500">Accuracy</div></div>
+                    <div class="text-center"><div class="text-lg font-bold">${st.cards_reviewed || 0}</div><div class="text-xs text-gray-500">Cards Seen</div></div>
+                    <div class="text-center"><div class="text-lg font-bold">${st.due_today || 0}</div><div class="text-xs text-gray-500">Due Today</div></div>
+                </div>
+                <div class="text-xs font-bold mb-1 text-gray-600">Daily Activity (30 days)</div>
+                <div class="flex items-end gap-px overflow-x-auto pb-2">${chartHtml}</div>
+            `;
+        }).catch(() => {
+            inner.innerHTML = '<div class="text-xs text-red-500">Network error</div>';
+        });
+    };
 
     // ═══════════════════════════════════════════════════════════════
     //  INIT

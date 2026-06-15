@@ -352,6 +352,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         <button class="tab-btn" data-tab="import">📥 Import</button>
         <button class="tab-btn" data-tab="export">📤 Export</button>
         <button class="tab-btn" data-tab="users">👥 Users &amp; Sets</button>
+        <button class="tab-btn" data-tab="progress">📊 Progress</button>
     </div>
 
     <!-- ═══ Tab 1: Card Editor ═══ -->
@@ -704,6 +705,12 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <div class="text-center text-gray-500 py-4">Loading...</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="tab-progress" class="tab-content">
+        <div id="progressDashboard">
+            <div class="text-center text-gray-500 py-8">Loading...</div>
         </div>
     </div>
 
