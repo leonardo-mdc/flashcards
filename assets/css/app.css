@@ -229,4 +229,5 @@ body {
     border-radius: inherit;
     border: 2px solid rgba(251, 146, 60, 0.2);
     animation: pulse-slow 2.5s ease-in-out infinite;
+    pointer-events: none;
 }
