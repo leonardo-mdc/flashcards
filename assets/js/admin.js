@@ -474,14 +474,14 @@
             const typeLabel = typeLabels[card.pattern_type] || 'Text';
             const color = typeColors[card.pattern_type] || '#f3f4f6';
             html += `<div class="card-item${sel}" data-id="${card.id}">
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" class="editor-card-cb" value="${card.id}" onclick="event.stopPropagation()">
+                <div class="flex items-start gap-2">
+                    <input type="checkbox" class="editor-card-cb mt-1" value="${card.id}" onclick="event.stopPropagation()">
                     <div class="flex-1 cursor-pointer" onclick="window._selectEditorCard(${card.id})">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-sm">${esc(card.title || 'Untitled')}</span>
+                        <div class="font-bold text-sm leading-tight">${esc(card.title || 'Untitled')}</div>
+                        <div class="flex items-center gap-2 mt-1">
                             <span class="card-type" style="background:${color}">${typeLabel}</span>
+                            <span class="text-xs text-gray-500">${esc(card.level || 'Beginner')} · ID: ${card.id}</span>
                         </div>
-                        <div class="text-xs text-gray-500">${esc(card.level || 'Beginner')} · ID: ${card.id}</div>
                     </div>
                 </div>
             </div>`;
