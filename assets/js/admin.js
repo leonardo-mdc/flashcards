@@ -343,8 +343,6 @@
         overlay.appendChild(container);
         document.body.appendChild(overlay);
         renderPreview('flipPreviewFront', 'flipPreviewBack', type, title, contentData);
-        setTimeout(() => card.classList.add('flipped'), 800);
-        setTimeout(() => card.classList.remove('flipped'), 1500);
     }
 
     // ═══════════════════════════════════════════════════════════════
