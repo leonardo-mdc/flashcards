@@ -301,6 +301,52 @@
         T(backEl).innerHTML = back;
     }
 
+    function openFlipPreview(title, type, contentData) {
+        const existing = document.getElementById('flipPreviewModal');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'flipPreviewModal';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        const container = document.createElement('div');
+        container.style.cssText = 'perspective:1600px;width:100%;max-width:420px;cursor:pointer;';
+        const card = document.createElement('div');
+        card.style.cssText = 'transition:transform 0.45s cubic-bezier(0.23,1,0.32,1);transform-style:preserve-3d;min-height:400px;position:relative;border-radius:1rem;';
+        card.addEventListener('click', () => card.classList.toggle('flipped'));
+        const front = document.createElement('div');
+        front.style.cssText = 'backface-visibility:hidden;position:absolute;inset:0;border-radius:1rem;overflow-y:auto;display:flex;flex-direction:column;background:white;transform:rotateY(0deg);z-index:2;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+        front.className = 'flip-preview-front';
+        const back = document.createElement('div');
+        back.style.cssText = 'backface-visibility:hidden;position:absolute;inset:0;border-radius:1rem;overflow-y:auto;display:flex;flex-direction:column;background:linear-gradient(135deg,#fef9e8,#fff);transform:rotateY(180deg);padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+        back.className = 'flip-preview-back';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = 'position:absolute;top:-12px;right:-12px;width:32px;height:32px;border-radius:50%;background:#1f2937;color:white;border:none;font-size:16px;z-index:10;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+        closeBtn.addEventListener('click', (e) => { e.stopPropagation(); overlay.remove(); });
+        const tapHint = document.createElement('div');
+        tapHint.style.cssText = 'text-align:center;color:#9ca3af;font-size:11px;margin-top:auto;padding-top:8px;';
+        tapHint.textContent = '👆 Tap card to flip';
+        const frontWrap = document.createElement('div');
+        frontWrap.id = 'flipPreviewFront';
+        frontWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;';
+        const backWrap = document.createElement('div');
+        backWrap.id = 'flipPreviewBack';
+        backWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;';
+        front.appendChild(frontWrap);
+        front.appendChild(tapHint.cloneNode(true));
+        back.appendChild(backWrap);
+        back.appendChild(tapHint.cloneNode(true));
+        card.appendChild(front);
+        card.appendChild(back);
+        container.appendChild(card);
+        container.appendChild(closeBtn);
+        overlay.appendChild(container);
+        document.body.appendChild(overlay);
+        renderPreview('flipPreviewFront', 'flipPreviewBack', type, title, contentData);
+        setTimeout(() => card.classList.add('flipped'), 800);
+        setTimeout(() => card.classList.remove('flipped'), 1500);
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  TAB SYSTEM
     // ═══════════════════════════════════════════════════════════════
@@ -368,6 +414,12 @@
         T('editFieldsContainer').addEventListener('input', editorUpdatePreview);
         T('editFieldsContainer').addEventListener('change', editorUpdatePreview);
         T('editFieldVisibility').addEventListener('change', editorUpdatePreview);
+        T('editorFlipPreviewBtn').addEventListener('click', () => {
+            const title = T('editTitle').value || 'Flashcard';
+            const type = T('editPatternType').value;
+            const cd = collectFields(type);
+            openFlipPreview(title, type, cd);
+        });
         loadEditorCards();
     }
 
@@ -473,10 +525,10 @@
             const sel = editorSelectedCardId === card.id ? ' selected' : '';
             const typeLabel = typeLabels[card.pattern_type] || 'Text';
             const color = typeColors[card.pattern_type] || '#f3f4f6';
-            html += `<div class="card-item${sel}" data-id="${card.id}">
+            html += `<div class="card-item${sel}" data-id="${card.id}" onclick="window._selectEditorCard(${card.id})">
                 <div class="flex items-start gap-2">
                     <input type="checkbox" class="editor-card-cb mt-1" value="${card.id}" onclick="event.stopPropagation()">
-                    <div class="flex-1 cursor-pointer" onclick="window._selectEditorCard(${card.id})">
+                    <div class="flex-1 cursor-pointer">
                         <div class="font-bold text-sm leading-tight">${esc(card.title || 'Untitled')}</div>
                         <div class="flex items-center gap-2 mt-1">
                             <span class="card-type" style="background:${color}">${typeLabel}</span>
@@ -503,7 +555,10 @@
         allChecked.checked = cards.length > 0 && document.querySelectorAll('.editor-card-cb:not(:checked)').length === 0;
 
         // Enable arrow navigation
-        arrowNav('editorCardList', '.card-item');
+        arrowNav('editorCardList', '.card-item', (el) => {
+            const id = parseInt(el.dataset.id);
+            if (id) window._selectEditorCard(id);
+        });
 
         // Expose select function globally for inline onclick
         window._selectEditorCard = (id) => {
@@ -748,6 +803,13 @@
         });
         T('importEditTitle').addEventListener('input', importRenderPreview);
         T('importEditLevel').addEventListener('change', importRenderPreview);
+        T('importFlipPreviewBtn').addEventListener('click', () => {
+            if (importSelectedIdx < 0) { toast('Select a card first', 'warning'); return; }
+            const title = T('importEditTitle').value || 'Flashcard';
+            const type = T('importEditType').value;
+            const cd = collectImportFields();
+            openFlipPreview(title, type, cd);
+        });
         arrowNav('importPreviewBody', 'tr', (el) => { if (el.dataset.idx !== undefined) selectImportRow(parseInt(el.dataset.idx)); });
     }
 
@@ -951,16 +1013,22 @@
         if (importRows.length) selectImportRow(0);
     }
 
+    function collectImportFields() {
+        const type = T('importEditType').value;
+        const cd = collectFields('importDynamicFields', type);
+        Object.assign(cd, collectFieldVisibility('importFieldVisibility'));
+        return cd;
+    }
+
     function importRenderPreview() {
         const idx = importSelectedIdx;
-        if (idx < 0 || idx >= importRows.length) { T('importPreviewSection')?.classList.add('hidden'); return; }
+        if (idx < 0 || idx >= importRows.length) { T('importPreviewSection')?.classList.add('hidden'); T('importFlipPreviewBtn')?.classList.add('hidden'); return; }
         T('importPreviewSection').classList.remove('hidden');
+        T('importFlipPreviewBtn')?.classList.remove('hidden');
         const row = importRows[idx];
         const title = T('importEditTitle').value || row.title || 'Untitled';
         const type = T('importEditType').value || row.type || 'usage_cases';
-        // Collect content data from editor fields (same as editor preview)
-        const cd = collectFields('importDynamicFields', type);
-        Object.assign(cd, collectFieldVisibility('importFieldVisibility'));
+        const cd = collectImportFields();
         renderPreview('importFrontPreview', 'importBackPreview', type, title, cd);
     }
 

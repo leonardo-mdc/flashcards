@@ -419,16 +419,16 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             <div class="whiteboard-card editor-card-list-panel">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-lg marker-underline">📋 Cards</h2>
-                    <span id="editorCardCount" class="text-xs text-gray-500">0</span>
-                </div>
-                <div class="editor-list-toolbar">
-                    <div class="flex items-center justify-between">
-                        <label class="flex items-center gap-1 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span id="editorCardCount" class="text-xs text-gray-500">0</span>
+                        <label class="flex items-center gap-1 text-xs cursor-pointer">
                             <input type="checkbox" id="editorSelectAll">
                             <span>All</span>
                         </label>
                     </div>
-                    <div class="flex items-center gap-1 mt-1">
+                </div>
+                <div class="editor-list-toolbar-column">
+                    <div class="flex items-center gap-1">
                         <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 Delete (<span id="editorSelectedCount">0</span>)</button>
                         <button id="editorBulkMoveBtn" class="btn btn-primary btn-xs hidden">📦 Move</button>
                         <span id="editorBulkTypeWrap" class="hidden flex items-center gap-1">
@@ -499,6 +499,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
             <!-- Right: Preview -->
             <div class="editor-preview-panel">
                 <div id="editFieldVisibility"></div>
+                <button id="editorFlipPreviewBtn" class="btn btn-info btn-xs mb-2 w-full">🔄 Flip Preview</button>
                 <div class="card-preview mb-3">
                     <div class="card-front-preview" style="position:relative;min-height:280px;">
                         <span class="preview-label">📖 FRONT</span>
@@ -631,6 +632,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 <div class="whiteboard-card" style="padding:12px;">
                     <div id="importFieldVisibility"></div>
                     <h3 class="text-sm font-bold marker-underline mb-2">👁️ Preview</h3>
+                    <button id="importFlipPreviewBtn" class="btn btn-info btn-xs mb-2 w-full hidden">🔄 Flip Preview</button>
                     <div id="importPreviewSection" class="hidden">
                         <div class="card-preview mb-2">
                             <div class="card-front-preview" style="position:relative;min-height:180px;">

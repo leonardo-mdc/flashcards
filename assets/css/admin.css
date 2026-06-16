@@ -142,6 +142,14 @@ body {
     border-bottom: 2px solid #e5e7eb;
     margin-bottom: 6px;
 }
+.editor-list-toolbar-column {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 6px;
+    min-height: 32px;
+}
 .editor-card-list {
     max-height: 550px;
     overflow-y: auto;
@@ -235,6 +243,7 @@ body {
     box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.2);
 }
 .btn-primary { background: #1d4ed8; color: white; }
+.btn-info { background: #0891b2; color: white; }
 .btn-warning { background: #d97706; color: white; }
 .btn-danger { background: #dc2626; color: white; }
 .btn-success { background: #16a34a; color: white; }
