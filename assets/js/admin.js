@@ -311,7 +311,8 @@
         const container = document.createElement('div');
         container.style.cssText = 'perspective:1600px;width:100%;max-width:420px;cursor:pointer;';
         const card = document.createElement('div');
-        card.style.cssText = 'transition:transform 0.45s cubic-bezier(0.23,1,0.32,1);transform-style:preserve-3d;min-height:400px;position:relative;border-radius:1rem;';
+        card.className = 'flip-preview-card';
+        card.style.cssText = 'min-height:400px;';
         card.addEventListener('click', () => card.classList.toggle('flipped'));
         const front = document.createElement('div');
         front.style.cssText = 'backface-visibility:hidden;position:absolute;inset:0;border-radius:1rem;overflow-y:auto;display:flex;flex-direction:column;background:white;transform:rotateY(0deg);z-index:2;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
