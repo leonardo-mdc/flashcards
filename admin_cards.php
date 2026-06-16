@@ -429,7 +429,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                 </div>
                 <div class="editor-list-toolbar-column">
                     <div class="flex items-center gap-1">
-                        <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 Delete (<span id="editorSelectedCount">0</span>)</button>
+                        <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 DEL (<span id="editorSelectedCount">0</span>)</button>
                         <button id="editorBulkMoveBtn" class="btn btn-primary btn-xs hidden">📦 Move</button>
                         <span id="editorBulkTypeWrap" class="hidden flex items-center gap-1">
                             <select id="editorBulkTypeSelect" class="form-select text-xs" style="width:120px;margin:0;padding:4px 6px;">
@@ -442,7 +442,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                 <option value="image_description">🖼️ Image Description</option>
                                 <option value="audio_listening">🎧 Audio Listening</option>
                             </select>
-                            <button id="editorBulkTypeBtn" class="btn btn-primary btn-xs">Change</button>
+                            <button id="editorBulkTypeBtn" class="btn btn-primary btn-xs">⏭</button>
                         </span>
                     </div>
                 </div>
