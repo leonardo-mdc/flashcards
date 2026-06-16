@@ -134,6 +134,21 @@ class Card
         $stmt->execute([$type, $id]);
     }
 
+    public static function updateSetId(int $id, int $setId): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE cards SET set_id = ? WHERE id = ?");
+        $stmt->execute([$setId, $id]);
+    }
+
+    public static function deleteBySetId(int $setId): int
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("DELETE FROM cards WHERE set_id = ?");
+        $stmt->execute([$setId]);
+        return $stmt->rowCount();
+    }
+
     public static function delete(int $id): void
     {
         $pdo = Database::getConnection();

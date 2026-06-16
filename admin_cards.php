@@ -290,6 +290,33 @@ if ($isAjax && isset($_GET['action'])) {
                 Card::updateType($id, $type);
             }
             echo json_encode(['success' => true, 'updated' => count($ids)]);
+        } elseif ($action === 'move_cards_bulk') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $ids = array_map('intval', $data['card_ids'] ?? []);
+            $ids = array_filter($ids, fn($id) => $id > 0);
+            $setId = (int) ($data['set_id'] ?? 0);
+            $newSetName = trim($data['new_set_name'] ?? '');
+            if ($setId <= 0 && $newSetName !== '') {
+                $setId = CardSet::create($newSetName);
+            }
+            if ($setId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid set']);
+                exit;
+            }
+            foreach ($ids as $id) {
+                Card::updateSetId($id, $setId);
+            }
+            echo json_encode(['success' => true, 'moved' => count($ids), 'set_id' => $setId]);
+        } elseif ($action === 'delete_set_with_cards') {
+            $id = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 0;
+            if ($id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Invalid set']);
+                exit;
+            }
+            $name = CardSet::getName($id);
+            Card::deleteBySetId($id);
+            CardSet::delete($id);
+            echo json_encode(['success' => true, 'name' => $name]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
         }
@@ -365,6 +392,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                         <option value="<?= $set['id'] ?>"><?= escapeHtml($set['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <button id="editorDeleteSetBtn" class="btn btn-danger btn-xs hidden" title="Delete selected set and all its cards">🗑 Delete Set + Cards</button>
                 <select id="editorTypeFilter" class="form-select w-auto" style="width:160px;">
                     <option value="">-- All Types --</option>
                     <option value="usage_cases">📘 Usage Cases</option>
@@ -400,6 +428,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     </label>
                     <div class="flex items-center gap-1">
                         <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 Delete (<span id="editorSelectedCount">0</span>)</button>
+                        <button id="editorBulkMoveBtn" class="btn btn-primary btn-xs hidden">📦 Move</button>
                         <span id="editorBulkTypeWrap" class="hidden flex items-center gap-1 ml-2">
                             <select id="editorBulkTypeSelect" class="form-select text-xs" style="width:120px;margin:0;padding:4px 6px;">
                                 <option value="usage_cases">📘 Usage Cases</option>

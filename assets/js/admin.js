@@ -357,6 +357,12 @@
         T('editorSelectAll').addEventListener('change', editorToggleSelectAll);
         T('editorBulkDeleteBtn').addEventListener('click', editorBulkDelete);
         T('editorBulkTypeBtn').addEventListener('click', editorBulkChangeType);
+        T('editorBulkMoveBtn').addEventListener('click', editorBulkMoveToSet);
+        T('editorDeleteSetBtn').addEventListener('click', editorDeleteSetWithCards);
+        T('editorSetFilter').addEventListener('change', () => {
+            const setId = parseInt(T('editorSetFilter').value || '0');
+            T('editorDeleteSetBtn').classList.toggle('hidden', !setId);
+        });
         T('editPatternType').addEventListener('change', editorOnTypeChange);
         T('editTitle').addEventListener('input', editorUpdatePreview);
         T('editFieldsContainer').addEventListener('input', editorUpdatePreview);
@@ -513,6 +519,7 @@
         T('editorSelectedCount').textContent = checked;
         T('editorBulkDeleteBtn').classList.toggle('hidden', checked === 0);
         T('editorBulkTypeWrap').classList.toggle('hidden', checked === 0);
+        T('editorBulkMoveBtn').classList.toggle('hidden', checked === 0);
     }
 
     async function editorBulkChangeType() {
@@ -553,6 +560,56 @@
         setLoading('editorBulkDeleteBtn', false);
         if (data.success) {
             toast(`✅ Deleted ${data.deleted} card(s)`, 'success');
+            loadEditorCards();
+            editorNewCard();
+        } else {
+            toast('❌ ' + (data.error || 'Delete failed'), 'error');
+        }
+    }
+
+    async function editorBulkMoveToSet() {
+        const ids = Array.from(document.querySelectorAll('.editor-card-cb:checked')).map(cb => parseInt(cb.value));
+        if (!ids.length) return;
+        const res = await fetchJSON('admin_cards.php?action=get_sets&t=' + Date.now(), { headers: { 'X-Requested-With':'XMLHttpRequest' } });
+        const sets = res.sets || [];
+        const setName = prompt('Enter the target set name (existing or new):\n\nExisting: ' + sets.map(s => s.name).join(', '));
+        if (!setName || !setName.trim()) return;
+        const name = setName.trim();
+        const existing = sets.find(s => s.name.toLowerCase() === name.toLowerCase());
+        const setId = existing ? existing.id : 0;
+        setLoading('editorBulkMoveBtn', true, 'Moving...');
+        const data = await fetchJSON('admin_cards.php?action=move_cards_bulk', {
+            method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+            body: JSON.stringify({ card_ids: ids, set_id: setId, new_set_name: setId ? '' : name })
+        });
+        setLoading('editorBulkMoveBtn', false);
+        if (data.success) {
+            toast(`✅ Moved ${data.moved} card(s) to "${name}"`, 'success');
+            const filter = T('editorSetFilter');
+            if (filter) filter.value = data.set_id;
+            loadEditorCards();
+            refreshSetSelectors();
+        } else {
+            toast('❌ ' + (data.error || 'Move failed'), 'error');
+        }
+    }
+
+    async function editorDeleteSetWithCards() {
+        const filter = T('editorSetFilter');
+        const setId = parseInt(filter?.value || '0');
+        if (!setId) { toast('Select a set first', 'warning'); return; }
+        const setName = filter.options[filter.selectedIndex]?.text || 'this set';
+        if (!confirm(`Delete "${setName}" and ALL its cards? This cannot be undone.`)) return;
+        setLoading('editorDeleteSetBtn', true, 'Deleting...');
+        const data = await fetchJSON(`admin_cards.php?action=delete_set_with_cards&set_id=${setId}`, {
+            headers: { 'X-Requested-With':'XMLHttpRequest' }
+        });
+        setLoading('editorDeleteSetBtn', false);
+        if (data.success) {
+            toast(`✅ Deleted "${data.name}" and all its cards`, 'success');
+            filter.value = '';
+            T('editorDeleteSetBtn').classList.add('hidden');
+            refreshSetSelectors();
             loadEditorCards();
             editorNewCard();
         } else {
