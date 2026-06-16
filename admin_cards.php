@@ -442,7 +442,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                                 <option value="image_description">🖼️ Image Description</option>
                                 <option value="audio_listening">🎧 Audio Listening</option>
                             </select>
-                            <button id="editorBulkTypeBtn" class="btn btn-primary btn-xs">⏭</button>
+                            <button id="editorBulkTypeBtn" class="btn btn-success btn-xs">✓</button>
                         </span>
                     </div>
                 </div>
