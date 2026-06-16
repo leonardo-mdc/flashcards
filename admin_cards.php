@@ -422,14 +422,16 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
                     <span id="editorCardCount" class="text-xs text-gray-500">0</span>
                 </div>
                 <div class="editor-list-toolbar">
-                    <label class="flex items-center gap-1 text-xs">
-                        <input type="checkbox" id="editorSelectAll">
-                        <span>All</span>
-                    </label>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center gap-1 text-xs">
+                            <input type="checkbox" id="editorSelectAll">
+                            <span>All</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-1 mt-1">
                         <button id="editorBulkDeleteBtn" class="btn btn-danger btn-xs hidden">🗑 Delete (<span id="editorSelectedCount">0</span>)</button>
                         <button id="editorBulkMoveBtn" class="btn btn-primary btn-xs hidden">📦 Move</button>
-                        <span id="editorBulkTypeWrap" class="hidden flex items-center gap-1 ml-2">
+                        <span id="editorBulkTypeWrap" class="hidden flex items-center gap-1">
                             <select id="editorBulkTypeSelect" class="form-select text-xs" style="width:120px;margin:0;padding:4px 6px;">
                                 <option value="usage_cases">📘 Usage Cases</option>
                                 <option value="deep_dive">🧠 Deep Dive</option>
