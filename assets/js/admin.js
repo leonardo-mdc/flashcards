@@ -84,16 +84,58 @@
         cfg.fields.forEach(f => {
             const v = vals[f.key] !== undefined ? vals[f.key] : (f.default || '');
             const h = f.help ? `<div class="help-text">${f.help}</div>` : '';
+            const isUrl = f.key === 'image_url' || f.key === 'audio_url';
+            const mediaDir = f.key === 'audio_url' ? 'audio' : 'images';
+            const browseBtn = isUrl ? `<button type="button" class="btn btn-secondary btn-xs media-browse-btn" data-target="${containerId}_${f.key}" data-dir="${mediaDir}" style="padding:2px 6px;font-size:11px;margin-left:4px;" title="Browse media files">📁</button>` : '';
             if (f.type === 'textarea') {
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><textarea id="${containerId}_${f.key}" class="form-textarea" rows="${f.rows || 3}" placeholder="${f.placeholder || ''}">${esc(v)}</textarea>${h}</div>`;
             } else if (f.type === 'csv') {
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
             } else {
-                html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
+                html += `<div><label class="block font-bold mb-1">${f.label}</label><div class="flex items-center"><input type="text" id="${containerId}_${f.key}" class="form-input flex-1" value="${esc(v)}" placeholder="${f.placeholder || ''}">${browseBtn}</div>${h}</div>`;
             }
         });
 
         T(containerId).innerHTML = html;
+    }
+
+    function openMediaBrowser(targetId, dir) {
+        const existing = document.getElementById('mediaBrowserModal');
+        if (existing) existing.remove();
+        fetchJSON('admin_cards.php?action=list_media&dir=' + dir + '&t=' + Date.now(), { headers: { 'X-Requested-With':'XMLHttpRequest' } }).then(res => {
+            if (!res.success) { toast('Failed to load media', 'error'); return; }
+            const overlay = document.createElement('div');
+            overlay.id = 'mediaBrowserModal';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+            const panel = document.createElement('div');
+            panel.style.cssText = 'background:white;border-radius:16px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+            let listHtml = '<div class="flex justify-between items-center mb-3"><h3 class="text-lg font-bold">📁 media/' + esc(dir) + '/</h3><button class="btn btn-xs" onclick="this.closest(\'#mediaBrowserModal\').remove()">✕</button></div>';
+            if (!res.files || !res.files.length) {
+                listHtml += '<div class="text-center text-gray-500 py-8">No files found</div>';
+            } else {
+                listHtml += '<div class="grid grid-cols-2 gap-2">';
+                res.files.forEach(f => {
+                    const ext = f.name.split('.').pop().toLowerCase();
+                    const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
+                    listHtml += `<div class="media-file-item cursor-pointer p-2 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all" data-path="${esc(f.path)}">
+                        ${isImg ? `<img src="${esc(f.path)}" class="w-full h-20 object-cover rounded-lg mb-1">` : '<div class="w-full h-20 flex items-center justify-center text-3xl text-gray-400">🎵</div>'}
+                        <div class="text-xs text-center truncate font-medium">${esc(f.name)}</div>
+                    </div>`;
+                });
+                listHtml += '</div>';
+            }
+            panel.innerHTML = listHtml;
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+            panel.querySelectorAll('.media-file-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const input = T(targetId);
+                    if (input) { input.value = el.dataset.path; input.dispatchEvent(new Event('input')); }
+                    overlay.remove();
+                });
+            });
+        });
     }
 
     function collectFields(containerId, type) {
@@ -419,6 +461,10 @@
             const type = T('editPatternType').value;
             const cd = collectFields(type);
             openFlipPreview(title, type, cd);
+        });
+        document.getElementById('editFieldsContainer').addEventListener('click', (e) => {
+            const btn = e.target.closest('.media-browse-btn');
+            if (btn) openMediaBrowser(btn.dataset.target, btn.dataset.dir);
         });
         loadEditorCards();
     }
@@ -803,6 +849,10 @@
         });
         T('importEditTitle').addEventListener('input', importRenderPreview);
         T('importEditLevel').addEventListener('change', importRenderPreview);
+        document.getElementById('importDynamicFields').addEventListener('click', (e) => {
+            const btn = e.target.closest('.media-browse-btn');
+            if (btn) openMediaBrowser(btn.dataset.target, btn.dataset.dir);
+        });
         T('importFlipPreviewBtn').addEventListener('click', () => {
             if (importSelectedIdx < 0) { toast('Select a card first', 'warning'); return; }
             const title = T('importEditTitle').value || 'Flashcard';
