@@ -568,17 +568,20 @@
             const options = data.options || ['Option A', 'Option B', 'Option C'];
             const imqQuestion = data.question_text || 'Select the correct answer:';
             return `
-                <div class="flex flex-col md:flex-row gap-3 md:gap-4 h-full min-h-[200px]">
-                    <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
-                        ${hasImage
-                            ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg">`
-                            : `<div class="text-6xl text-gray-300">🖼️</div>`
-                        }
-                    </div>
-                    <div class="flex flex-col justify-center md:w-1/2 gap-2" id="mcqOptionsContainer">
-                        <p class="text-sm font-bold text-center md:text-left mb-1">${formatBreaks(escapeHtml(imqQuestion))}</p>
-                        ${options.map((opt, idx) => `<div class="quiz-option text-sm md:text-base py-2 px-3" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
-                        <p class="text-xs text-gray-400 mt-1 text-center">👆 Tap your answer, then flip</p>
+                <div class="flex flex-col h-full min-h-[200px]">
+                    <div class="text-base md:text-lg font-bold text-center mb-2 px-2">${formatBreaks(escapeHtml(title))}</div>
+                    <div class="flex flex-col md:flex-row gap-3 md:gap-4 flex-1 min-h-0">
+                        <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
+                            ${hasImage
+                                ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg">`
+                                : `<div class="text-6xl text-gray-300">🖼️</div>`
+                            }
+                        </div>
+                        <div class="flex flex-col justify-center md:w-1/2 gap-2" id="mcqOptionsContainer">
+                            <p class="text-sm font-bold text-center md:text-left mb-1">${formatBreaks(escapeHtml(imqQuestion))}</p>
+                            ${options.map((opt, idx) => `<div class="quiz-option text-sm md:text-base py-2 px-3" data-idx="${idx}">${String.fromCharCode(65+idx)}. ${formatBreaks(escapeHtml(opt))}</div>`).join('')}
+                            <p class="text-xs text-gray-400 mt-1 text-center">👆 Tap your answer, then flip</p>
+                        </div>
                     </div>
                 </div>
             `;
