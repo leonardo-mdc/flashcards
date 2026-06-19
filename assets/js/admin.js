@@ -119,7 +119,7 @@
                     const ext = f.name.split('.').pop().toLowerCase();
                     const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
                     listHtml += `<div class="media-file-item cursor-pointer p-1 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all" data-path="${esc(f.path)}">
-                        ${isImg ? `<img src="${esc(f.path)}" class="w-full h-14 object-cover rounded-lg mb-1">` : '<div class="w-full h-14 flex items-center justify-center text-2xl text-gray-400">🎵</div>'}
+                        ${isImg ? `<img src="${esc(f.path)}" class="w-full h-14 object-contain rounded-lg mb-1">` : '<div class="w-full h-14 flex items-center justify-center text-2xl text-gray-400">🎵</div>'}
                         <div class="text-xs text-center truncate font-medium">${esc(f.name)}</div>
                     </div>`;
                 });
