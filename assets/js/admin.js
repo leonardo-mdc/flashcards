@@ -246,7 +246,7 @@
     // ─── Preview Rendering ──────────────────────────────────────────
     function renderPreview(frontEl, backEl, type, title, contentData) {
         const cd = contentData || {};
-        const isURL = (u) => u && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('uploads/'));
+        const isURL = (u) => u && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('uploads/') || u.startsWith('media/'));
         const hasImg = isURL(cd.image_url);
         const hasAud = isURL(cd.audio_url);
 

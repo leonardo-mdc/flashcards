@@ -544,8 +544,8 @@
             const hint = getGapFillHint(card);
             const imageUrl = data.image_url || '';
             const audioUrl = data.audio_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
-            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/') || imageUrl.startsWith('media/'));
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/') || audioUrl.startsWith('media/'));
             const mediaHtml = (hasImage || hasAudio) ? `
                 <div class="w-full flex justify-center mb-2">
                     ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-40 object-contain rounded-lg">` : ''}
@@ -564,7 +564,7 @@
             `;
         } else if (pattern === 'image_mcq') {
             const imageUrl = data.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/') || imageUrl.startsWith('media/'));
             const options = data.options || ['Option A', 'Option B', 'Option C'];
             const imqQuestion = data.question_text || 'Select the correct answer:';
             return `
@@ -587,7 +587,7 @@
             `;
         } else if (pattern === 'image_description') {
             const imageUrl = data.image_url || '';
-            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/'));
+            const hasImage = imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('uploads/') || imageUrl.startsWith('media/'));
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${formatBreaks(escapeHtml(title))}</h1>
@@ -597,7 +597,7 @@
             `;
         } else if (pattern === 'audio_listening') {
             const audioUrl = data.audio_url || '';
-            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/'));
+            const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/') || audioUrl.startsWith('media/'));
             const prompt = data.prompt || '';
             const isInteractive = !!(prompt || data.correct_answers);
             return `
@@ -612,8 +612,8 @@
         } else {
             const imgUrl = data.image_url || '';
             const audUrl = data.audio_url || '';
-            const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('uploads/'));
-            const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://') || audUrl.startsWith('uploads/'));
+            const hasImg = imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('uploads/') || imgUrl.startsWith('media/'));
+            const hasAud = audUrl && (audUrl.startsWith('http://') || audUrl.startsWith('https://') || audUrl.startsWith('uploads/') || audUrl.startsWith('media/'));
             const defaultFront = pattern === 'deep_dive' ? [] : ['definition'];
             const frontFields = Array.isArray(data.front_fields) ? data.front_fields : defaultFront;
             const frontParts = [];
