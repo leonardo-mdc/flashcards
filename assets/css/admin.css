@@ -250,20 +250,6 @@ body {
 .btn-secondary { background: #64748b; color: white; }
 .btn-logout { background: #1f2937; color: white; }
 .btn-xs { padding: 4px 12px; font-size: clamp(0.6rem, 1.4vw, 0.75rem); }
-.flip-preview-card {
-    transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1);
-    transform-style: preserve-3d;
-    min-height: 400px;
-    position: relative;
-    cursor: pointer;
-    border-radius: 1rem;
-}
-.flip-preview-card.flipped {
-    transform: rotateY(180deg);
-}
-@media (max-width: 640px) {
-    .flip-preview-card { min-height: 320px !important; }
-}
 .media-file-item:hover { border-color: #60a5fa !important; }
 
 /* ─── Card List ───────────────────────────────────── */

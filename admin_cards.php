@@ -368,6 +368,7 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
 <div class="admin-container">
