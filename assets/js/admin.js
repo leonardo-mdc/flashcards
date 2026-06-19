@@ -109,17 +109,17 @@
             overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
             overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
             const panel = document.createElement('div');
-            panel.style.cssText = 'background:white;border-radius:16px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+            panel.style.cssText = 'background:white;border-radius:16px;max-width:800px;width:100%;max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
             let listHtml = '<div class="flex justify-between items-center mb-3"><h3 class="text-lg font-bold">📁 media/' + esc(dir) + '/</h3><button class="btn btn-xs" onclick="this.closest(\'#mediaBrowserModal\').remove()">✕</button></div>';
             if (!res.files || !res.files.length) {
                 listHtml += '<div class="text-center text-gray-500 py-8">No files found</div>';
             } else {
-                listHtml += '<div class="grid grid-cols-2 gap-2">';
+                listHtml += '<div class="grid grid-cols-4 gap-2">';
                 res.files.forEach(f => {
                     const ext = f.name.split('.').pop().toLowerCase();
                     const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
-                    listHtml += `<div class="media-file-item cursor-pointer p-2 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all" data-path="${esc(f.path)}">
-                        ${isImg ? `<img src="${esc(f.path)}" class="w-full h-20 object-cover rounded-lg mb-1">` : '<div class="w-full h-20 flex items-center justify-center text-3xl text-gray-400">🎵</div>'}
+                    listHtml += `<div class="media-file-item cursor-pointer p-1 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all" data-path="${esc(f.path)}">
+                        ${isImg ? `<img src="${esc(f.path)}" class="w-full h-14 object-cover rounded-lg mb-1">` : '<div class="w-full h-14 flex items-center justify-center text-2xl text-gray-400">🎵</div>'}
                         <div class="text-xs text-center truncate font-medium">${esc(f.name)}</div>
                     </div>`;
                 });
