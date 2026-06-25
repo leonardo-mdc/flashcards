@@ -319,21 +319,27 @@ if ($isAjax && isset($_GET['action'])) {
             echo json_encode(['success' => true, 'name' => $name]);
         } elseif ($action === 'list_media') {
             $dir = $_GET['dir'] ?? 'images';
-            $base = __DIR__ . '/media/' . $dir;
+            $subdir = $_GET['subdir'] ?? '';
+            $subdir = ltrim(str_replace('..', '', $subdir), '/\\');
+            $base = __DIR__ . '/media/' . $dir . ($subdir ? '/' . $subdir : '');
             $files = [];
+            $subdirs = [];
             if (is_dir($base)) {
                 $iter = new FilesystemIterator($base);
                 foreach ($iter as $f) {
-                    if ($f->isFile()) {
+                    if ($f->isDir()) {
+                        $subdirs[] = ['name' => $f->getFilename()];
+                    } elseif ($f->isFile()) {
                         $ext = strtolower($f->getExtension());
                         if (in_array($ext, ['jpg','jpeg','png','gif','webp','svg','bmp','mp3','wav','ogg','m4a','aac','mp4','webm'])) {
-                            $files[] = ['name' => $f->getFilename(), 'path' => 'media/' . $dir . '/' . $f->getFilename(), 'size' => $f->getSize()];
+                            $files[] = ['name' => $f->getFilename(), 'path' => 'media/' . $dir . ($subdir ? '/' . $subdir : '') . '/' . $f->getFilename(), 'size' => $f->getSize()];
                         }
                     }
                 }
             }
             usort($files, fn($a, $b) => strcasecmp($a['name'], $b['name']));
-            echo json_encode(['success' => true, 'files' => $files, 'dir' => $dir]);
+            usort($subdirs, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+            echo json_encode(['success' => true, 'files' => $files, 'subdirs' => $subdirs, 'dir' => $dir, 'subdir' => $subdir]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
         }

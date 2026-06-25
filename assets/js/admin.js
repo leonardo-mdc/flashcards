@@ -102,20 +102,31 @@
     function openMediaBrowser(targetId, dir) {
         const existing = document.getElementById('mediaBrowserModal');
         if (existing) existing.remove();
-        fetchJSON('admin_cards.php?action=list_media&dir=' + dir + '&t=' + Date.now(), { headers: { 'X-Requested-With':'XMLHttpRequest' } }).then(res => {
-            if (!res.success) { toast('Failed to load media', 'error'); return; }
-            const overlay = document.createElement('div');
-            overlay.id = 'mediaBrowserModal';
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-            const panel = document.createElement('div');
-            panel.style.cssText = 'background:white;border-radius:16px;max-width:800px;width:100%;max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
-            let listHtml = '<div class="flex justify-between items-center mb-3"><h3 class="text-lg font-bold">📁 media/' + esc(dir) + '/</h3><button class="btn btn-xs" onclick="this.closest(\'#mediaBrowserModal\').remove()">✕</button></div>';
-            if (!res.files || !res.files.length) {
-                listHtml += '<div class="text-center text-gray-500 py-8">No files found</div>';
-            } else {
+        let currentSubdir = '';
+        const modalOverlay = document.createElement('div');
+        modalOverlay.id = 'mediaBrowserModal';
+        modalOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.remove(); });
+        const panel = document.createElement('div');
+        panel.style.cssText = 'background:white;border-radius:16px;max-width:800px;width:100%;max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+        function renderMediaBrowser() {
+            fetchJSON('admin_cards.php?action=list_media&dir=' + dir + '&subdir=' + encodeURIComponent(currentSubdir) + '&t=' + Date.now(), { headers: { 'X-Requested-With':'XMLHttpRequest' } }).then(res => {
+                if (!res.success) { toast('Failed to load media', 'error'); return; }
+                let listHtml = '<div class="flex justify-between items-center mb-3"><h3 class="text-lg font-bold">📁 media/' + esc(dir) + (currentSubdir ? '/' + esc(currentSubdir) : '') + '/</h3><button class="btn btn-xs" onclick="document.getElementById(\'mediaBrowserModal\').remove()">✕</button></div>';
                 listHtml += '<div class="grid grid-cols-4 gap-2">';
-                res.files.forEach(f => {
+                if (currentSubdir) {
+                    listHtml += `<div class="media-file-item cursor-pointer p-1 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all flex flex-col items-center justify-center h-24" data-subdir="..">
+                        <div class="text-3xl text-gray-400">📂</div>
+                        <div class="text-xs text-center truncate font-medium mt-1">..</div>
+                    </div>`;
+                }
+                (res.subdirs || []).forEach(sd => {
+                    listHtml += `<div class="media-file-item cursor-pointer p-1 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all flex flex-col items-center justify-center h-24" data-subdir="${esc(sd.name)}">
+                        <div class="text-3xl text-gray-400">📁</div>
+                        <div class="text-xs text-center truncate font-medium mt-1">${esc(sd.name)}</div>
+                    </div>`;
+                });
+                (res.files || []).forEach(f => {
                     const ext = f.name.split('.').pop().toLowerCase();
                     const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
                     listHtml += `<div class="media-file-item cursor-pointer p-1 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all" data-path="${esc(f.path)}">
@@ -124,18 +135,35 @@
                     </div>`;
                 });
                 listHtml += '</div>';
-            }
-            panel.innerHTML = listHtml;
-            overlay.appendChild(panel);
-            document.body.appendChild(overlay);
-            panel.querySelectorAll('.media-file-item').forEach(el => {
-                el.addEventListener('click', () => {
-                    const input = T(targetId);
-                    if (input) { input.value = el.dataset.path; input.dispatchEvent(new Event('input')); }
-                    overlay.remove();
+                if (!res.files.length && !res.subdirs.length) listHtml += '<div class="text-center text-gray-500 py-8">(empty)</div>';
+                panel.innerHTML = listHtml;
+                panel.querySelectorAll('.media-file-item').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const subdir = el.dataset.subdir;
+                        if (subdir !== undefined) {
+                            if (subdir === '..') {
+                                const parts = currentSubdir.split('/').filter(Boolean);
+                                parts.pop();
+                                currentSubdir = parts.join('/');
+                            } else {
+                                currentSubdir = currentSubdir ? currentSubdir + '/' + subdir : subdir;
+                            }
+                            renderMediaBrowser();
+                            return;
+                        }
+                        const path = el.dataset.path;
+                        if (path) {
+                            const input = T(targetId);
+                            if (input) { input.value = path; input.dispatchEvent(new Event('input')); }
+                            modalOverlay.remove();
+                        }
+                    });
                 });
             });
-        });
+        }
+        modalOverlay.appendChild(panel);
+        document.body.appendChild(modalOverlay);
+        renderMediaBrowser();
     }
 
     function collectFields(containerId, type) {
