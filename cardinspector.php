@@ -474,7 +474,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         const correctAnswer = contentData.correct_answer || row.correct_answer || '';
         const optArr = contentData.options;
         const optStr = Array.isArray(optArr) && optArr.length ? optArr.join(', ') : (row.opt1 ? [row.opt1, row.opt2, row.opt3, row.opt4].filter(Boolean).join(', ') : '');
-        const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : (row.correct_answer || 1);
+        const correctIdx = contentData.correct_index !== undefined ? contentData.correct_index : (row.correct_answer !== undefined ? Number(row.correct_answer) : 1);
         const imageUrl = contentData.image_url || row.image_url || '';
         const audioUrl = contentData.audio_url || row.audio_url || '';
         const description = contentData.description || row.description || '';
@@ -706,7 +706,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
     function renderCardBack(type, title, data) {
         if (type === 'image_mcq' || type === 'multiple_choice') {
             const options = data.options || ['Option A', 'Option B', 'Option C'];
-            const correctIdx = data.correct_index || 1;
+            const correctIdx = data.correct_index ?? 1;
             return `
                 <div class="text-center">
                     <h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3>
@@ -778,7 +778,8 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
         if (type === 'multiple_choice' || type === 'image_mcq') {
             row.question_text = document.getElementById('editQuestionText')?.value || '';
             const opts = document.getElementById('editOptions')?.value || 'Option A, Option B, Option C';
-            row.correct_index = parseInt(document.getElementById('editCorrectIndex')?.value) || 1;
+            const idxVal = document.getElementById('editCorrectIndex')?.value;
+            row.correct_index = (idxVal !== undefined && idxVal !== '') ? parseInt(idxVal) : 1;
             row.definition = '';
             row.usage1 = '';
             row.tip = '';

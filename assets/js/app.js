@@ -903,7 +903,8 @@
             let wasCorrect = false;
             if (pattern === 'multiple_choice' || pattern === 'image_mcq' || pattern === 'gap_fill' || pattern === 'audio_listening') {
                 if (pattern === 'multiple_choice' || pattern === 'image_mcq') {
-                    const correctIdx = card.content_data?.correct_index || 1;
+                    const defaultIdx = pattern === 'multiple_choice' ? 0 : 1;
+                    const correctIdx = card.content_data?.correct_index ?? defaultIdx;
                     wasCorrect = (quizState.selectedIdx === correctIdx);
                 } else if (pattern === 'gap_fill') {
                     const correctAnswers = card.content_data?.correct_answers || ['answer'];

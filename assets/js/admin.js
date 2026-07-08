@@ -328,7 +328,7 @@
             const opts = cd.options || ['Option A','Option B','Option C'];
             const qText = cd.question_text || 'Select the correct answer:';
             front = `<div class="text-center"><div class="text-2xl font-bold marker-underline mb-2">${t}</div><div class="text-sm font-semibold text-gray-700 mb-2">${fmtBreaks(esc(qText))}</div><div class="flex flex-col md:flex-row gap-3 min-h-[200px]"><div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain">` : '<div class="text-5xl text-gray-300">🖼️</div>'}</div><div class="flex flex-col justify-center md:w-1/2 gap-2">${opts.map((o,i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}</div></div></div>`;
-            const ci = cd.correct_index || 0;
+            const ci = cd.correct_index ?? 1;
             back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${fmtBreaks(esc(opts[ci] || 'Correct'))}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
         } else if (type === 'image_description') {
             front = `<div class="flex flex-col items-center justify-center min-h-[200px]"><div class="text-xl font-bold marker-underline mb-3">🖼️ ${t}</div>${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : '<div class="text-5xl mb-2">🖼️</div>'}<p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p></div>`;
@@ -341,7 +341,7 @@
         } else if (type === 'multiple_choice') {
             const opts = cd.options || ['Option A','Option B','Option C'];
             front = `<div class="text-center">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-4xl mb-3">❓</div><p class="text-lg mb-4 font-bold">${fmtBreaks(esc(cd.question_text || 'Select the correct answer:'))}</p>${opts.map((o,i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}<p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip</p></div>`;
-            const ci = cd.correct_index || 0;
+            const ci = cd.correct_index ?? 0;
             back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${fmtBreaks(esc(opts[ci] || 'Correct'))}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
         } else if (type === 'gap_fill') {
             const gapMedia = (hasImg || hasAud) ? `<div class="w-full flex justify-center mb-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg">` : ''}${hasAud ? '<div class="text-sm">🔊 Audio</div>' : ''}</div>` : '';
