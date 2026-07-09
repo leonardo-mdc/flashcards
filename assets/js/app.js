@@ -521,7 +521,7 @@
         });
     }
 
-    function imgScaleStyle(scale) { const s = parseFloat(scale) || 1; return s !== 1 ? ` style="transform:scale(${s});transform-origin:center center"` : ''; }
+    function imgScaleStyle(scale) { const s = parseFloat(scale) || 1; return s !== 1 ? ` style="transform:scale(${s});transform-origin:top center"` : ''; }
 
     function renderCardFront(card) {
         const pattern = card.pattern_type;

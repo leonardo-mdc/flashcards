@@ -322,7 +322,7 @@
     }
 
     // ─── Preview Rendering ──────────────────────────────────────────
-    function imgScaleAttr(scale) { const s = parseFloat(scale) || 1; return s !== 1 ? ` style="transform:scale(${s});transform-origin:center center"` : ''; }
+    function imgScaleAttr(scale) { const s = parseFloat(scale) || 1; return s !== 1 ? ` style="transform:scale(${s});transform-origin:top center"` : ''; }
 
     function renderPreview(frontEl, backEl, type, title, contentData) {
         const cd = contentData || {};
@@ -391,31 +391,32 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
         const container = document.createElement('div');
-        container.className = 'flashcard-container';
-        container.style.cssText = 'width:100%;max-width:420px;';
+        container.className = 'flashcard-container relative w-full';
+        container.style.cssText = 'max-width:420px;min-height:400px;';
         const card = document.createElement('div');
-        card.className = 'flashcard';
+        card.className = 'flashcard relative w-full';
+        card.style.minHeight = '400px';
         card.addEventListener('click', () => card.classList.toggle('flipped'));
         const front = document.createElement('div');
-        front.className = 'card-front';
+        front.className = 'card-front p-4 md:p-5 overflow-y-auto border-4 border-gray-700 shadow-xl';
         const back = document.createElement('div');
-        back.className = 'card-back';
+        back.className = 'card-back p-4 md:p-5 overflow-y-auto border-4 border-blue-300 shadow-xl';
         const closeBtn = document.createElement('button');
         closeBtn.textContent = '✕';
         closeBtn.style.cssText = 'position:absolute;top:-12px;right:-12px;width:32px;height:32px;border-radius:50%;background:#1f2937;color:white;border:none;font-size:16px;z-index:10;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
         closeBtn.addEventListener('click', (e) => { e.stopPropagation(); overlay.remove(); });
-        const frontWrap = document.createElement('div');
-        frontWrap.id = 'flipPreviewFront';
-        frontWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;padding:20px;overflow-y:auto;';
-        const backWrap = document.createElement('div');
-        backWrap.id = 'flipPreviewBack';
-        backWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;padding:20px;overflow-y:auto;';
+        const frontContent = document.createElement('div');
+        frontContent.id = 'flipPreviewFront';
+        frontContent.style.cssText = 'flex:1;display:flex;flex-direction:column;';
+        const backContent = document.createElement('div');
+        backContent.id = 'flipPreviewBack';
+        backContent.style.cssText = 'flex:1;display:flex;flex-direction:column;';
         const tapHint = document.createElement('div');
-        tapHint.style.cssText = 'text-align:center;color:#9ca3af;font-size:11px;padding:8px 0 4px;';
+        tapHint.className = 'text-center text-gray-400 text-xs py-2';
         tapHint.textContent = '👆 Tap card to flip';
-        front.appendChild(frontWrap);
+        front.appendChild(frontContent);
         front.appendChild(tapHint.cloneNode(true));
-        back.appendChild(backWrap);
+        back.appendChild(backContent);
         back.appendChild(tapHint.cloneNode(true));
         card.appendChild(front);
         card.appendChild(back);
