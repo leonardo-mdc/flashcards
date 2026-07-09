@@ -496,7 +496,8 @@
         T('editorFlipPreviewBtn').addEventListener('click', () => {
             const title = T('editTitle').value || 'Flashcard';
             const type = T('editPatternType').value;
-            const cd = collectFields(type);
+            const cd = collectFields('editFieldsContainer', type);
+            Object.assign(cd, collectFieldVisibility('editFieldVisibility'));
             openFlipPreview(title, type, cd);
         });
         document.getElementById('editFieldsContainer').addEventListener('click', (e) => {
