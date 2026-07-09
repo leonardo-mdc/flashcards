@@ -392,7 +392,7 @@
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
         const container = document.createElement('div');
         container.className = 'flashcard-container relative w-full';
-        container.style.cssText = 'max-width:420px;min-height:400px;';
+        container.style.cssText = 'max-width:560px;min-height:400px;width:90vw;';
         const card = document.createElement('div');
         card.className = 'flashcard relative w-full';
         card.style.minHeight = '400px';
