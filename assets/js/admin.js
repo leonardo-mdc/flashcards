@@ -91,6 +91,9 @@
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><textarea id="${containerId}_${f.key}" class="form-textarea" rows="${f.rows || 3}" placeholder="${f.placeholder || ''}">${esc(v)}</textarea>${h}</div>`;
             } else if (f.type === 'csv') {
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><input type="text" id="${containerId}_${f.key}" class="form-input" value="${esc(v)}" placeholder="${f.placeholder || ''}">${h}</div>`;
+            } else if (f.type === 'select') {
+                const opts = (f.options || []).map(o => `<option value="${o}" ${String(v) === o ? 'selected' : ''}>${o}${o === '1' ? ' (default)' : ''}</option>`).join('');
+                html += `<div><label class="block font-bold mb-1">${f.label}</label><select id="${containerId}_${f.key}" class="form-input">${opts}</select>${h}</div>`;
             } else {
                 html += `<div><label class="block font-bold mb-1">${f.label}</label><div class="flex items-center"><input type="text" id="${containerId}_${f.key}" class="form-input flex-1" value="${esc(v)}" placeholder="${f.placeholder || ''}">${browseBtn}</div>${h}</div>`;
             }
@@ -214,18 +217,19 @@
             { key:'examples',    label:'Examples (one per line)', type:'textarea', rows:3, placeholder:'Example 1\nExample 2\nExample 3\nExample 4' },
             { key:'tip',         label:'Tip (optional)',          type:'textarea', rows:2, placeholder:'Helpful tip...' },
             { key:'image_url',   label:'Image URL (optional)',    type:'text',     placeholder:'https://...' },
+            { key:'image_scale', label:'Image Scale',             type:'select', options:['0.5','0.75','1','1.5','1.75','2'], default:'1', help:'Resize the image' },
             { key:'audio_url',   label:'Audio URL (optional)',    type:'text',     placeholder:'https://...' },
         ];
         function textFromContentData(cd) {
             const ex = Array.isArray(cd.examples) ? cd.examples : (typeof cd.examples === 'string' ? cd.examples.split('\n').map(s => s.trim()).filter(Boolean) : []);
-            const r = { definition: cd.definition || '', usage1: cd.usage1 || '', examples: ex.join('\n'), tip: cd.tip || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
+            const r = { definition: cd.definition || '', usage1: cd.usage1 || '', examples: ex.join('\n'), tip: cd.tip || '', image_url: cd.image_url || '', image_scale: cd.image_scale || '1', audio_url: cd.audio_url || '' };
             if (cd.front_fields) r.front_fields = cd.front_fields;
             if (cd.back_fields) r.back_fields = cd.back_fields;
             return r;
         }
         function textToContentData(dom) {
             const exLines = dom.examples.split('\n').map(s => s.trim()).filter(Boolean);
-            const cd = { definition: dom.definition, usage1: dom.usage1, examples: exLines, tip: dom.tip, image_url: dom.image_url, audio_url: dom.audio_url };
+            const cd = { definition: dom.definition, usage1: dom.usage1, examples: exLines, tip: dom.tip, image_url: dom.image_url, image_scale: dom.image_scale, audio_url: dom.audio_url };
             if (exLines.length) cd.example1a = exLines[0];
             if (dom.front_fields?.length) cd.front_fields = dom.front_fields;
             if (dom.back_fields?.length) cd.back_fields = dom.back_fields;
@@ -246,6 +250,7 @@
         registerType('multiple_choice', {
             fields: [
                 { key:'image_url',     label:'Image URL (optional)',  type:'text', placeholder:'https://...' },
+                { key:'image_scale',   label:'Image Scale',           type:'select', options:['0.5','0.75','1','1.5','1.75','2'], default:'1', help:'Resize the image' },
                 { key:'audio_url',     label:'Audio URL (optional)',  type:'text', placeholder:'https://...' },
                 { key:'question_text', label:'Question Text',         type:'textarea', rows:2, placeholder:'What is the question?' },
                 { key:'options',       label:'Options (comma separated)', type:'csv', default:['Option A','Option B','Option C'], placeholder:'Option A, Option B, Option C', help:'The first option has index 0' },
@@ -254,14 +259,15 @@
             ],
             fromContentData(cd) {
                 const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? splitCSV(cd.options) : []);
-                return { image_url: cd.image_url || '', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: joinCSV(opts), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
+                return { image_url: cd.image_url || '', image_scale: cd.image_scale || '1', audio_url: cd.audio_url || '', question_text: cd.question_text || '', options: joinCSV(opts), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
             },
-            toContentData(dom) { return { image_url: dom.image_url, audio_url: dom.audio_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
+            toContentData(dom) { return { image_url: dom.image_url, image_scale: dom.image_scale, audio_url: dom.audio_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
         });
 
         registerType('image_mcq', {
             fields: [
                 { key:'image_url',     label:'Image URL',             type:'text', placeholder:'https://...' },
+                { key:'image_scale',   label:'Image Scale',           type:'select', options:['0.5','0.75','1','1.5','1.75','2'], default:'1', help:'Resize the image' },
                 { key:'question_text', label:'Question Text',         type:'textarea', rows:2, placeholder:'What is the question?' },
                 { key:'options',       label:'Options (comma separated)', type:'csv', default:['Option A','Option B','Option C'], placeholder:'Option A, Option B, Option C' },
                 { key:'correct_index', label:'Correct Index (0, 1, 2...)', type:'text', default:'0', placeholder:'0' },
@@ -269,9 +275,9 @@
             ],
             fromContentData(cd) {
                 const opts = Array.isArray(cd.options) ? cd.options : (typeof cd.options === 'string' ? splitCSV(cd.options) : []);
-                return { image_url: cd.image_url || '', question_text: cd.question_text || '', options: joinCSV(opts), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
+                return { image_url: cd.image_url || '', image_scale: cd.image_scale || '1', question_text: cd.question_text || '', options: joinCSV(opts), correct_index: cd.correct_index !== undefined ? String(cd.correct_index) : '0', explanation: cd.explanation || '' };
             },
-            toContentData(dom) { return { image_url: dom.image_url, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
+            toContentData(dom) { return { image_url: dom.image_url, image_scale: dom.image_scale, question_text: dom.question_text, options: dom.options, correct_index: parseInt(dom.correct_index) || 0, explanation: dom.explanation }; },
         });
 
         registerType('gap_fill', {
@@ -280,22 +286,24 @@
                 { key:'correct_answers', label:'Correct Answer(s)',    type:'csv', default:['answer'], placeholder:'go, goes, went', help:'Comma separated — all accepted answers' },
                 { key:'example',         label:'Example Sentence',      type:'textarea', rows:2, placeholder:'They go to school every day.' },
                 { key:'image_url',       label:'Image URL (optional)', type:'text', placeholder:'https://...' },
+                { key:'image_scale',     label:'Image Scale',           type:'select', options:['0.5','0.75','1','1.5','1.75','2'], default:'1', help:'Resize the image' },
                 { key:'audio_url',       label:'Audio URL (optional)', type:'text', placeholder:'https://...' },
             ],
             fromContentData(cd) {
                 const ca = Array.isArray(cd.correct_answers) ? cd.correct_answers : (typeof cd.correct_answers === 'string' ? splitCSV(cd.correct_answers) : []);
-                return { sentence: cd.sentence || '', correct_answers: joinCSV(ca), example: cd.example || '', image_url: cd.image_url || '', audio_url: cd.audio_url || '' };
+                return { sentence: cd.sentence || '', correct_answers: joinCSV(ca), example: cd.example || '', image_url: cd.image_url || '', image_scale: cd.image_scale || '1', audio_url: cd.audio_url || '' };
             },
-            toContentData(dom) { return { sentence: dom.sentence, correct_answers: dom.correct_answers, example: dom.example, image_url: dom.image_url, audio_url: dom.audio_url }; },
+            toContentData(dom) { return { sentence: dom.sentence, correct_answers: dom.correct_answers, example: dom.example, image_url: dom.image_url, image_scale: dom.image_scale, audio_url: dom.audio_url }; },
         });
 
         registerType('image_description', {
             fields: [
                 { key:'image_url',   label:'Image URL',            type:'text', placeholder:'https://...' },
+                { key:'image_scale', label:'Image Scale',           type:'select', options:['0.5','0.75','1','1.5','1.75','2'], default:'1', help:'Resize the image' },
                 { key:'description', label:'Description',          type:'textarea', rows:5, placeholder:'Enter description...' },
             ],
-            fromContentData(cd) { return { image_url: cd.image_url || '', description: cd.description || '' }; },
-            toContentData(dom) { return { image_url: dom.image_url, description: dom.description }; },
+            fromContentData(cd) { return { image_url: cd.image_url || '', image_scale: cd.image_scale || '1', description: cd.description || '' }; },
+            toContentData(dom) { return { image_url: dom.image_url, image_scale: dom.image_scale, description: dom.description }; },
         });
 
         registerType('audio_listening', {
@@ -314,11 +322,14 @@
     }
 
     // ─── Preview Rendering ──────────────────────────────────────────
+    function imgScaleAttr(scale) { const s = parseFloat(scale) || 1; return s !== 1 ? ` style="transform:scale(${s});transform-origin:center center"` : ''; }
+
     function renderPreview(frontEl, backEl, type, title, contentData) {
         const cd = contentData || {};
         const isURL = (u) => u && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('uploads/') || u.startsWith('media/'));
         const hasImg = isURL(cd.image_url);
         const hasAud = isURL(cd.audio_url);
+        const _sc = imgScaleAttr(cd.image_scale);
 
         let front = '';
         let back = '';
@@ -327,11 +338,11 @@
         if (type === 'image_mcq') {
             const opts = cd.options || ['Option A','Option B','Option C'];
             const qText = cd.question_text || 'Select the correct answer:';
-            front = `<div class="text-center"><div class="text-2xl font-bold marker-underline mb-2">${t}</div><div class="text-sm font-semibold text-gray-700 mb-2">${fmtBreaks(esc(qText))}</div><div class="flex flex-col md:flex-row gap-3 min-h-[200px]"><div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain">` : '<div class="text-5xl text-gray-300">🖼️</div>'}</div><div class="flex flex-col justify-center md:w-1/2 gap-2">${opts.map((o,i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}</div></div></div>`;
+            front = `<div class="text-center"><div class="text-2xl font-bold marker-underline mb-2">${t}</div><div class="text-sm font-semibold text-gray-700 mb-2">${fmtBreaks(esc(qText))}</div><div class="flex flex-col md:flex-row gap-3 min-h-[200px]"><div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain"${_sc}>` : '<div class="text-5xl text-gray-300">🖼️</div>'}</div><div class="flex flex-col justify-center md:w-1/2 gap-2">${opts.map((o,i) => `<div class="quiz-option-preview text-sm py-1">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}</div></div></div>`;
             const ci = cd.correct_index ?? 1;
             back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${fmtBreaks(esc(opts[ci] || 'Correct'))}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
         } else if (type === 'image_description') {
-            front = `<div class="flex flex-col items-center justify-center min-h-[200px]"><div class="text-xl font-bold marker-underline mb-3">🖼️ ${t}</div>${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain">` : '<div class="text-5xl mb-2">🖼️</div>'}<p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p></div>`;
+            front = `<div class="flex flex-col items-center justify-center min-h-[200px]"><div class="text-xl font-bold marker-underline mb-3">🖼️ ${t}</div>${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-40 rounded-xl shadow-md mb-2 object-contain"${_sc}>` : '<div class="text-5xl mb-2">🖼️</div>'}<p class="text-xs text-gray-400 mt-2">👆 Tap to flip</p></div>`;
             back = `<div class="text-center"><h3 class="text-2xl text-blue-700 marker-underline mb-3">${t}</h3><div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.description || ''))}</p></div></div>`;
         } else if (type === 'audio_listening') {
             const int = !!(cd.prompt || (Array.isArray(cd.correct_answers) && cd.correct_answers.length));
@@ -340,11 +351,11 @@
             back = `<div class="text-center"><h3 class="text-2xl text-green-700 marker-underline mb-3">${t}</h3>${tr ? `<div class="bg-green-50 p-4 rounded-xl border-2 border-green-300"><p class="text-lg">${fmtBreaks(esc(tr))}</p></div>` : '<p class="text-gray-500">(Transcript)</p>'}</div>`;
         } else if (type === 'multiple_choice') {
             const opts = cd.options || ['Option A','Option B','Option C'];
-            front = `<div class="text-center">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-4xl mb-3">❓</div><p class="text-lg mb-4 font-bold">${fmtBreaks(esc(cd.question_text || 'Select the correct answer:'))}</p>${opts.map((o,i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}<p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip</p></div>`;
+            front = `<div class="text-center">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain mx-auto mb-2 rounded-lg"${_sc}>` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-4xl mb-3">❓</div><p class="text-lg mb-4 font-bold">${fmtBreaks(esc(cd.question_text || 'Select the correct answer:'))}</p>${opts.map((o,i) => `<div class="quiz-option-preview text-base">${String.fromCharCode(65+i)}. ${fmtBreaks(esc(o))}</div>`).join('')}<p class="text-xs text-gray-400 mt-3">👆 Tap answer, then flip</p></div>`;
             const ci = cd.correct_index ?? 0;
             back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 mb-3"><p class="text-xl font-bold">${String.fromCharCode(65+ci)}. ${fmtBreaks(esc(opts[ci] || 'Correct'))}</p></div><p class="text-sm text-gray-600">${fmtBreaks(esc(cd.explanation || ''))}</p></div>`;
         } else if (type === 'gap_fill') {
-            const gapMedia = (hasImg || hasAud) ? `<div class="w-full flex justify-center mb-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg">` : ''}${hasAud ? '<div class="text-sm">🔊 Audio</div>' : ''}</div>` : '';
+            const gapMedia = (hasImg || hasAud) ? `<div class="w-full flex justify-center mb-2">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg"${_sc}>` : ''}${hasAud ? '<div class="text-sm">🔊 Audio</div>' : ''}</div>` : '';
             front = `<div class="text-center">${gapMedia}<div class="text-4xl mb-3">✏️</div><p class="text-lg mb-4 font-bold">Complete the sentence:</p><p class="text-base bg-gray-100 p-3 rounded-xl">${fmtBreaks(esc(cd.sentence || 'Complete: ______'))}</p><input type="text" placeholder="Type answer..." class="w-full p-2 text-base border-2 rounded-xl mt-3" disabled style="background:#f3f4f6"><p class="text-xs text-gray-400 mt-3">👆 Type answer, then flip</p></div>`;
             const ans = Array.isArray(cd.correct_answers) ? cd.correct_answers : [cd.correct_answers || 'answer'];
             back = `<div class="text-center"><h3 class="text-xl text-green-700 marker-underline mb-3">✓ Correct Answer</h3><div class="bg-green-50 p-4 rounded-xl border-2 border-green-300"><p class="text-xl font-bold">${fmtBreaks(esc(ans.join(' / ')))}</p></div>${cd.example ? `<p class="text-md text-gray-600 mt-3">📝 Example: ${fmtBreaks(esc(cd.example))}</p>` : ''}</div>`;
@@ -358,7 +369,7 @@
             if (ff.includes('usage1') && cd.usage1) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">${fmtBreaks(esc(cd.usage1))}</div>`);
             if (ff.includes('examples') && exList.length) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">${exHtml}</div>`);
             if (ff.includes('tip') && cd.tip) parts.push(`<div class="text-sm text-center text-gray-700 mt-1">💡 ${fmtBreaks(esc(cd.tip))}</div>`);
-            front = `<div class="flex flex-col items-center justify-center min-h-[200px]">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-2xl text-center font-bold mb-2">${t}</div>${parts.join('')}<p class="text-xs text-gray-400 mt-4">👆 Tap to flip</p></div>`;
+            front = `<div class="flex flex-col items-center justify-center min-h-[200px]">${hasImg ? `<img src="${esc(cd.image_url)}" class="max-h-32 object-contain rounded-lg mb-2"${_sc}>` : ''}${hasAud ? '<div class="text-sm mb-2">🔊 Audio</div>' : ''}<div class="text-2xl text-center font-bold mb-2">${t}</div>${parts.join('')}<p class="text-xs text-gray-400 mt-4">👆 Tap to flip</p></div>`;
             const bf = Array.isArray(cd.back_fields) ? cd.back_fields : null;
             const bParts = [];
             if (bf === null || bf.includes('definition')) { if (cd.definition) bParts.push(`<div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-300"><p class="text-lg">${fmtBreaks(esc(cd.definition))}</p></div>`); }

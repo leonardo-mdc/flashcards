@@ -521,10 +521,13 @@
         });
     }
 
+    function imgScaleStyle(scale) { const s = parseFloat(scale) || 1; return s !== 1 ? ` style="transform:scale(${s});transform-origin:center center"` : ''; }
+
     function renderCardFront(card) {
         const pattern = card.pattern_type;
         const data = card.content_data || {};
         const title = card.title || 'Flashcard';
+        const _sc = imgScaleStyle(data.image_scale);
 
         if (pattern === 'multiple_choice') {
             const options = data.options || ['Option A', 'Option B', 'Option C'];
@@ -548,7 +551,7 @@
             const hasAudio = audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('uploads/') || audioUrl.startsWith('media/'));
             const mediaHtml = (hasImage || hasAudio) ? `
                 <div class="w-full flex justify-center mb-2">
-                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-40 object-contain rounded-lg">` : ''}
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-40 object-contain rounded-lg"${_sc}>` : ''}
                     ${hasAudio ? `<audio controls class="w-full max-w-xs" src="${escapeHtml(audioUrl)}">Your browser does not support audio.</audio>` : ''}
                 </div>
             ` : '';
@@ -574,7 +577,7 @@
                     <div class="flex flex-col md:flex-row gap-3 md:gap-4 flex-1 min-h-0">
                         <div class="flex items-center justify-center md:w-1/2 bg-gray-50 rounded-xl p-2">
                             ${hasImage
-                                ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg">`
+                                ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-full w-full object-contain rounded-lg"${_sc}>`
                                 : `<div class="text-6xl text-gray-300">🖼️</div>`
                             }
                         </div>
@@ -591,7 +594,7 @@
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
                     <h1 class="text-xl md:text-2xl text-center font-bold marker-underline mb-3">🖼️ ${formatBreaks(escapeHtml(title))}</h1>
-                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-64 rounded-xl shadow-md mb-2 object-contain">` : `<div class="text-6xl mb-2">🖼️</div>`}
+                    ${hasImage ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" class="max-h-48 md:max-h-64 rounded-xl shadow-md mb-2 object-contain"${_sc}>` : `<div class="text-6xl mb-2">🖼️</div>`}
                     <p class="text-sm text-gray-400 mt-2">👆 Tap card to flip</p>
                 </div>
             `;
@@ -624,7 +627,7 @@
 
             return `
                 <div class="flex flex-col items-center justify-center h-full min-h-[200px]">
-                    ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(title)}" class="max-h-32 object-contain rounded-lg mb-2">` : ''}
+                    ${hasImg ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(title)}" class="max-h-32 object-contain rounded-lg mb-2"${_sc}>` : ''}
                     ${hasAud ? `<audio controls class="w-full max-w-xs mb-2" src="${escapeHtml(audUrl)}">Your browser does not support audio.</audio>` : ''}
                     <h1 class="text-2xl md:text-3xl text-center font-bold marker-underline">${formatBreaks(escapeHtml(title))}</h1>
                     ${frontParts.join('')}
