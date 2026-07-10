@@ -1215,13 +1215,12 @@
             updateExportCount();
         });
         T('exportExecuteBtn').addEventListener('click', exportExecute);
-        arrowNav('exportCardListContainer', '.export-card-item');
         loadExportCards();
     }
 
     async function loadExportCards() {
         T('exportCardListContainer').innerHTML = '<div class="text-center py-8"><div class="loader"></div> Loading...</div>';
-        const res = await fetchJSON('admin_cards.php?action=get_cards&set_id=0&t=' + Date.now(), {
+        const res = await fetchJSON('admin_cards.php?action=get_cards&set_id=0&all=1&t=' + Date.now(), {
             headers: { 'X-Requested-With':'XMLHttpRequest' }
         });
         if (res.success) {

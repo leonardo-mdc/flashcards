@@ -142,16 +142,17 @@ if ($isAjax && isset($_GET['action'])) {
             $setId = isset($_GET['set_id']) ? (int) $_GET['set_id'] : 1;
             $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
             $perPage = isset($_GET['per_page']) ? min(200, max(10, (int) $_GET['per_page'])) : 100;
+            $all = isset($_GET['all']) && $_GET['all'] === '1';
             $offset = ($page - 1) * $perPage;
             if ($setId === 0) {
                 $allCards = Card::getAll();
                 $total = count($allCards);
-                $cards = array_slice($allCards, $offset, $perPage);
+                $cards = $all ? $allCards : array_slice($allCards, $offset, $perPage);
                 echo json_encode(['success' => true, 'cards' => $cards, 'total' => $total, 'page' => $page, 'per_page' => $perPage, 'pages' => max(1, (int) ceil($total / $perPage))]);
             } else {
                 $allCards = Card::getBySet($setId);
                 $total = count($allCards);
-                $cards = array_slice($allCards, $offset, $perPage);
+                $cards = $all ? $allCards : array_slice($allCards, $offset, $perPage);
                 echo json_encode(['success' => true, 'cards' => $cards, 'total' => $total, 'page' => $page, 'per_page' => $perPage, 'pages' => max(1, (int) ceil($total / $perPage))]);
             }
         } elseif ($action === 'get_sets') {
