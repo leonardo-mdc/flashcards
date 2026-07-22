@@ -1582,6 +1582,7 @@
                     <div class="exclusive-select-wrap"></div>
                     <div class="flex gap-2 mt-1">
                         <button class="save-exclusive-btn btn btn-success text-xs">💾 Save</button>
+                        <button class="make-universal-btn btn btn-secondary text-xs">🔓 Make Universal</button>
                         <button class="cancel-exclusive-btn btn btn-secondary text-xs">✕ Cancel</button>
                     </div>
                 </div>
@@ -1653,7 +1654,12 @@
                     const excl = (set?.exclusive_to || '').split(',').map(s => s.trim()).filter(Boolean);
                     let opts = '';
                     students.forEach(s => { const sel = excl.includes(s.username) ? 'selected' : ''; opts += `<option value="${esc(s.username)}" ${sel}>${esc(s.full_name || s.username)}</option>`; });
-                    wrap.innerHTML = `<select class="exclusive-select text-xs w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;">${opts}</select>`;
+                    wrap.innerHTML = `<select class="exclusive-select text-xs w-full" multiple size="4" style="border:2px solid #d1d5db;border-radius:8px;padding:4px;background:white;">${opts}</select><div class="text-right mt-0.5"><button type="button" class="deselect-all-exclusive text-[10px] text-gray-400 hover:text-gray-600" style="background:none;border:none;cursor:pointer;padding:0;">Deselect All</button></div>`;
+                    wrap.querySelector('.deselect-all-exclusive')?.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const sel = wrap.querySelector('.exclusive-select');
+                        if (sel) Array.from(sel.options).forEach(o => o.selected = false);
+                    });
                 }
             });
         });
@@ -1682,6 +1688,22 @@
                 const item = btn.closest('.set-item');
                 item.querySelector('.exclusive-editor').classList.add('hidden');
                 item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access';
+            });
+        });
+
+        // Make universal (remove all exclusive access)
+        document.querySelectorAll('.make-universal-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const item = btn.closest('.set-item');
+                const id = parseInt(item.dataset.id);
+                const name = item.querySelector('.set-name-display').textContent.trim();
+                const description = item.querySelector('.set-description-display')?.value.trim() || '';
+                const res = await fetchJSON('admin_cards.php?action=update_set', {
+                    method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest' },
+                    body: JSON.stringify({ id, name, exclusive_to: '', description })
+                });
+                if (res.success) { toast('🔓 Set is now universal', 'success'); item.querySelector('.exclusive-editor').classList.add('hidden'); item.querySelector('.toggle-exclusive-btn').textContent = '✏️ access'; fetchSets(); }
+                else toast('❌ ' + (res.error || 'Error'), 'error');
             });
         });
     }

@@ -135,7 +135,7 @@ try {
     $totalAvailable = (int) $stmt->fetchColumn();
 
     $excludeId = $isAdmin ? 0 : $studentId;
-    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 500, $excludeId, !empty($setIds) ? $setIds : null);
+    $cards = Card::getBySetAndLevels($setId, $selectedLevels, $randomMode, 2000, $excludeId, !empty($setIds) ? $setIds : null);
 
     if ($dueOnly && $studentId > 0) {
         $dueStmt = $pdo->prepare("SELECT card_id FROM user_card_progress WHERE user_id = ? AND next_review <= CURDATE()");
