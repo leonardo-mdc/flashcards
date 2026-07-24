@@ -857,9 +857,9 @@
                 el.style.removeProperty('overflow');
                 if (el.scrollHeight > el.clientHeight + 2) {
                     el.style.overflow = 'hidden';
-                    inner.style.transform = 'scale(0.75)';
+                    inner.style.transform = 'scale(0.65)';
                     inner.style.transformOrigin = 'top left';
-                    inner.style.width = '133.33%';
+                    inner.style.width = '153.85%';
                 }
             });
         }
