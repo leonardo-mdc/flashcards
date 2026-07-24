@@ -845,6 +845,26 @@
         `;
         appEl.innerHTML = html;
 
+        function autoScaleCardFaces() {
+            ['cardFront', 'cardBack'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const inner = el.querySelector(':scope > div');
+                if (!inner) return;
+                inner.style.removeProperty('transform');
+                inner.style.removeProperty('transform-origin');
+                inner.style.removeProperty('width');
+                el.style.removeProperty('overflow');
+                if (el.scrollHeight > el.clientHeight + 2) {
+                    el.style.overflow = 'hidden';
+                    inner.style.transform = 'scale(0.75)';
+                    inner.style.transformOrigin = 'top left';
+                    inner.style.width = '133.33%';
+                }
+            });
+        }
+        requestAnimationFrame(autoScaleCardFaces);
+
         const flashcard = document.getElementById('flashcardEl');
 
         function flipHandler() {
@@ -873,6 +893,7 @@
             }
 
             flashcard.classList.add('flipped');
+            requestAnimationFrame(autoScaleCardFaces);
         }
 
         document.getElementById('flipCardBtn')?.addEventListener('click', flipHandler);
