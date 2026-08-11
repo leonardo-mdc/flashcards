@@ -14,6 +14,13 @@ if (!$isAdmin) {
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/CardSet.php';
 require_once __DIR__ . '/../src/Card.php';
+require_once __DIR__ . '/../src/helpers.php';
+
+if (!verifyCsrfToken($_GET['csrf_token'] ?? null)) {
+    http_response_code(403);
+    echo 'Invalid security token';
+    exit;
+}
 
 $pdo = Database::getConnection();
 

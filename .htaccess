@@ -1,0 +1,25 @@
+# ── Protect sensitive files & directories ─────────────────────────
+<Files "config.php">
+    Require all denied
+</Files>
+
+<FilesMatch "\.(md|txt|log)$">
+    Require all denied
+</FilesMatch>
+
+RedirectMatch 403 ^/(src|import|conversations|\.opencode|\.github)/
+
+# ── PHP settings ──────────────────────────────────────────────────
+php_value upload_max_filesize 16M
+php_value post_max_size 20M
+
+# ── Caching for static assets ─────────────────────────────────────
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType audio/mpeg "access plus 1 month"
+</IfModule>

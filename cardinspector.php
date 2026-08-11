@@ -23,6 +23,8 @@ if ($isAjax && isset($_GET['action'])) {
         exit;
     }
 
+    $action = $_GET['action'];
+
     if ($action !== 'login' && !verifyCsrfToken($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Invalid security token']);
@@ -30,8 +32,6 @@ if ($isAjax && isset($_GET['action'])) {
     }
 
     try {
-        $action = $_GET['action'];
-
         if ($action === 'login') {
             $input = json_decode(file_get_contents('php://input'), true);
             $username = trim($input['username'] ?? '');

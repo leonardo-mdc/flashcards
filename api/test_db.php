@@ -1,5 +1,15 @@
 <?php
 
+require_once __DIR__ . '/../src/session_init.php';
+initSession();
+
+$adminUser = $_SESSION['admin_user'] ?? null;
+if (!$adminUser || empty($adminUser['is_admin'])) {
+    http_response_code(403);
+    echo 'Forbidden';
+    exit;
+}
+
 require_once __DIR__ . '/../src/Database.php';
 
 try {

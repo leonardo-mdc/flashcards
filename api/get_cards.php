@@ -101,6 +101,23 @@ try {
         $selectedLevels = [];
         $dueOnly = false;
         $setIds = [];
+    } else {
+        $accessibleSetIds = Review::getAccessibleSets($studentId, $sessionUser['username'] ?? '');
+        if (empty($accessibleSetIds)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden', 'cards' => []]);
+            exit;
+        }
+        if (!$randomMode && $setId !== null && $setId > 0) {
+            if (!in_array($setId, $accessibleSetIds)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden', 'cards' => []]);
+                exit;
+            }
+        }
+        if (!empty($setIds)) {
+            $setIds = array_values(array_filter($setIds, fn($sid) => in_array($sid, $accessibleSetIds)));
+        }
     }
 
     Review::checkAndResetCycle($studentId);

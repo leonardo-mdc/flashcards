@@ -319,7 +319,7 @@ if ($isAjax && isset($_GET['action'])) {
             CardSet::delete($id);
             echo json_encode(['success' => true, 'name' => $name]);
         } elseif ($action === 'list_media') {
-            $dir = $_GET['dir'] ?? 'images';
+            $dir = in_array($_GET['dir'] ?? '', ['images', 'audio']) ? $_GET['dir'] : 'images';
             $subdir = $_GET['subdir'] ?? '';
             $subdir = ltrim(str_replace('..', '', $subdir), '/\\');
             $base = __DIR__ . '/media/' . $dir . ($subdir ? '/' . $subdir : '');

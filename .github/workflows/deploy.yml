@@ -32,6 +32,11 @@ jobs:
           exclude: |
             config.php
             .git*
+            .opencode/
+            import/
+            conversations/
+            checklist.md
+            reimplementation-plan.txt
           dangerous-clean-slate: false
 
       - name: Restore config.php (main)
@@ -64,6 +69,11 @@ jobs:
           exclude: |
             config.php
             .git*
+            .opencode/
+            import/
+            conversations/
+            checklist.md
+            reimplementation-plan.txt
           dangerous-clean-slate: false
 
       - name: Restore config.php (mirror)

@@ -1289,6 +1289,7 @@
         if (setId !== '0') p.set('set_id', setId);
         if (type) p.set('type', type);
         p.set('card_ids', ids.join(','));
+        p.set('csrf_token', CSRF);
         window.location.href = 'api/export_csv.php?' + p.toString();
     }
 

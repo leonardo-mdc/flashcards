@@ -15,6 +15,15 @@ try {
     $pdo->exec("CREATE DATABASE IF NOT EXISTS $dbname");
     $pdo->exec("USE $dbname");
 
+    $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
+    if ($stmt->fetch()) {
+        $adminCount = $pdo->query("SELECT COUNT(*) FROM users WHERE is_admin = 1")->fetchColumn();
+        if ($adminCount > 0) {
+            echo json_encode(['success' => false, 'error' => 'Setup already completed.']);
+            exit;
+        }
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(30) NOT NULL UNIQUE,
