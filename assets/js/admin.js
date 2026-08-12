@@ -1068,7 +1068,7 @@
         row.level = T('importEditLevel').value;
         const setId = T('importEditSetId').value;
         const sName = setId ? (T('importEditSetId').options[T('importEditSetId').selectedIndex]?.text || '') : '';
-        row._setName = sName;
+        row._setName = sName || row.set || '';
         row.set_id = setId;
         // Collect dynamic fields
         const cd = collectFields('importDynamicFields', row.type);
