@@ -8,9 +8,10 @@ require_once __DIR__ . '/src/helpers.php';
 require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/Review.php';
+require_once __DIR__ . '/src/Schema.php';
 
 $dbConnected = Database::testConnection();
-$cardSets = $dbConnected ? CardSet::getWithCards() : [];
+$cardSets = $dbConnected && Schema::tablesReady() ? CardSet::getWithCards() : [];
 
 $loggedInStudent = isset($_SESSION['student_user']) ? $_SESSION['student_user'] : null;
 

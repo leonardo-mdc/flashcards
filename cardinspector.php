@@ -114,7 +114,7 @@ $isLoggedIn = $adminUser !== null && ($adminUser['is_admin'] ?? false);
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="<?= assetVersion('assets/css/admin.css') ?>">
     <style>
         body { padding: 0; background: #e5e7eb; }
         .inspector-container { max-width: 1400px; margin: 0 auto; padding: 16px; }

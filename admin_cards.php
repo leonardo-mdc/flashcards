@@ -9,10 +9,31 @@ require_once __DIR__ . '/src/User.php';
 require_once __DIR__ . '/src/CardSet.php';
 require_once __DIR__ . '/src/Card.php';
 require_once __DIR__ . '/src/Review.php';
+require_once __DIR__ . '/src/Schema.php';
 
 $currentUser = isset($_SESSION['admin_user']) ? $_SESSION['admin_user'] : null;
 $isLoggedIn = $currentUser !== null && ($currentUser['is_admin'] ?? false);
-$needsSetup = !User::hasAdmins();
+
+$dbConnected = Database::testConnection();
+$schemaReady = $dbConnected && Schema::tablesReady();
+$needsSetup = $schemaReady && !User::hasAdmins();
+
+if (isset($_POST['create_db'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $dbSetupError = 'Invalid security token.';
+    } else {
+        try {
+            Schema::createDatabaseIfMissing();
+            Schema::createAll();
+            $dbConnected = Database::testConnection();
+            $schemaReady = $dbConnected && Schema::tablesReady();
+            $needsSetup = $schemaReady && !User::hasAdmins();
+        } catch (Exception $e) {
+            error_log('DB create error: ' . $e->getMessage());
+            $dbSetupError = 'Could not create the database: ' . $e->getMessage();
+        }
+    }
+}
 
 function adminCsrfTokenFromRequest(): ?string
 {
@@ -355,14 +376,15 @@ if ($isAjax && isset($_GET['action'])) {
 if (!$isLoggedIn) {
     if ($needsSetup) {
         require __DIR__ . '/src/templates/admin_setup.php';
+    } elseif (!$dbConnected || !$schemaReady) {
+        require __DIR__ . '/src/templates/admin_db_setup.php';
     } else {
         require __DIR__ . '/src/templates/admin_login.php';
     }
     exit;
 }
 
-$dbConnected = Database::testConnection();
-$cardSets = $dbConnected ? CardSet::getAll() : [];
+$cardSets = $dbConnected && $schemaReady ? CardSet::getAll() : [];
 ?>
 <!DOCTYPE html>
 <html lang="en" translate="no">
@@ -374,8 +396,8 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
     <link href="https://fonts.cdnfonts.com/css/bubble-sans" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/stampatello-faceto" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/admin.css">
-    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="<?= assetVersion('assets/css/admin.css') ?>">
+    <link rel="stylesheet" href="<?= assetVersion('assets/css/app.css') ?>">
 </head>
 <body>
 <div class="admin-container">
@@ -783,6 +805,6 @@ $cardSets = $dbConnected ? CardSet::getAll() : [];
         returnUrl: <?= json_encode($_GET['return_url'] ?? null) ?>
     };
 </script>
-<script src="assets/js/admin.js"></script>
+<script src="<?= assetVersion('assets/js/admin.js') ?>"></script>
 </body>
 </html>
