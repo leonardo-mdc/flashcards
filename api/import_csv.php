@@ -112,19 +112,24 @@ try {
         $level = $levelMap[$levelKey] ?? 'Beginner';
 
         $setId = 0;
-        if ($setIdRaw !== '' && is_numeric($setIdRaw) && (int)$setIdRaw > 0) {
-            $setId = (int) $setIdRaw;
-        }
         if (!empty($setName)) {
             $existing = CardSet::getIdByName($setName);
             if ($existing !== null) {
                 $setId = $existing;
-            } elseif ($setId === 0) {
+            } else {
                 $setId = CardSet::create($setName);
             }
         }
+        if ($setId === 0 && $setIdRaw !== '' && is_numeric($setIdRaw) && (int)$setIdRaw > 0) {
+            $existingSet = $pdo->prepare("SELECT id FROM card_sets WHERE id = ?");
+            $existingSet->execute([(int) $setIdRaw]);
+            if ($existingSet->fetch()) {
+                $setId = (int) $setIdRaw;
+            }
+        }
         if ($setId === 0) {
-            $setId = 1;
+            $defaultSet = CardSet::getIdByName('Imported Cards');
+            $setId = $defaultSet !== null ? $defaultSet : CardSet::create('Imported Cards');
         }
 
         $questionText = trim($data['question_text'] ?? '');
@@ -244,6 +249,14 @@ try {
         }
 
         $cardId = isset($data['id']) && is_numeric($data['id']) ? (int) $data['id'] : 0;
+
+        if ($cardId > 0) {
+            $existsCheck = $pdo->prepare("SELECT id FROM cards WHERE id = ?");
+            $existsCheck->execute([$cardId]);
+            if (!$existsCheck->fetch()) {
+                $cardId = 0;
+            }
+        }
 
         if ($cardId === 0) {
             $dupCheck = $pdo->prepare("SELECT id FROM cards WHERE title = ? AND pattern_type = ? AND set_id = ?");
